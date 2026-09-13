@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardProjectRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="14dp"
+    android:layout_marginEnd="14dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/pe_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <!-- Thumbnail Container with Duration Badge -->
+        <FrameLayout
+            android:layout_width="68dp"
+            android:layout_height="68dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivProjectThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:background="#2C3957"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
+
+            <!-- Duration Badge -->
+            <TextView
+                android:id="@+id/tvProjectDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="4dp"
+                android:background="@drawable/bg_pill_accent"
+                android:backgroundTint="#CC000000"
+                android:paddingStart="5dp"
+                android:paddingEnd="5dp"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp"
+                android:text="00:00:02"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <!-- Project Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvProjectTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="New Project 3"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <!-- First Row: Aspect Ratio & Resolution -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_pe_aspect"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvProjectAspect"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="9:16"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="11sp" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="12dp"
+                    android:src="@drawable/ic_pe_resolution"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvProjectResolution"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="1080p"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Second Row: Size & FPS -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:src="@drawable/ic_pe_folder"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvProjectSize"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="743b"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="11sp" />
+
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:layout_marginStart="12dp"
+                    android:src="@drawable/ic_pe_fps"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvProjectFps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="30fps"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 3-Dots Menu -->
+        <ImageButton
+            android:id="@+id/btnProjectMore"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_more"
+            app:tint="@color/pe_text_secondary" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

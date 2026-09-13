@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/panelEditShape"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/pe_surface_panel"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="12dp">
+
+    <!-- Sub-panel Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btnBackFromEditShape"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_back"
+            app:tint="@color/pe_text_primary" />
+
+        <TextView
+            android:id="@+id/tvSubpanelTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/tool_edit_shape"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- Proportional link toggle -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLinkProportions"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:backgroundTint="@color/pe_surface_card"
+            app:cornerRadius="8dp"
+            app:icon="@drawable/ic_pe_settings"
+            app:iconTint="@color/pe_accent_mint" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/pe_border" />
+
+    <!-- Content: Left Strip (Icons) + Sliders Area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Left vertical utility strip (as in Image 2) -->
+        <LinearLayout
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_shape_diamond"
+                app:tint="@color/pe_text_secondary" />
+
+            <ImageButton
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginTop="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_shape_star"
+                app:tint="@color/pe_text_secondary" />
+        </LinearLayout>
+
+        <!-- Right Sliders & Values Area -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Size Slider Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/prop_size"
+                    android:textColor="@color/pe_accent_mint"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderSize"
+                    style="@style/Widget.PixelEditor.Slider"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:valueFrom="30"
+                    android:valueTo="800"
+                    android:value="200" />
+
+                <TextView
+                    android:id="@+id/tvSizeVal"
+                    android:layout_width="50dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_input_box"
+                    android:gravity="center"
+                    android:text="200"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Radius Slider Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/prop_radius"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderRadius"
+                    style="@style/Widget.PixelEditor.Slider"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:valueFrom="0"
+                    android:valueTo="150"
+                    android:value="25" />
+
+                <TextView
+                    android:id="@+id/tvRadiusVal"
+                    android:layout_width="50dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_input_box"
+                    android:gravity="center"
+                    android:text="25"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

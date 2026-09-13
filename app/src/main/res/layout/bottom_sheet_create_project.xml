@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/sheetCreateProjectRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_panel_card"
+    android:backgroundTint="@color/pe_surface_panel"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="16dp">
+
+    <!-- 1. Top Segment Switch: PROJECT | ELEMENT -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_pill_accent"
+        android:backgroundTint="@color/pe_surface_panel_elevated"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="3dp">
+
+        <TextView
+            android:id="@+id/tabCreateProject"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_pill_accent"
+            android:backgroundTint="#24304A"
+            android:gravity="center"
+            android:text="PROJECT"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabCreateElement"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="ELEMENT"
+            android:textColor="@color/pe_text_secondary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 2. Project Name Input Field -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etProjectName"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="New Project Name"
+            android:text="New Project 4"
+            android:textColor="@color/pe_text_primary"
+            android:textColorHint="@color/pe_text_tertiary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnClearProjectName"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_close"
+            app:tint="@color/pe_text_secondary" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1.5dp"
+        android:layout_marginTop="4dp"
+        android:background="@color/pe_border" />
+
+    <!-- 3. Aspect Ratio Selector Cards Row -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/layoutAspectRatios"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- 16:9 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspect16_9"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvAspect16_9"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="16:9"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 9:16 (Selected Default) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspect9_16"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/pe_accent_mint"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_accent_mint"
+                app:strokeWidth="1.5dp">
+
+                <TextView
+                    android:id="@+id/tvAspect9_16"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="9:16"
+                    android:textColor="#00382B"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 4:5 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspect4_5"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvAspect4_5"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="4:5"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 1:1 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspect1_1"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvAspect1_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="1:1"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 4:3 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspect4_3"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvAspect4_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="4:3"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Custom Pencil -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAspectCustom"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_pe_pen"
+                    app:tint="@color/pe_text_primary" />
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- 4. Resolution Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Resolution"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCompSizeDesc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Composition Size\n1080 × 1920"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPickerResolution"
+            android:layout_width="160dp"
+            android:layout_height="44dp"
+            app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/pe_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedResolution"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="1080p (FHD)"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▼"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- 5. Frame Rate Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Frame Rate"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPickerFps"
+            android:layout_width="160dp"
+            android:layout_height="44dp"
+            app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/pe_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedFps"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="30 fps"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▼"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- 6. Background Picker Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Background"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPickerBg"
+            android:layout_width="160dp"
+            android:layout_height="44dp"
+            app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/pe_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <View
+                    android:id="@+id/viewSelectedBgSwatch"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:background="@drawable/bg_pill_accent"
+                    android:backgroundTint="#D8DCE3" />
+
+                <TextView
+                    android:id="@+id/tvSelectedBgName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Light Grey"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▼"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- 7. CREATE PROJECT Action Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSubmitCreateProject"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="26dp"
+        android:backgroundTint="@color/pe_surface_panel_elevated"
+        android:text="CREATE PROJECT"
+        android:textColor="@color/pe_accent_mint"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:cornerRadius="16dp"
+        app:strokeColor="@color/pe_border"
+        app:strokeWidth="1dp" />
+
+    <!-- 8. Close Button (X) -->
+    <ImageButton
+        android:id="@+id/btnCloseCreateSheet"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="14dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_pe_close"
+        app:tint="@color/pe_text_primary" />
+
+</LinearLayout>
