@@ -6,145 +6,300 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.material.materialswitch.MaterialSwitch;
-import com.google.android.material.slider.Slider;
+
+import java.util.List;
+
+import glab.pixeleditor.R;
+import glab.pixeleditor.model.CanvasLayer;
+import glab.pixeleditor.view.ScrubRulerView;
 
 public class EffectControlHelper {
 
-    public interface OnParamChangeListener {
+    public interface OnEffectInteractionListener {
         void onParamChanged(EffectDefinition effect, EffectParam param);
+        void onEffectToggled(EffectDefinition effect, boolean isEnabled);
+        void onEffectDeleted(EffectDefinition effect);
+        void onEffectReset(EffectDefinition effect);
     }
 
     /**
-     * Builds interactive controls for all parameters of the given effect inside target container.
+     * Populates all applied effect cards for the currently selected layer.
      */
-    public static void populateControls(Context context, LinearLayout container, EffectDefinition effect, OnParamChangeListener listener) {
-        container.removeAllViews();
-        if (effect == null) return;
+    public static void populateAppliedEffectsList(
+            Context context,
+            LayoutInflater inflater,
+            LinearLayout container,
+            TextView emptyView,
+            CanvasLayer layer,
+            OnEffectInteractionListener listener) {
 
+        container.removeAllViews();
+        if (layer == null) {
+            if (emptyView != null) emptyView.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        List<EffectDefinition> effects = layer.getAppliedEffects();
+        if (effects.isEmpty()) {
+            if (emptyView != null) emptyView.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        if (emptyView != null) emptyView.setVisibility(View.GONE);
+
+        for (EffectDefinition effect : effects) {
+            View card = createAppliedEffectCard(context, inflater, container, effect, listener);
+            container.addView(card);
+        }
+    }
+
+    private static View createAppliedEffectCard(
+            Context context,
+            LayoutInflater inflater,
+            ViewGroup parent,
+            EffectDefinition effect,
+            OnEffectInteractionListener listener) {
+
+        View card = inflater.inflate(R.layout.item_applied_effect_card, parent, false);
         float density = context.getResources().getDisplayMetrics().density;
 
-        // If no parameters
+        LinearLayout layoutHeader = card.findViewById(R.id.layoutCardHeader);
+        ImageView ivExpandArrow = card.findViewById(R.id.ivExpandArrow);
+        TextView tvName = card.findViewById(R.id.tvEffectCardName);
+        LinearLayout layoutCollapsedActions = card.findViewById(R.id.layoutCollapsedActions);
+        LinearLayout layoutExpandedActions = card.findViewById(R.id.layoutExpandedActions);
+        ImageButton btnToggleVisibility = card.findViewById(R.id.btnToggleVisibility);
+        ImageButton btnEffectOptions = card.findViewById(R.id.btnEffectOptions);
+        ImageButton btnDeleteEffect = card.findViewById(R.id.btnDeleteEffect);
+        LinearLayout containerParams = card.findViewById(R.id.containerCardParams);
+
+        tvName.setText(effect.getName());
+
+        // Initial expand state
+        updateCardExpandState(effect.isExpanded(), ivExpandArrow, layoutCollapsedActions, layoutExpandedActions, containerParams);
+
+        // Visibility Eye Icon state
+        updateVisibilityIcon(btnToggleVisibility, effect.isEnabled());
+
+        // Header click -> Toggle expand/collapse
+        layoutHeader.setOnClickListener(v -> {
+            boolean nextState = !effect.isExpanded();
+            effect.setExpanded(nextState);
+            updateCardExpandState(nextState, ivExpandArrow, layoutCollapsedActions, layoutExpandedActions, containerParams);
+        });
+
+        // Visibility Toggle button
+        btnToggleVisibility.setOnClickListener(v -> {
+            boolean nextEnabled = !effect.isEnabled();
+            effect.setEnabled(nextEnabled);
+            updateVisibilityIcon(btnToggleVisibility, nextEnabled);
+            if (listener != null) {
+                listener.onEffectToggled(effect, nextEnabled);
+            }
+        });
+
+        // Delete button
+        btnDeleteEffect.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onEffectDeleted(effect);
+            }
+        });
+
+        // Effect Options / Reset button
+        btnEffectOptions.setOnClickListener(v -> {
+            effect.resetAllParams();
+            containerParams.removeAllViews();
+            populateParamRows(context, containerParams, effect, density, listener);
+            if (listener != null) {
+                listener.onEffectReset(effect);
+            }
+        });
+
+        // Populate parameter controls inside card
+        populateParamRows(context, containerParams, effect, density, listener);
+
+        return card;
+    }
+
+    private static void updateCardExpandState(
+            boolean isExpanded,
+            ImageView ivArrow,
+            View collapsedActions,
+            View expandedActions,
+            View paramsContainer) {
+
+        ivArrow.setRotation(isExpanded ? 90f : 0f);
+        collapsedActions.setVisibility(isExpanded ? View.GONE : View.VISIBLE);
+        expandedActions.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+        paramsContainer.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+    }
+
+    private static void updateVisibilityIcon(ImageButton btn, boolean isEnabled) {
+        if (isEnabled) {
+            btn.setImageResource(R.drawable.ic_pe_visible);
+            btn.setColorFilter(0xFF00E5BC);
+            btn.setAlpha(1.0f);
+        } else {
+            btn.setImageResource(R.drawable.ic_pe_invisible);
+            btn.setColorFilter(0xFF64748B);
+            btn.setAlpha(0.6f);
+        }
+    }
+
+    private static void populateParamRows(
+            Context context,
+            LinearLayout container,
+            EffectDefinition effect,
+            float density,
+            OnEffectInteractionListener listener) {
+
+        container.removeAllViews();
+
         if (effect.getParams().isEmpty()) {
             TextView emptyTv = new TextView(context);
-            emptyTv.setText("This effect does not require manual adjustments.");
-            emptyTv.setTextColor(0xFF94A3B8);
-            emptyTv.setTextSize(13);
-            emptyTv.setPadding(0, (int) (16 * density), 0, (int) (16 * density));
+            emptyTv.setText("No configurable parameters");
+            emptyTv.setTextColor(0xFF64748B);
+            emptyTv.setTextSize(12);
+            emptyTv.setPadding(0, (int) (8 * density), 0, (int) (8 * density));
             container.addView(emptyTv);
             return;
         }
 
-        // Generate controls for each param
         for (EffectParam param : effect.getParams()) {
             if (param.getType() == EffectParam.ParamType.SLIDER) {
-                View sliderRow = createSliderControl(context, effect, param, density, listener);
+                View sliderRow = createSliderRulerRow(context, effect, param, density, listener);
                 container.addView(sliderRow);
             } else if (param.getType() == EffectParam.ParamType.SWITCH) {
-                View switchRow = createSwitchControl(context, effect, param, density, listener);
+                View switchRow = createSwitchRow(context, effect, param, density, listener);
                 container.addView(switchRow);
             } else if (param.getType() == EffectParam.ParamType.COLOR) {
-                View colorRow = createColorControl(context, effect, param, density, listener);
+                View colorRow = createColorRow(context, effect, param, density, listener);
                 container.addView(colorRow);
             }
         }
     }
 
-    private static View createSliderControl(Context context, EffectDefinition effect, EffectParam param, float density, OnParamChangeListener listener) {
+    private static View createSliderRulerRow(
+            Context context,
+            EffectDefinition effect,
+            EffectParam param,
+            float density,
+            OnEffectInteractionListener listener) {
+
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-        ((LinearLayout.LayoutParams) row.getLayoutParams()).setMargins(0, (int) (4 * density), 0, (int) (4 * density));
+                (int) (40 * density)
+        );
+        rowLp.setMargins(0, (int) (3 * density), 0, (int) (3 * density));
+        row.setLayoutParams(rowLp);
 
-        // Param Label
+        // 1. Parameter Label Tab / Button [ Scale ]
         TextView tvLabel = new TextView(context);
         tvLabel.setText(param.getLabel());
         tvLabel.setTextColor(0xFFFFFFFF);
-        tvLabel.setTextSize(13);
-        tvLabel.setLayoutParams(new LinearLayout.LayoutParams(
-                (int) (90 * density),
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
+        tvLabel.setTextSize(12);
+        tvLabel.setTypeface(null, Typeface.BOLD);
+        tvLabel.setGravity(Gravity.CENTER);
+        int padH = (int) (8 * density);
+        int padV = (int) (4 * density);
+        tvLabel.setPadding(padH, padV, padH, padV);
+
+        GradientDrawable labelBg = new GradientDrawable();
+        labelBg.setColor(0xFF141C2B);
+        labelBg.setCornerRadius(6 * density);
+        labelBg.setStroke(1, 0xFF28354D);
+        tvLabel.setBackground(labelBg);
+
+        LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(
+                (int) (76 * density),
+                (int) (30 * density)
+        );
+        tvLabel.setLayoutParams(labelLp);
         row.addView(tvLabel);
 
-        // Value Indicator Box
+        // 2. Precision Scrub Ruler View (Middle)
+        ScrubRulerView ruler = new ScrubRulerView(context);
+        GradientDrawable rulerBg = new GradientDrawable();
+        rulerBg.setColor(0xFF121927);
+        rulerBg.setCornerRadius(6 * density);
+        ruler.setBackground(rulerBg);
+
+        LinearLayout.LayoutParams rulerLp = new LinearLayout.LayoutParams(
+                0, (int) (32 * density), 1f
+        );
+        rulerLp.setMargins((int) (6 * density), 0, (int) (6 * density), 0);
+        ruler.setLayoutParams(rulerLp);
+        row.addView(ruler);
+
+        // 3. Value Indicator Box (Right)
         TextView tvValue = new TextView(context);
         tvValue.setText(param.getFormattedValue());
         tvValue.setTextColor(0xFF00E5BC);
         tvValue.setTextSize(12);
         tvValue.setTypeface(null, Typeface.BOLD);
         tvValue.setGravity(Gravity.CENTER);
-        int padH = (int) (8 * density);
-        int padV = (int) (4 * density);
         tvValue.setPadding(padH, padV, padH, padV);
 
         GradientDrawable valBg = new GradientDrawable();
-        valBg.setColor(0xFF1E273C);
+        valBg.setColor(0xFF141C2B);
         valBg.setCornerRadius(6 * density);
-        valBg.setStroke(1, 0xFF2C3852);
+        valBg.setStroke(1, 0xFF28354D);
         tvValue.setBackground(valBg);
 
         LinearLayout.LayoutParams valLp = new LinearLayout.LayoutParams(
-                (int) (52 * density),
-                (int) (28 * density)
+                (int) (58 * density),
+                (int) (30 * density)
         );
-        valLp.setMarginEnd((int) (6 * density));
         tvValue.setLayoutParams(valLp);
+        row.addView(tvValue);
 
-        // Material 3 Slider
-        Slider slider = new Slider(context);
-        float min = param.getMinValue();
-        float max = param.getMaxValue();
-        if (min >= max) max = min + 1.0f;
-        slider.setValueFrom(min);
-        slider.setValueTo(max);
-        slider.setStepSize(param.getStep() > 0 && (max - min) / param.getStep() <= 500 ? param.getStep() : 0.0f);
-        slider.setValue(Math.max(min, Math.min(max, param.getFloatValue())));
+        // Wire Scrub Ruler Listener
+        ruler.setOnScrubListener(delta -> {
+            float step = param.getStep() > 0 ? param.getStep() : 0.01f;
+            float range = param.getMaxValue() - param.getMinValue();
+            float sensitivity = Math.max(step, range / 300f);
+            float change = (delta / 6f) * sensitivity;
 
-        // Style slider
-        slider.setThumbTintList(ColorStateList.valueOf(0xFF00E5BC));
-        slider.setTrackActiveTintList(ColorStateList.valueOf(0xFF00E5BC));
-        slider.setTrackInactiveTintList(ColorStateList.valueOf(0xFF24304A));
+            float newVal = param.getFloatValue() + change;
+            param.setFloatValue(newVal);
+            tvValue.setText(param.getFormattedValue());
 
-        LinearLayout.LayoutParams sliderLp = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-        );
-        slider.setLayoutParams(sliderLp);
-
-        slider.addOnChangeListener((s, val, fromUser) -> {
-            if (fromUser) {
-                param.setFloatValue(val);
-                tvValue.setText(param.getFormattedValue());
-                if (listener != null) {
-                    listener.onParamChanged(effect, param);
-                }
+            if (listener != null) {
+                listener.onParamChanged(effect, param);
             }
         });
-
-        row.addView(slider);
-        row.addView(tvValue);
 
         return row;
     }
 
-    private static View createSwitchControl(Context context, EffectDefinition effect, EffectParam param, float density, OnParamChangeListener listener) {
+    private static View createSwitchRow(
+            Context context,
+            EffectDefinition effect,
+            EffectParam param,
+            float density,
+            OnEffectInteractionListener listener) {
+
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                (int) (40 * density)
-        ));
+                (int) (38 * density)
+        );
+        rowLp.setMargins(0, (int) (3 * density), 0, (int) (3 * density));
+        row.setLayoutParams(rowLp);
 
         TextView tvLabel = new TextView(context);
         tvLabel.setText(param.getLabel());
@@ -155,6 +310,9 @@ public class EffectControlHelper {
 
         MaterialSwitch sw = new MaterialSwitch(context);
         sw.setChecked(param.getBooleanValue());
+        sw.setThumbTintList(ColorStateList.valueOf(0xFF00E5BC));
+        sw.setTrackTintList(ColorStateList.valueOf(0x6600E5BC));
+
         sw.setOnCheckedChangeListener((buttonView, isChecked) -> {
             param.setBooleanValue(isChecked);
             if (listener != null) {
@@ -166,14 +324,22 @@ public class EffectControlHelper {
         return row;
     }
 
-    private static View createColorControl(Context context, EffectDefinition effect, EffectParam param, float density, OnParamChangeListener listener) {
+    private static View createColorRow(
+            Context context,
+            EffectDefinition effect,
+            EffectParam param,
+            float density,
+            OnEffectInteractionListener listener) {
+
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                (int) (42 * density)
-        ));
+                (int) (38 * density)
+        );
+        rowLp.setMargins(0, (int) (3 * density), 0, (int) (3 * density));
+        row.setLayoutParams(rowLp);
 
         TextView tvLabel = new TextView(context);
         tvLabel.setText(param.getLabel());
@@ -183,7 +349,7 @@ public class EffectControlHelper {
         row.addView(tvLabel);
 
         View colorSwatch = new View(context);
-        int sz = (int) (28 * density);
+        int sz = (int) (26 * density);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(sz, sz);
         colorSwatch.setLayoutParams(clp);
 
@@ -193,9 +359,8 @@ public class EffectControlHelper {
         cd.setStroke(2, 0xFFFFFFFF);
         colorSwatch.setBackground(cd);
 
-        int[] colors = {0xFF00FF00, 0xFF0000FF, 0xFFFF0000, 0xFFFFFFFF, 0xFF000000, 0xFF00E5BC};
+        int[] colors = {0xFF00FF00, 0xFF0000FF, 0xFFFF0000, 0xFFFFFFFF, 0xFF000000, 0xFF00E5BC, 0xFF7A4B58, 0xFFFFD166};
         colorSwatch.setOnClickListener(v -> {
-            // Cycle color on tap
             int nextColor = colors[0];
             for (int i = 0; i < colors.length; i++) {
                 if (colors[i] == param.getColorValue()) {
@@ -215,3 +380,4 @@ public class EffectControlHelper {
         return row;
     }
 }
+

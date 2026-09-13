@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 
 public class TextLayer extends CanvasLayer {
@@ -48,6 +49,9 @@ public class TextLayer extends CanvasLayer {
         canvas.rotate(rotation);
         canvas.scale(scaleX, scaleY);
 
+        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip)
+        glab.pixeleditor.effect.EffectPipeline.applyEffectTransforms(canvas, this);
+
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(textSize);
         paint.setTextAlign(Paint.Align.CENTER);
@@ -68,18 +72,42 @@ public class TextLayer extends CanvasLayer {
             paint.setShadowLayer(8f, 2f, 4f, 0x88000000);
         }
 
-        // Stroke
+        RectF bounds = new RectF(-width / 2f, -height / 2f, width / 2f, height / 2f);
+
+        // Fill Paint
+        Paint fillPaint = new Paint(paint);
+        fillPaint.setStyle(Paint.Style.FILL);
+        fillPaint.setColor(textColor);
+
+        // Stroke Paint
+        Paint strokePaint = null;
         if (hasStroke && strokeWidth > 0) {
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(strokeWidth);
-            paint.setColor(strokeColor);
-            canvas.drawText(text, 0, baseline, paint);
+            strokePaint = new Paint(paint);
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setStrokeWidth(strokeWidth);
+            strokePaint.setColor(strokeColor);
         }
 
-        // Fill
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(textColor);
-        canvas.drawText(text, 0, baseline, paint);
+        // ColorFilter combining effects
+        android.graphics.ColorFilter filter = glab.pixeleditor.effect.EffectPipeline.createCombinedColorFilter(this);
+        if (filter != null) {
+            fillPaint.setColorFilter(filter);
+            if (strokePaint != null) strokePaint.setColorFilter(filter);
+        }
+
+        // Apply Mask, Trim, Blur, Shadow, Gradient
+        glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, bounds, fillPaint, strokePaint);
+
+        // Draw Stroke
+        if (strokePaint != null) {
+            canvas.drawText(text, 0, baseline, strokePaint);
+        }
+
+        // Draw Fill
+        canvas.drawText(text, 0, baseline, fillPaint);
+
+        // Post-draw vignette
+        glab.pixeleditor.effect.EffectPipeline.applyPostDraw(canvas, this, bounds);
 
         canvas.restore();
     }
@@ -100,6 +128,9 @@ public class TextLayer extends CanvasLayer {
         copy.setHasStroke(hasStroke);
         copy.setHasShadow(hasShadow);
         copy.recalculateBounds();
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            copy.addEffect(eff.copy());
+        }
         return copy;
     }
 

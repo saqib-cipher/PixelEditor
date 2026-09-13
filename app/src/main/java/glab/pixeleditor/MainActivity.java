@@ -200,8 +200,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     }
 
     public void handleSmartBack() {
-        // 1. If Effect Browser is open, close it
+        // 1. If Effect Browser is open, check if viewing a filtered category
         if (binding.containerEffectBrowser.getVisibility() == View.VISIBLE) {
+            View layoutFiltered = binding.getRoot().findViewById(R.id.layoutFilteredEffectsList);
+            if (layoutFiltered != null && layoutFiltered.getVisibility() == View.VISIBLE) {
+                showMainCategoryView();
+                return;
+            }
             binding.containerEffectBrowser.setVisibility(View.GONE);
             return;
         }
@@ -580,10 +585,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
         });
 
-        menuView.findViewById(R.id.btnToolPresets).setOnClickListener(v -> showPresetsDialog());
-
         menuView.findViewById(R.id.btnToolEffects).setOnClickListener(v -> {
-            binding.containerEffectBrowser.setVisibility(View.VISIBLE);
+            CanvasLayer layer = project.getSelectedLayer();
+            if (layer != null && !layer.getAppliedEffects().isEmpty()) {
+                openAppliedEffectsPanel();
+            } else {
+                binding.containerEffectBrowser.setVisibility(View.VISIBLE);
+            }
         });
     }
 
@@ -898,8 +906,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     // 7. EFFECT BROWSER & EFFECTS HELPER
     // -------------------------------------------------------------
     private void setupEffectBrowser() {
-        binding.getRoot().findViewById(R.id.btnCloseEffectBrowser).setOnClickListener(v ->
-                binding.containerEffectBrowser.setVisibility(View.GONE));
+        binding.getRoot().findViewById(R.id.btnCloseEffectBrowser).setOnClickListener(v -> {
+            View layoutFiltered = binding.getRoot().findViewById(R.id.layoutFilteredEffectsList);
+            if (layoutFiltered != null && layoutFiltered.getVisibility() == View.VISIBLE) {
+                showMainCategoryView();
+            } else {
+                binding.containerEffectBrowser.setVisibility(View.GONE);
+            }
+        });
 
         // Search Bar Toggle
         View layoutSearchBar = binding.getRoot().findViewById(R.id.layoutSearchBar);
@@ -1123,12 +1137,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             View row = getLayoutInflater().inflate(R.layout.item_effect_row, layoutList, false);
 
             TextView tvName = row.findViewById(R.id.tvEffectItemName);
-            TextView tvDesc = row.findViewById(R.id.tvEffectItemDesc);
             TextView tvParams = row.findViewById(R.id.tvEffectItemParamsSummary);
             ImageView ivThumb = row.findViewById(R.id.ivEffectThumbnail);
 
             tvName.setText(eff.getName());
-            tvDesc.setText(eff.getDescription().isEmpty() ? eff.getCategory() : eff.getDescription());
 
             int controlCount = eff.getParams().size();
             StringBuilder paramSummary = new StringBuilder();
@@ -1175,79 +1187,115 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         binding.getRoot().findViewById(R.id.btnBackFromEffectControls).setOnClickListener(v ->
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
 
+        binding.getRoot().findViewById(R.id.btnEffectBackRail).setOnClickListener(v ->
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+
+        binding.getRoot().findViewById(R.id.btnEffectKeyframe).setOnClickListener(v ->
+                Toast.makeText(this, "Keyframe added for effect", Toast.LENGTH_SHORT).show());
+
+        binding.getRoot().findViewById(R.id.btnEffectCurve).setOnClickListener(v ->
+                Toast.makeText(this, "Easing: Linear", Toast.LENGTH_SHORT).show());
+
+        binding.getRoot().findViewById(R.id.btnEffectMore).setOnClickListener(v ->
+                Toast.makeText(this, "Effect options", Toast.LENGTH_SHORT).show());
+
+        binding.getRoot().findViewById(R.id.btnAddEffectCard).setOnClickListener(v ->
+                binding.containerEffectBrowser.setVisibility(View.VISIBLE));
+
         binding.getRoot().findViewById(R.id.btnResetEffectParams).setOnClickListener(v -> {
-            if (activeSelectedEffect != null) {
-                activeSelectedEffect.resetAllParams();
-                LinearLayout container = binding.getRoot().findViewById(R.id.containerDynamicEffectControls);
-                EffectControlHelper.populateControls(this, container, activeSelectedEffect, this::applyEffectParamToActiveLayer);
-                applyEffectToActiveLayer(activeSelectedEffect);
-                Toast.makeText(this, "Parameters reset to defaults", Toast.LENGTH_SHORT).show();
+            CanvasLayer layer = project.getSelectedLayer();
+            if (layer != null) {
+                for (EffectDefinition eff : layer.getAppliedEffects()) {
+                    eff.resetAllParams();
+                }
+                refreshAppliedEffectsPanel();
+                binding.canvasView.invalidate();
+                Toast.makeText(this, "All effects reset to defaults", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    /**
-     * Opens dynamic parameter adjustment panel for any selected effect
-     */
-    public void openEffectControls(EffectDefinition effect) {
-        activeSelectedEffect = effect;
+    public void openAppliedEffectsPanel() {
+        CanvasLayer layer = project.getSelectedLayer();
+        if (layer == null) {
+            Toast.makeText(this, "Please select a layer first", Toast.LENGTH_SHORT).show();
+            return;
+        }
         binding.containerEffectBrowser.setVisibility(View.GONE);
+        binding.flipperBottomPanels.setDisplayedChild(PANEL_EFFECT_CONTROLS);
+        refreshAppliedEffectsPanel();
+    }
 
-        TextView tvTitle = binding.getRoot().findViewById(R.id.tvActiveEffectTitle);
-        TextView tvCat = binding.getRoot().findViewById(R.id.tvActiveEffectCategory);
-        tvTitle.setText(effect.getName());
-        tvCat.setText(effect.getCategory() + " • " + effect.getParams().size() + " Controls");
+    /**
+     * Applies selected effect to the active layer and opens the expandable controls panel
+     */
+    public void openEffectControls(EffectDefinition effectTemplate) {
+        CanvasLayer layer = project.getSelectedLayer();
+        if (layer == null) {
+            Toast.makeText(this, "Please select a layer to apply effect", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        LinearLayout container = binding.getRoot().findViewById(R.id.containerDynamicEffectControls);
-        EffectControlHelper.populateControls(this, container, effect, this::applyEffectParamToActiveLayer);
+        EffectDefinition cloned = effectTemplate.copy();
+        cloned.setExpanded(true);
+        layer.addEffect(cloned);
 
+        binding.containerEffectBrowser.setVisibility(View.GONE);
         binding.flipperBottomPanels.setDisplayedChild(PANEL_EFFECT_CONTROLS);
 
-        applyEffectToActiveLayer(effect);
-        Toast.makeText(this, effect.getName() + " loaded", Toast.LENGTH_SHORT).show();
-    }
-
-    private void applyEffectToActiveLayer(EffectDefinition effect) {
-        for (EffectParam p : effect.getParams()) {
-            applyEffectParamToActiveLayer(effect, p);
-        }
-    }
-
-    private void applyEffectParamToActiveLayer(EffectDefinition effect, EffectParam param) {
-        CanvasLayer layer = project.getSelectedLayer();
-        if (layer == null) return;
-
-        String id = param.getId().toLowerCase();
-
-        // If active layer is a PhotoLayer, map relevant parameters
-        if (layer instanceof PhotoLayer) {
-            PhotoLayer photo = (PhotoLayer) layer;
-            if (id.contains("bright")) {
-                // In XML, brightness is -1.0 to 1.0; map to -100 to 100
-                photo.setBrightness(param.getFloatValue() * 100f);
-            } else if (id.contains("contrast")) {
-                // In XML, contrast is -1.0 to 3.0; map to -100 to 100
-                photo.setContrast(param.getFloatValue() * 50f);
-            } else if (id.contains("sat")) {
-                photo.setSaturation(param.getFloatValue() * 100f);
-            } else if (id.contains("warm") || id.contains("temp")) {
-                photo.setWarmth(param.getFloatValue() * 100f);
-            } else if (id.contains("vignette") || id.contains("roundness") || id.contains("feather")) {
-                photo.setVignette(Math.max(0f, param.getFloatValue() * 50f));
-            }
-        } else if (layer instanceof ShapeLayer) {
-            ShapeLayer shape = (ShapeLayer) layer;
-            if (id.contains("radius") || id.contains("roundness")) {
-                shape.setCornerRadius(param.getFloatValue() * 50f);
-            } else if (id.contains("stroke") || id.contains("width") || id.contains("strength")) {
-                shape.setStrokeWidth(Math.max(0f, param.getFloatValue() * 10f));
-                shape.setHasStroke(shape.getStrokeWidth() > 0);
-            } else if (param.getType() == EffectParam.ParamType.COLOR) {
-                shape.setFillColor(param.getColorValue());
-            }
-        }
-
+        refreshAppliedEffectsPanel();
         binding.canvasView.invalidate();
+        Toast.makeText(this, cloned.getName() + " added", Toast.LENGTH_SHORT).show();
+    }
+
+    private void refreshAppliedEffectsPanel() {
+        CanvasLayer layer = project.getSelectedLayer();
+        LinearLayout container = binding.getRoot().findViewById(R.id.containerAppliedEffects);
+        TextView emptyView = binding.getRoot().findViewById(R.id.tvEmptyAppliedEffects);
+        TextView tvTitle = binding.getRoot().findViewById(R.id.tvEffectControlsTitle);
+
+        if (container == null) return;
+
+        if (layer != null && tvTitle != null) {
+            tvTitle.setText("Effects • " + layer.getName());
+        } else if (tvTitle != null) {
+            tvTitle.setText("Effects");
+        }
+
+        EffectControlHelper.populateAppliedEffectsList(
+                this,
+                getLayoutInflater(),
+                container,
+                emptyView,
+                layer,
+                new EffectControlHelper.OnEffectInteractionListener() {
+                    @Override
+                    public void onParamChanged(EffectDefinition effect, EffectParam param) {
+                        binding.canvasView.invalidate();
+                    }
+
+                    @Override
+                    public void onEffectToggled(EffectDefinition effect, boolean isEnabled) {
+                        binding.canvasView.invalidate();
+                    }
+
+                    @Override
+                    public void onEffectDeleted(EffectDefinition effect) {
+                        if (layer != null) {
+                            layer.removeEffect(effect);
+                            refreshAppliedEffectsPanel();
+                            binding.canvasView.invalidate();
+                            Toast.makeText(MainActivity.this, effect.getName() + " removed", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onEffectReset(EffectDefinition effect) {
+                        binding.canvasView.invalidate();
+                        Toast.makeText(MainActivity.this, effect.getName() + " reset", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     // -------------------------------------------------------------
@@ -1304,6 +1352,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
 
         updateTransformCoordinatesUI();
+
+        if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_EFFECT_CONTROLS) {
+            refreshAppliedEffectsPanel();
+        }
     }
 
     // -------------------------------------------------------------

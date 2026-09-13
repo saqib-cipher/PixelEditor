@@ -16,6 +16,9 @@ public class EffectDefinition {
     private final List<EffectParam> params = new ArrayList<>();
     private String shaderSource = "";
 
+    private boolean isEnabled = true;
+    private boolean isExpanded = false;
+
     public EffectDefinition(String id, String fileName, String name, String category) {
         this.id = id;
         this.fileName = fileName;
@@ -42,6 +45,22 @@ public class EffectDefinition {
         }
     }
 
+    public EffectDefinition copy() {
+        EffectDefinition copy = new EffectDefinition(id, fileName, name, category);
+        copy.setDescription(description);
+        copy.setCategory(category);
+        copy.setTags(tags);
+        copy.setThumbPath(thumbPath);
+        copy.setDeprecated(isDeprecated);
+        copy.setShaderSource(shaderSource);
+        copy.setEnabled(isEnabled);
+        copy.setExpanded(isExpanded);
+        for (EffectParam p : params) {
+            copy.addParam(p.copy());
+        }
+        return copy;
+    }
+
     // Getters and Setters
     public String getId() { return id; }
     public String getFileName() { return fileName; }
@@ -57,6 +76,10 @@ public class EffectDefinition {
     public void setThumbPath(String thumbPath) { this.thumbPath = thumbPath; }
     public boolean isDeprecated() { return isDeprecated; }
     public void setDeprecated(boolean deprecated) { isDeprecated = deprecated; }
+    public boolean isEnabled() { return isEnabled; }
+    public void setEnabled(boolean enabled) { this.isEnabled = enabled; }
+    public boolean isExpanded() { return isExpanded; }
+    public void setExpanded(boolean expanded) { this.isExpanded = expanded; }
     public List<EffectParam> getParams() { return params; }
     public String getShaderSource() { return shaderSource; }
     public void setShaderSource(String shaderSource) { this.shaderSource = shaderSource; }

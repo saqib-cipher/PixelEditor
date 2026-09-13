@@ -35,6 +35,9 @@ public class PhotoLayer extends CanvasLayer {
         canvas.rotate(rotation);
         canvas.scale(scaleX, scaleY);
 
+        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip)
+        glab.pixeleditor.effect.EffectPipeline.applyEffectTransforms(canvas, this);
+
         float left = -width / 2f;
         float top = -height / 2f;
         float right = width / 2f;
@@ -44,25 +47,20 @@ public class PhotoLayer extends CanvasLayer {
 
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         paint.setAlpha(opacity);
-        paint.setColorFilter(createCombinedFilter());
+
+        // ColorFilter combining base adjustments + all applied effects
+        ColorFilter filter = glab.pixeleditor.effect.EffectPipeline.createCombinedColorFilter(this);
+        if (filter != null) {
+            paint.setColorFilter(filter);
+        }
+
+        // Apply Mask, Trim, Blur
+        glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, destRect, paint, null);
 
         canvas.drawBitmap(bitmap, srcRect, destRect, paint);
 
-        // Optional Vignette overlay
-        if (vignette > 0) {
-            Paint vigPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            float radius = Math.max(width, height) * 0.7f;
-            int vigAlpha = (int) (vignette * 2.2f);
-            int darkEdge = (vigAlpha << 24) | 0x000000;
-            RadialGradient gradient = new RadialGradient(
-                    0, 0, radius,
-                    new int[]{0x00000000, darkEdge},
-                    new float[]{0.5f, 1.0f},
-                    Shader.TileMode.CLAMP
-            );
-            vigPaint.setShader(gradient);
-            canvas.drawRect(destRect, vigPaint);
-        }
+        // Post-draw vignette & overlays
+        glab.pixeleditor.effect.EffectPipeline.applyPostDraw(canvas, this, destRect);
 
         canvas.restore();
     }
@@ -163,6 +161,9 @@ public class PhotoLayer extends CanvasLayer {
         copy.setWarmth(warmth);
         copy.setVignette(vignette);
         copy.setFilterPreset(filterPreset);
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            copy.addEffect(eff.copy());
+        }
         return copy;
     }
 

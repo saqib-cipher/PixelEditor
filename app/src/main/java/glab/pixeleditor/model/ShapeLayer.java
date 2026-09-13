@@ -42,6 +42,9 @@ public class ShapeLayer extends CanvasLayer {
         canvas.rotate(rotation);
         canvas.scale(scaleX, scaleY);
 
+        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip)
+        glab.pixeleditor.effect.EffectPipeline.applyEffectTransforms(canvas, this);
+
         float left = -width / 2f;
         float top = -height / 2f;
         float right = width / 2f;
@@ -66,7 +69,20 @@ public class ShapeLayer extends CanvasLayer {
             strokePaint.setAlpha(opacity);
         }
 
+        // Apply ColorMatrix / Filters from active effects
+        android.graphics.ColorFilter filter = glab.pixeleditor.effect.EffectPipeline.createCombinedColorFilter(this);
+        if (filter != null) {
+            fillPaint.setColorFilter(filter);
+            if (strokePaint != null) strokePaint.setColorFilter(filter);
+        }
+
+        // Apply Masks, Blurs, Trims, Shadow, and Gradient Overlays
+        glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, rect, fillPaint, strokePaint);
+
         drawShapeGeometry(canvas, rect, fillPaint, strokePaint);
+
+        // Apply post-draw effects (e.g. Vignette)
+        glab.pixeleditor.effect.EffectPipeline.applyPostDraw(canvas, this, rect);
 
         canvas.restore();
     }
@@ -203,6 +219,9 @@ public class ShapeLayer extends CanvasLayer {
         copy.setStrokeWidth(strokeWidth);
         copy.setHasStroke(hasStroke);
         copy.setCornerRadius(cornerRadius);
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            copy.addEffect(eff.copy());
+        }
         return copy;
     }
 

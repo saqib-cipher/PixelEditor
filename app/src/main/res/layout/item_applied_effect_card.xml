@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.PixelEditor.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="6dp"
+    app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+    app:cardCornerRadius="10dp"
+    app:strokeColor="@color/pe_border">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Card Header Row -->
+        <LinearLayout
+            android:id="@+id/layoutCardHeader"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="10dp">
+
+            <!-- Expand / Collapse Arrow (Rotates 90 deg when expanded) -->
+            <ImageView
+                android:id="@+id/ivExpandArrow"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_pe_expand_arrow"
+                app:tint="@color/pe_text_secondary" />
+
+            <!-- Effect Title -->
+            <TextView
+                android:id="@+id/tvEffectCardName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Stretch Axis"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Collapsed Actions (Eye Visibility + Reorder Grip) -->
+            <LinearLayout
+                android:id="@+id/layoutCollapsedActions"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="visible">
+
+                <ImageButton
+                    android:id="@+id/btnToggleVisibility"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_visible"
+                    app:tint="@color/pe_text_secondary" />
+
+                <ImageView
+                    android:id="@+id/ivReorderGrip"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="6dp"
+                    android:src="@drawable/ic_pe_menu"
+                    app:tint="@color/pe_text_tertiary" />
+            </LinearLayout>
+
+            <!-- Expanded Actions (3-Dots Menu + Trash Delete) -->
+            <LinearLayout
+                android:id="@+id/layoutExpandedActions"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageButton
+                    android:id="@+id/btnEffectOptions"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_more"
+                    app:tint="@color/pe_text_secondary" />
+
+                <ImageButton
+                    android:id="@+id/btnDeleteEffect"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_delete"
+                    app:tint="@color/pe_accent_danger" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Dynamic Parameter Controls Container (Expanded State) -->
+        <LinearLayout
+            android:id="@+id/containerCardParams"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="10dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

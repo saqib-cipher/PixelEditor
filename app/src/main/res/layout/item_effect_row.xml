@@ -44,26 +44,15 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tvEffectItemDesc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Adjusts photo brightness and contrast"
-                android:textColor="@color/pe_text_secondary"
-                android:textSize="11sp" />
-
             <!-- Tags / Params chip -->
             <TextView
                 android:id="@+id/tvEffectItemParamsSummary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Controls: Brightness, Contrast"
+                android:text="2 Controls"
                 android:textColor="@color/pe_accent_mint"
-                android:textSize="10sp" />
+                android:textSize="11sp" />
         </LinearLayout>
 
         <!-- Arrow indicator -->

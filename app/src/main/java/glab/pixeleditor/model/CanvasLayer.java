@@ -6,7 +6,10 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.RectF;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import glab.pixeleditor.effect.EffectDefinition;
 
 public abstract class CanvasLayer {
     protected String id;
@@ -21,6 +24,7 @@ public abstract class CanvasLayer {
     protected int opacity = 255; // 0..255
     protected boolean isVisible = true;
     protected boolean isLocked = false;
+    protected final List<EffectDefinition> appliedEffects = new ArrayList<>();
 
     public CanvasLayer(String name, float x, float y, float width, float height) {
         this.id = UUID.randomUUID().toString();
@@ -101,4 +105,22 @@ public abstract class CanvasLayer {
     public void setVisible(boolean visible) { isVisible = visible; }
     public boolean isLocked() { return isLocked; }
     public void setLocked(boolean locked) { isLocked = locked; }
+
+    public List<EffectDefinition> getAppliedEffects() { return appliedEffects; }
+    public void addEffect(EffectDefinition effect) {
+        if (effect != null) {
+            appliedEffects.add(effect);
+        }
+    }
+    public void removeEffect(int index) {
+        if (index >= 0 && index < appliedEffects.size()) {
+            appliedEffects.remove(index);
+        }
+    }
+    public void removeEffect(EffectDefinition effect) {
+        appliedEffects.remove(effect);
+    }
+    public void clearAppliedEffects() {
+        appliedEffects.clear();
+    }
 }

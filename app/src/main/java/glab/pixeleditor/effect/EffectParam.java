@@ -79,6 +79,14 @@ public class EffectParam {
         this.floatValue = defaultValue;
     }
 
+    public EffectParam copy() {
+        EffectParam copy = new EffectParam(id, type, label, defaultValue, minValue, maxValue, step, unitType);
+        copy.setFloatValue(floatValue);
+        copy.setBooleanValue(booleanValue);
+        copy.setColorValue(colorValue);
+        return copy;
+    }
+
     // Getters and Setters
     public String getId() { return id; }
     public ParamType getType() { return type; }
