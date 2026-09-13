@@ -59,7 +59,6 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
         ImageButton btnClear = view.findViewById(R.id.btnClearProjectName);
         TextView tvCompSize = view.findViewById(R.id.tvCompSizeDesc);
         TextView tvRes = view.findViewById(R.id.tvSelectedResolution);
-        TextView tvFps = view.findViewById(R.id.tvSelectedFps);
         TextView tvBgName = view.findViewById(R.id.tvSelectedBgName);
         View viewBgSwatch = view.findViewById(R.id.viewSelectedBgSwatch);
 
@@ -165,18 +164,6 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
                     .show();
         });
 
-        // Frame Rate Picker
-        view.findViewById(R.id.cardPickerFps).setOnClickListener(v -> {
-            String[] fpsOptions = {"30 fps", "60 fps", "24 fps", "15 fps"};
-            int[] fpsVals = {30, 60, 24, 15};
-            new MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Select Frame Rate")
-                    .setItems(fpsOptions, (dialog, which) -> {
-                        selectedFps = fpsVals[which];
-                        tvFps.setText(fpsOptions[which]);
-                    })
-                    .show();
-        });
 
         // Background Color Picker
         view.findViewById(R.id.cardPickerBg).setOnClickListener(v -> {

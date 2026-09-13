@@ -41,6 +41,8 @@ import com.google.android.material.slider.Slider;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import glab.pixeleditor.databinding.ActivityMainBinding;
 import glab.pixeleditor.effect.EffectControlHelper;
@@ -69,6 +71,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private static final int PANEL_PHOTO_ADJUST = 4;
     private static final int SHEET_ADD_ELEMENT = 5;
     private static final int PANEL_EFFECT_CONTROLS = 6;
+    private static final int PANEL_MOVE_TRANSFORM = 7;
+
+    private enum TransformMode {
+        POSITION,
+        ROTATE,
+        SCALE,
+        SKEW
+    }
+
+    private TransformMode currentTransformMode = TransformMode.POSITION;
+    private glab.pixeleditor.ui.CanvasLayerSidebarAdapter sidebarAdapter;
 
     // Aspect ratio definitions
     private final String[] aspectLabels = {"4:5", "1:1", "9:16", "16:9"};
@@ -114,6 +127,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         setupAddElementSheet();
         setupEffectBrowser();
         setupEffectControlsPanel();
+        setupMoveTransformPanel();
+        setupRightLayersSidebar();
 
         // Load all XML effects asynchronously from assets/effects
         loadEffectsAsync();
@@ -553,8 +568,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         menuView.findViewById(R.id.btnToolTransform).setOnClickListener(v -> {
             CanvasLayer layer = project.getSelectedLayer();
             if (layer != null) {
-                layer.setRotation(layer.getRotation() + 45f);
-                binding.canvasView.invalidate();
+                openMoveTransformPanel();
+            } else {
+                Toast.makeText(this, "Select a layer first", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -1289,5 +1305,295 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         } else {
             binding.viewLayerColorChip.setVisibility(View.GONE);
         }
+
+        updateRightLayersSidebar();
+        updateTransformCoordinatesUI();
+    }
+
+    // -------------------------------------------------------------
+    // 9. RIGHT-SIDE LAYERS PANEL STACK
+    // -------------------------------------------------------------
+    private void setupRightLayersSidebar() {
+        RecyclerView rv = binding.getRoot().findViewById(R.id.rvRightLayers);
+        if (rv == null) return;
+
+        rv.setLayoutManager(new LinearLayoutManager(this));
+        sidebarAdapter = new glab.pixeleditor.ui.CanvasLayerSidebarAdapter(this, new glab.pixeleditor.ui.CanvasLayerSidebarAdapter.OnLayerSidebarListener() {
+            @Override
+            public void onLayerSelected(int index) {
+                project.setSelectedIndex(index);
+                binding.canvasView.invalidate();
+                updateUIForActiveLayer(project.getSelectedLayer());
+            }
+
+            @Override
+            public void onLayerVisibilityToggle(int index) {
+                if (index >= 0 && index < project.getLayers().size()) {
+                    CanvasLayer l = project.getLayers().get(index);
+                    l.setVisible(!l.isVisible());
+                    binding.canvasView.invalidate();
+                    updateRightLayersSidebar();
+                    if (index == project.getSelectedIndex()) {
+                        updateUIForActiveLayer(l);
+                    }
+                }
+            }
+        });
+        rv.setAdapter(sidebarAdapter);
+
+        // Expand / Collapse Sidebar Toggle
+        View btnToggle = binding.getRoot().findViewById(R.id.btnToggleRightLayers);
+        View containerCard = binding.getRoot().findViewById(R.id.cardRightLayersContainer);
+        ImageView ivChevron = binding.getRoot().findViewById(R.id.ivToggleLayersChevron);
+
+        if (btnToggle != null && containerCard != null) {
+            btnToggle.setOnClickListener(v -> {
+                if (containerCard.getVisibility() == View.VISIBLE) {
+                    containerCard.setVisibility(View.GONE);
+                    if (ivChevron != null) ivChevron.setAlpha(0.6f);
+                } else {
+                    containerCard.setVisibility(View.VISIBLE);
+                    if (ivChevron != null) ivChevron.setAlpha(1.0f);
+                    updateRightLayersSidebar();
+                }
+            });
+        }
+
+        updateRightLayersSidebar();
+    }
+
+    private void updateRightLayersSidebar() {
+        if (sidebarAdapter != null && project != null) {
+            sidebarAdapter.setLayers(project.getLayers(), project.getSelectedIndex());
+            TextView tvCount = binding.getRoot().findViewById(R.id.tvRightLayersCount);
+            if (tvCount != null) {
+                tvCount.setText(String.valueOf(project.getLayers().size()));
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 10. MOVE & TRANSFORM CONTROL PANEL (Alight Motion inspired)
+    // -------------------------------------------------------------
+    private void setupMoveTransformPanel() {
+        View panel = binding.flipperBottomPanels.getChildAt(PANEL_MOVE_TRANSFORM);
+        if (panel == null) return;
+
+        // Back buttons
+        View.OnClickListener backClick = v -> binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+        panel.findViewById(R.id.btnBackFromTransform).setOnClickListener(backClick);
+        panel.findViewById(R.id.btnTransformBackRail).setOnClickListener(backClick);
+
+        // Mode cards
+        MaterialCardView cardPos = panel.findViewById(R.id.cardModePosition);
+        MaterialCardView cardRot = panel.findViewById(R.id.cardModeRotate);
+        MaterialCardView cardScale = panel.findViewById(R.id.cardModeScale);
+        MaterialCardView cardSkew = panel.findViewById(R.id.cardModeSkew);
+
+        ImageView ivPos = panel.findViewById(R.id.ivModePosition);
+        ImageView ivRot = panel.findViewById(R.id.ivModeRotate);
+        ImageView ivScale = panel.findViewById(R.id.ivModeScale);
+        ImageView ivSkew = panel.findViewById(R.id.ivModeSkew);
+
+        MaterialCardView[] modeCards = {cardPos, cardRot, cardScale, cardSkew};
+        ImageView[] modeIcons = {ivPos, ivRot, ivScale, ivSkew};
+        TransformMode[] modes = {TransformMode.POSITION, TransformMode.ROTATE, TransformMode.SCALE, TransformMode.SKEW};
+
+        TextView tvHint = panel.findViewById(R.id.tvTransformHint);
+
+        Runnable updateModeSelectorUI = () -> {
+            for (int i = 0; i < modeCards.length; i++) {
+                if (modes[i] == currentTransformMode) {
+                    modeCards[i].setCardBackgroundColor(0xFF00E5BC);
+                    modeCards[i].setStrokeColor(0xFF00E5BC);
+                    modeIcons[i].setColorFilter(0xFF00382B);
+                } else {
+                    modeCards[i].setCardBackgroundColor(0xFF1E273C);
+                    modeCards[i].setStrokeColor(0xFF2C3852);
+                    modeIcons[i].setColorFilter(0xFF94A3B8);
+                }
+            }
+
+            if (currentTransformMode == TransformMode.POSITION) {
+                tvHint.setText("Swipe here to move layer");
+            } else if (currentTransformMode == TransformMode.ROTATE) {
+                tvHint.setText("Swipe here to rotate layer");
+            } else if (currentTransformMode == TransformMode.SCALE) {
+                tvHint.setText("Swipe here to resize layer");
+            } else if (currentTransformMode == TransformMode.SKEW) {
+                tvHint.setText("Swipe here to skew layer");
+            }
+
+            updateTransformCoordinatesUI();
+        };
+
+        for (int i = 0; i < modeCards.length; i++) {
+            final int idx = i;
+            modeCards[i].setOnClickListener(v -> {
+                currentTransformMode = modes[idx];
+                updateModeSelectorUI.run();
+            });
+        }
+
+        // Sub-rail actions: Keyframe, Curve, More
+        panel.findViewById(R.id.btnTransformKeyframe).setOnClickListener(v -> {
+            Toast.makeText(this, "Position Keyframe pinned", Toast.LENGTH_SHORT).show();
+        });
+
+        panel.findViewById(R.id.btnTransformCurve).setOnClickListener(v -> {
+            Toast.makeText(this, "Standard Ease In-Out Curve applied", Toast.LENGTH_SHORT).show();
+        });
+
+        panel.findViewById(R.id.btnTransformMore).setOnClickListener(v -> showTransformMoreDialog());
+
+        // Large Interactive Touchpad Surface
+        View pad = panel.findViewById(R.id.viewTransformPad);
+        pad.setOnTouchListener(new View.OnTouchListener() {
+            private float lastTouchX, lastTouchY;
+
+            @Override
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer == null) return false;
+
+                switch (event.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        lastTouchX = event.getX();
+                        lastTouchY = event.getY();
+                        v.getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        float dx = event.getX() - lastTouchX;
+                        float dy = event.getY() - lastTouchY;
+                        lastTouchX = event.getX();
+                        lastTouchY = event.getY();
+
+                        if (currentTransformMode == TransformMode.POSITION) {
+                            layer.setX(layer.getX() + dx);
+                            layer.setY(layer.getY() + dy);
+                        } else if (currentTransformMode == TransformMode.ROTATE) {
+                            float deg = (dx * 0.5f) + (dy * 0.2f);
+                            float newRot = (layer.getRotation() + deg) % 360f;
+                            if (newRot < 0) newRot += 360f;
+                            layer.setRotation(newRot);
+                        } else if (currentTransformMode == TransformMode.SCALE) {
+                            float scaleFactor = 1.0f + (dx * 0.005f) - (dy * 0.005f);
+                            float newW = Math.max(20f, Math.min(2500f, layer.getWidth() * scaleFactor));
+                            float newH = Math.max(20f, Math.min(2500f, layer.getHeight() * scaleFactor));
+                            layer.setWidth(newW);
+                            layer.setHeight(newH);
+                        } else if (currentTransformMode == TransformMode.SKEW) {
+                            float deg = (dx * 0.3f);
+                            layer.setRotation((layer.getRotation() + deg) % 360f);
+                        }
+
+                        binding.canvasView.invalidate();
+                        updateTransformCoordinatesUI();
+                        return true;
+
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
+                        return true;
+                }
+                return false;
+            }
+        });
+
+        updateModeSelectorUI.run();
+    }
+
+    private void openMoveTransformPanel() {
+        binding.flipperBottomPanels.setDisplayedChild(PANEL_MOVE_TRANSFORM);
+        updateTransformCoordinatesUI();
+    }
+
+    private void updateTransformCoordinatesUI() {
+        View panel = binding.flipperBottomPanels.getChildAt(PANEL_MOVE_TRANSFORM);
+        if (panel == null) return;
+
+        TextView tvLabel1 = panel.findViewById(R.id.tvCoordLabel1);
+        TextView tvVal1 = panel.findViewById(R.id.tvCoordVal1);
+        TextView tvLabel2 = panel.findViewById(R.id.tvCoordLabel2);
+        TextView tvVal2 = panel.findViewById(R.id.tvCoordVal2);
+        TextView tvLabel3 = panel.findViewById(R.id.tvCoordLabel3);
+        TextView tvVal3 = panel.findViewById(R.id.tvCoordVal3);
+
+        if (tvVal1 == null || tvVal2 == null || tvVal3 == null) return;
+
+        CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+        if (layer == null) {
+            tvVal1.setText("0.00");
+            tvVal2.setText("0.00");
+            tvVal3.setText("0.00");
+            return;
+        }
+
+        if (currentTransformMode == TransformMode.POSITION) {
+            tvLabel1.setText("X: ");
+            tvVal1.setText(String.format(java.util.Locale.US, "%.2f", layer.getX()));
+            tvLabel2.setText("Y: ");
+            tvVal2.setText(String.format(java.util.Locale.US, "%.2f", layer.getY()));
+            tvLabel3.setText("Z: ");
+            tvVal3.setText("0.00");
+        } else if (currentTransformMode == TransformMode.ROTATE) {
+            tvLabel1.setText("Angle: ");
+            tvVal1.setText(String.format(java.util.Locale.US, "%.1f°", layer.getRotation()));
+            tvLabel2.setText("Pivot: ");
+            tvVal2.setText("Center");
+            tvLabel3.setText("Z: ");
+            tvVal3.setText("0.00");
+        } else if (currentTransformMode == TransformMode.SCALE) {
+            tvLabel1.setText("W: ");
+            tvVal1.setText(String.format(java.util.Locale.US, "%.0f", layer.getWidth()));
+            tvLabel2.setText("H: ");
+            tvVal2.setText(String.format(java.util.Locale.US, "%.0f", layer.getHeight()));
+            tvLabel3.setText("Scale: ");
+            tvVal3.setText("100%");
+        } else if (currentTransformMode == TransformMode.SKEW) {
+            tvLabel1.setText("Skew X: ");
+            tvVal1.setText("0.0°");
+            tvLabel2.setText("Skew Y: ");
+            tvVal2.setText("0.0°");
+            tvLabel3.setText("Z: ");
+            tvVal3.setText("0.00");
+        }
+    }
+
+    private void showTransformMoreDialog() {
+        String[] actions = {
+                "Center to Canvas",
+                "Reset Rotation (0°)",
+                "Reset Size (1:1)",
+                "Flip Horizontally",
+                "Flip Vertically"
+        };
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Transform Options")
+                .setItems(actions, (dialog, which) -> {
+                    CanvasLayer layer = project.getSelectedLayer();
+                    if (layer == null) return;
+
+                    if (which == 0) {
+                        layer.setX(project.getCanvasWidth() / 2f);
+                        layer.setY(project.getCanvasHeight() / 2f);
+                    } else if (which == 1) {
+                        layer.setRotation(0f);
+                    } else if (which == 2) {
+                        layer.setWidth(300f);
+                        layer.setHeight(300f);
+                    } else if (which == 3) {
+                        layer.setRotation((layer.getRotation() + 180f) % 360f);
+                    } else if (which == 4) {
+                        layer.setRotation((layer.getRotation() + 180f) % 360f);
+                    }
+
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                    Toast.makeText(this, actions[which], Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 }

@@ -56,12 +56,14 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ProjectV
     @Override
     public void onBindViewHolder(@NonNull ProjectViewHolder holder, int position) {
         ProjectStorageManager.ProjectItem item = items.get(position);
-
         holder.tvTitle.setText(item.getTitle());
         holder.tvAspect.setText(item.getAspectRatio());
         holder.tvResolution.setText(item.getFormattedResolution());
         holder.tvSize.setText(item.getFormattedSize());
-        holder.tvFps.setText(item.getFps() + "fps");
+
+        // Format date: e.g. "Sep 13"
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault());
+        holder.tvDate.setText(sdf.format(new java.util.Date(item.getLastModified())));
 
         // Load thumbnail
         Bitmap thumb = ProjectStorageManager.loadThumbnail(context, item);
@@ -124,8 +126,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ProjectV
         TextView tvAspect;
         TextView tvResolution;
         TextView tvSize;
-        TextView tvFps;
-        TextView tvDuration;
+        TextView tvDate;
         ImageButton btnMore;
 
         public ProjectViewHolder(@NonNull View itemView) {
@@ -135,8 +136,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ProjectV
             tvAspect = itemView.findViewById(R.id.tvProjectAspect);
             tvResolution = itemView.findViewById(R.id.tvProjectResolution);
             tvSize = itemView.findViewById(R.id.tvProjectSize);
-            tvFps = itemView.findViewById(R.id.tvProjectFps);
-            tvDuration = itemView.findViewById(R.id.tvProjectDuration);
+            tvDate = itemView.findViewById(R.id.tvProjectDate);
             btnMore = itemView.findViewById(R.id.btnProjectMore);
         }
     }

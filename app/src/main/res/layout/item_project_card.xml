@@ -22,7 +22,7 @@
         android:orientation="horizontal"
         android:padding="10dp">
 
-        <!-- Thumbnail Container with Duration Badge -->
+        <!-- Thumbnail Container -->
         <FrameLayout
             android:layout_width="68dp"
             android:layout_height="68dp">
@@ -34,24 +34,6 @@
                 android:scaleType="centerCrop"
                 android:background="#2C3957"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
-
-            <!-- Duration Badge -->
-            <TextView
-                android:id="@+id/tvProjectDuration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:layout_marginBottom="4dp"
-                android:background="@drawable/bg_pill_accent"
-                android:backgroundTint="#CC000000"
-                android:paddingStart="5dp"
-                android:paddingEnd="5dp"
-                android:paddingTop="1dp"
-                android:paddingBottom="1dp"
-                android:text="00:00:02"
-                android:textColor="@color/pe_text_primary"
-                android:textSize="9sp"
-                android:textStyle="bold" />
         </FrameLayout>
 
         <!-- Project Info -->
@@ -111,7 +93,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Second Row: Size & FPS -->
+            <!-- Second Row: Size & Last Modified Date -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -134,19 +116,12 @@
                     android:textColor="@color/pe_text_secondary"
                     android:textSize="11sp" />
 
-                <ImageView
-                    android:layout_width="13dp"
-                    android:layout_height="13dp"
-                    android:layout_marginStart="12dp"
-                    android:src="@drawable/ic_pe_fps"
-                    app:tint="@color/pe_text_secondary" />
-
                 <TextView
-                    android:id="@+id/tvProjectFps"
+                    android:id="@+id/tvProjectDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="30fps"
+                    android:layout_marginStart="10dp"
+                    android:text="Today"
                     android:textColor="@color/pe_text_secondary"
                     android:textSize="11sp" />
             </LinearLayout>

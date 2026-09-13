@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -95,10 +96,13 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
                 topBar.setPadding(insets.left + 16, insets.top, insets.right + 16, 0);
             }
 
-            // Pad bottom nav
-            View nav = findViewById(R.id.homeBottomNavContainer);
-            if (nav != null) {
-                nav.setPadding(insets.left, 0, insets.right, insets.bottom);
+            // Pad bottom fab for navigation bar
+            View fab = findViewById(R.id.fabCreateProject);
+            if (fab != null) {
+                ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) fab.getLayoutParams();
+                float density = getResources().getDisplayMetrics().density;
+                lp.bottomMargin = (int) (24 * density) + insets.bottom;
+                fab.setLayoutParams(lp);
             }
 
             return windowInsets;
@@ -187,16 +191,10 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
     }
 
     private void setupBottomNav() {
-        FloatingActionButton fab = findViewById(R.id.fabCreateProject);
-        fab.setOnClickListener(v -> openCreateProjectBottomSheet());
-
-        findViewById(R.id.navBtnHome).setOnClickListener(v -> switchTab(HomeTab.PROJECTS));
-        findViewById(R.id.navBtnTutorials).setOnClickListener(v ->
-                Toast.makeText(this, "Tutorials & Creative Guides coming soon", Toast.LENGTH_SHORT).show());
-        findViewById(R.id.navBtnProjects).setOnClickListener(v -> switchTab(HomeTab.PROJECTS));
-        findViewById(R.id.navBtnTemplates).setOnClickListener(v -> {
-            openCreateProjectBottomSheet();
-        });
+        com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton fab = findViewById(R.id.fabCreateProject);
+        if (fab != null) {
+            fab.setOnClickListener(v -> openCreateProjectBottomSheet());
+        }
     }
 
     private void openCreateProjectBottomSheet() {

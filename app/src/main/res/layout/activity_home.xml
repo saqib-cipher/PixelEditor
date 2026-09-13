@@ -239,138 +239,20 @@
         </FrameLayout>
     </LinearLayout>
 
-    <!-- 5. Bottom Navigation Bar + Center + FAB -->
-    <FrameLayout
-        android:id="@+id/homeBottomNavContainer"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_gravity="bottom">
-
-        <!-- Bottom Navigation Bar Background -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_gravity="bottom"
-            android:background="@color/pe_surface_panel"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <!-- Home -->
-            <LinearLayout
-                android:id="@+id/navBtnHome"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_pe_home"
-                    app:tint="@color/pe_accent_mint" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Home"
-                    android:textColor="@color/pe_accent_mint"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Tutorials -->
-            <LinearLayout
-                android:id="@+id/navBtnTutorials"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_pe_tutorials"
-                    app:tint="@color/pe_text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Tutorials"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- Center Space for Floating Action Button -->
-            <View
-                android:layout_width="64dp"
-                android:layout_height="match_parent" />
-
-            <!-- Projects -->
-            <LinearLayout
-                android:id="@+id/navBtnProjects"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_pe_layers"
-                    app:tint="@color/pe_text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Projects"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- Templates -->
-            <LinearLayout
-                android:id="@+id/navBtnTemplates"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_pe_template"
-                    app:tint="@color/pe_text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Templates"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Center Green Circular + Floating Action Button -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fabCreateProject"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
-            android:contentDescription="Create Project"
-            android:src="@drawable/ic_pe_add"
-            app:backgroundTint="@color/pe_accent_mint"
-            app:borderWidth="0dp"
-            app:elevation="8dp"
-            app:fabCustomSize="56dp"
-            app:tint="#00382B" />
-    </FrameLayout>
+    <!-- 5. Floating Action Button for Project Creation -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabCreateProject"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="24dp"
+        android:text="New Project"
+        android:textColor="#00382B"
+        android:textStyle="bold"
+        app:backgroundTint="@color/pe_accent_mint"
+        app:elevation="6dp"
+        app:icon="@drawable/ic_pe_add"
+        app:iconTint="#00382B" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
