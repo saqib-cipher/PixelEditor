@@ -114,14 +114,27 @@ public class EffectControlHelper {
             }
         });
 
-        // Effect Options / Reset button
+        // Effect Options (Reset & View/Modify Shader CDATA)
         btnEffectOptions.setOnClickListener(v -> {
-            effect.resetAllParams();
-            containerParams.removeAllViews();
-            populateParamRows(context, containerParams, effect, density, listener);
-            if (listener != null) {
-                listener.onEffectReset(effect);
-            }
+            String[] options = new String[]{
+                    "Reset to Default Values",
+                    "View / Modify Shader Code (CDATA)"
+            };
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                    .setTitle(effect.getName() + " Options")
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            effect.resetAllParams();
+                            containerParams.removeAllViews();
+                            populateParamRows(context, containerParams, effect, density, listener);
+                            if (listener != null) {
+                                listener.onEffectReset(effect);
+                            }
+                        } else if (which == 1) {
+                            showShaderEditorDialog(context, effect, listener);
+                        }
+                    })
+                    .show();
         });
 
         // Populate parameter controls inside card
@@ -378,6 +391,43 @@ public class EffectControlHelper {
         row.addView(colorSwatch);
 
         return row;
+    }
+
+    private static void showShaderEditorDialog(
+            Context context,
+            EffectDefinition effect,
+            OnEffectInteractionListener listener) {
+
+        android.widget.EditText editText = new android.widget.EditText(context);
+        editText.setText(effect.getShaderSource() != null ? effect.getShaderSource() : "");
+        editText.setTypeface(Typeface.MONOSPACE);
+        editText.setTextSize(11);
+        editText.setTextColor(0xFF00E5BC);
+        editText.setBackgroundColor(0xFF0F172A);
+        editText.setPadding(32, 24, 32, 24);
+        editText.setHorizontallyScrolling(true);
+        editText.setVerticalScrollBarEnabled(true);
+        editText.setHorizontalScrollBarEnabled(true);
+
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(context);
+        scrollView.addView(editText, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (int) (350 * context.getResources().getDisplayMetrics().density)
+        ));
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                .setTitle(effect.getName() + " Shader (CDATA)")
+                .setMessage("Fragment shader source extracted from XML. Edit and tap Apply to test changes live.")
+                .setView(scrollView)
+                .setPositiveButton("Apply & Save", (dialog, which) -> {
+                    String newSource = editText.getText().toString();
+                    effect.setShaderSource(newSource);
+                    if (listener != null) {
+                        listener.onParamChanged(effect, null);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 }
 

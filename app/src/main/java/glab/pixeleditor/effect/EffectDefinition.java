@@ -83,4 +83,59 @@ public class EffectDefinition {
     public List<EffectParam> getParams() { return params; }
     public String getShaderSource() { return shaderSource; }
     public void setShaderSource(String shaderSource) { this.shaderSource = shaderSource; }
+
+    public org.json.JSONObject toJson() {
+        try {
+            org.json.JSONObject json = new org.json.JSONObject();
+            json.put("id", id);
+            json.put("fileName", fileName);
+            json.put("name", name);
+            json.put("description", description);
+            json.put("category", category);
+            json.put("tags", tags);
+            json.put("thumbPath", thumbPath);
+            json.put("isDeprecated", isDeprecated);
+            json.put("isEnabled", isEnabled);
+            json.put("isExpanded", isExpanded);
+            json.put("shaderSource", shaderSource);
+
+            org.json.JSONArray pArray = new org.json.JSONArray();
+            for (EffectParam p : params) {
+                pArray.put(p.toJson());
+            }
+            json.put("params", pArray);
+            return json;
+        } catch (Exception e) {
+            return new org.json.JSONObject();
+        }
+    }
+
+    public static EffectDefinition fromJson(org.json.JSONObject json) {
+        if (json == null) return null;
+        String id = json.optString("id", "");
+        String fileName = json.optString("fileName", "");
+        String name = json.optString("name", "Effect");
+        String category = json.optString("category", "Other");
+
+        EffectDefinition eff = new EffectDefinition(id, fileName, name, category);
+        eff.description = json.optString("description", "");
+        eff.tags = json.optString("tags", "");
+        eff.thumbPath = json.optString("thumbPath", "");
+        eff.isDeprecated = json.optBoolean("isDeprecated", false);
+        eff.isEnabled = json.optBoolean("isEnabled", true);
+        eff.isExpanded = json.optBoolean("isExpanded", false);
+        eff.shaderSource = json.optString("shaderSource", "");
+
+        org.json.JSONArray pArray = json.optJSONArray("params");
+        if (pArray != null) {
+            for (int i = 0; i < pArray.length(); i++) {
+                org.json.JSONObject pJson = pArray.optJSONObject(i);
+                if (pJson != null) {
+                    EffectParam p = EffectParam.fromJson(pJson);
+                    if (p != null) eff.addParam(p);
+                }
+            }
+        }
+        return eff;
+    }
 }

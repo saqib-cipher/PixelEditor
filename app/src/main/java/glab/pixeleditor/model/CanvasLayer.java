@@ -132,4 +132,72 @@ public abstract class CanvasLayer {
     public void clearAppliedEffects() {
         appliedEffects.clear();
     }
+
+    public abstract org.json.JSONObject toJson(android.content.Context context);
+
+    protected void writeBaseJson(org.json.JSONObject json) {
+        try {
+            json.put("id", id);
+            json.put("name", name);
+            json.put("x", x);
+            json.put("y", y);
+            json.put("width", width);
+            json.put("height", height);
+            json.put("rotation", rotation);
+            json.put("scaleX", scaleX);
+            json.put("scaleY", scaleY);
+            json.put("skewX", skewX);
+            json.put("skewY", skewY);
+            json.put("opacity", opacity);
+            json.put("isVisible", isVisible);
+            json.put("isLocked", isLocked);
+
+            org.json.JSONArray effArray = new org.json.JSONArray();
+            for (EffectDefinition eff : appliedEffects) {
+                effArray.put(eff.toJson());
+            }
+            json.put("appliedEffects", effArray);
+        } catch (Exception ignored) {}
+    }
+
+    protected void readBaseJson(org.json.JSONObject json) {
+        this.id = json.optString("id", id);
+        this.name = json.optString("name", name);
+        this.x = (float) json.optDouble("x", x);
+        this.y = (float) json.optDouble("y", y);
+        this.width = (float) json.optDouble("width", width);
+        this.height = (float) json.optDouble("height", height);
+        this.rotation = (float) json.optDouble("rotation", rotation);
+        this.scaleX = (float) json.optDouble("scaleX", scaleX);
+        this.scaleY = (float) json.optDouble("scaleY", scaleY);
+        this.skewX = (float) json.optDouble("skewX", skewX);
+        this.skewY = (float) json.optDouble("skewY", skewY);
+        this.opacity = json.optInt("opacity", opacity);
+        this.isVisible = json.optBoolean("isVisible", isVisible);
+        this.isLocked = json.optBoolean("isLocked", isLocked);
+
+        appliedEffects.clear();
+        org.json.JSONArray effArray = json.optJSONArray("appliedEffects");
+        if (effArray != null) {
+            for (int i = 0; i < effArray.length(); i++) {
+                org.json.JSONObject effJson = effArray.optJSONObject(i);
+                if (effJson != null) {
+                    EffectDefinition eff = EffectDefinition.fromJson(effJson);
+                    if (eff != null) appliedEffects.add(eff);
+                }
+            }
+        }
+    }
+
+    public static CanvasLayer fromJson(android.content.Context context, org.json.JSONObject json) {
+        if (json == null) return null;
+        String type = json.optString("layerType", "SHAPE");
+        if ("TEXT".equalsIgnoreCase(type)) {
+            return TextLayer.fromJson(context, json);
+        } else if ("PHOTO".equalsIgnoreCase(type)) {
+            return PhotoLayer.fromJson(context, json);
+        } else {
+            return ShapeLayer.fromJson(context, json);
+        }
+    }
 }

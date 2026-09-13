@@ -243,4 +243,45 @@ public class ShapeLayer extends CanvasLayer {
     public void setHasStroke(boolean hasStroke) { this.hasStroke = hasStroke; }
     public float getCornerRadius() { return cornerRadius; }
     public void setCornerRadius(float cornerRadius) { this.cornerRadius = Math.max(0f, cornerRadius); }
+
+    @Override
+    public org.json.JSONObject toJson(android.content.Context context) {
+        org.json.JSONObject json = new org.json.JSONObject();
+        try {
+            json.put("layerType", "SHAPE");
+            writeBaseJson(json);
+            json.put("shapeType", shapeType != null ? shapeType.name() : ShapeType.ROUNDED_RECT.name());
+            json.put("fillColor", fillColor);
+            json.put("strokeColor", strokeColor);
+            json.put("strokeWidth", strokeWidth);
+            json.put("hasStroke", hasStroke);
+            json.put("cornerRadius", cornerRadius);
+        } catch (Exception ignored) {}
+        return json;
+    }
+
+    public static ShapeLayer fromJson(android.content.Context context, org.json.JSONObject json) {
+        if (json == null) return null;
+        String name = json.optString("name", "Shape");
+        float x = (float) json.optDouble("x", 200);
+        float y = (float) json.optDouble("y", 200);
+        float w = (float) json.optDouble("width", 200);
+        float h = (float) json.optDouble("height", 200);
+
+        ShapeLayer layer = new ShapeLayer(name, x, y, w, h);
+        layer.readBaseJson(json);
+
+        String stStr = json.optString("shapeType", ShapeType.ROUNDED_RECT.name());
+        try {
+            layer.shapeType = ShapeType.valueOf(stStr);
+        } catch (Exception ignored) {}
+
+        layer.fillColor = json.optInt("fillColor", 0xFF7A4B58);
+        layer.strokeColor = json.optInt("strokeColor", 0xFF00E5BC);
+        layer.strokeWidth = (float) json.optDouble("strokeWidth", 0.0);
+        layer.hasStroke = json.optBoolean("hasStroke", false);
+        layer.cornerRadius = (float) json.optDouble("cornerRadius", 25.0);
+
+        return layer;
+    }
 }

@@ -187,4 +187,91 @@ public class PhotoLayer extends CanvasLayer {
     public void setVignette(float vignette) { this.vignette = vignette; }
     public String getFilterPreset() { return filterPreset; }
     public void setFilterPreset(String filterPreset) { this.filterPreset = filterPreset; }
+
+    private String photoFileName = "";
+    private float originalWidth = 0f;
+    private float originalHeight = 0f;
+
+    public float getOriginalWidth() {
+        return originalWidth > 0 ? originalWidth : (bitmap != null ? bitmap.getWidth() : width);
+    }
+    public void setOriginalWidth(float ow) { this.originalWidth = ow; }
+
+    public float getOriginalHeight() {
+        return originalHeight > 0 ? originalHeight : (bitmap != null ? bitmap.getHeight() : height);
+    }
+    public void setOriginalHeight(float oh) { this.originalHeight = oh; }
+
+    @Override
+    public org.json.JSONObject toJson(android.content.Context context) {
+        org.json.JSONObject json = new org.json.JSONObject();
+        try {
+            json.put("layerType", "PHOTO");
+            writeBaseJson(json);
+            json.put("brightness", brightness);
+            json.put("contrast", contrast);
+            json.put("saturation", saturation);
+            json.put("warmth", warmth);
+            json.put("vignette", vignette);
+            json.put("filterPreset", filterPreset);
+            json.put("originalWidth", getOriginalWidth());
+            json.put("originalHeight", getOriginalHeight());
+
+            // Persist bitmap to projects dir/assets
+            if (bitmap != null && !bitmap.isRecycled()) {
+                java.io.File projectsDir = ProjectStorageManager.getProjectsDir(context);
+                java.io.File assetsDir = new java.io.File(projectsDir, "assets");
+                if (!assetsDir.exists()) assetsDir.mkdirs();
+                String fileName = "photo_" + id + ".png";
+                java.io.File photoFile = new java.io.File(assetsDir, fileName);
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(photoFile)) {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 95, fos);
+                    photoFileName = "assets/" + fileName;
+                } catch (Exception ignored) {}
+            }
+            json.put("photoFileName", photoFileName);
+        } catch (Exception ignored) {}
+        return json;
+    }
+
+    public static PhotoLayer fromJson(android.content.Context context, org.json.JSONObject json) {
+        if (json == null) return null;
+        String name = json.optString("name", "Photo");
+        float x = (float) json.optDouble("x", 200);
+        float y = (float) json.optDouble("y", 200);
+        float w = (float) json.optDouble("width", 300);
+        float h = (float) json.optDouble("height", 300);
+
+        String photoPath = json.optString("photoFileName", "");
+        Bitmap loadedBmp = null;
+        if (!photoPath.isEmpty()) {
+            java.io.File projectsDir = ProjectStorageManager.getProjectsDir(context);
+            java.io.File photoFile = new java.io.File(projectsDir, photoPath);
+            if (photoFile.exists()) {
+                try {
+                    loadedBmp = android.graphics.BitmapFactory.decodeFile(photoFile.getAbsolutePath());
+                } catch (Exception ignored) {}
+            }
+        }
+
+        if (loadedBmp == null) {
+            loadedBmp = Bitmap.createBitmap(Math.max(50, Math.round(w)), Math.max(50, Math.round(h)), Bitmap.Config.ARGB_8888);
+            loadedBmp.eraseColor(0xFF334155);
+        }
+
+        PhotoLayer layer = new PhotoLayer(name, loadedBmp, x, y, w, h);
+        layer.readBaseJson(json);
+
+        layer.brightness = (float) json.optDouble("brightness", 0.0);
+        layer.contrast = (float) json.optDouble("contrast", 0.0);
+        layer.saturation = (float) json.optDouble("saturation", 0.0);
+        layer.warmth = (float) json.optDouble("warmth", 0.0);
+        layer.vignette = (float) json.optDouble("vignette", 0.0);
+        layer.filterPreset = json.optString("filterPreset", "NORMAL");
+        layer.photoFileName = photoPath;
+        layer.originalWidth = (float) json.optDouble("originalWidth", loadedBmp.getWidth());
+        layer.originalHeight = (float) json.optDouble("originalHeight", loadedBmp.getHeight());
+
+        return layer;
+    }
 }

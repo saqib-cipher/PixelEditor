@@ -103,4 +103,47 @@ public class EffectParam {
     public void setBooleanValue(boolean booleanValue) { this.booleanValue = booleanValue; }
     public int getColorValue() { return colorValue; }
     public void setColorValue(int colorValue) { this.colorValue = colorValue; }
+
+    public org.json.JSONObject toJson() {
+        try {
+            org.json.JSONObject json = new org.json.JSONObject();
+            json.put("id", id);
+            json.put("type", type != null ? type.name() : ParamType.SLIDER.name());
+            json.put("label", label);
+            json.put("defaultValue", defaultValue);
+            json.put("minValue", minValue);
+            json.put("maxValue", maxValue);
+            json.put("step", step);
+            json.put("unitType", unitType);
+            json.put("floatValue", floatValue);
+            json.put("booleanValue", booleanValue);
+            json.put("colorValue", colorValue);
+            return json;
+        } catch (Exception e) {
+            return new org.json.JSONObject();
+        }
+    }
+
+    public static EffectParam fromJson(org.json.JSONObject json) {
+        if (json == null) return null;
+        String id = json.optString("id", "param");
+        String typeStr = json.optString("type", ParamType.SLIDER.name());
+        ParamType type = ParamType.SLIDER;
+        try {
+            type = ParamType.valueOf(typeStr);
+        } catch (Exception ignored) {}
+
+        String label = json.optString("label", id);
+        float def = (float) json.optDouble("defaultValue", 0.0);
+        float min = (float) json.optDouble("minValue", 0.0);
+        float max = (float) json.optDouble("maxValue", 1.0);
+        float step = (float) json.optDouble("step", 0.01);
+        String unit = json.optString("unitType", "");
+
+        EffectParam param = new EffectParam(id, type, label, def, min, max, step, unit);
+        param.floatValue = (float) json.optDouble("floatValue", def);
+        param.booleanValue = json.optBoolean("booleanValue", false);
+        param.colorValue = json.optInt("colorValue", 0xFFFFFFFF);
+        return param;
+    }
 }

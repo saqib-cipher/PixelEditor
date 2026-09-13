@@ -276,6 +276,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 if (intent != null) intent.putExtra("EXTRA_PROJECT_ID", projectId);
             }
 
+            // Save full project layers and effect parameters
+            ProjectStorageManager.saveProjectContent(this, projectId, project);
+
             // Capture and save updated thumbnail
             Bitmap thumb = binding.canvasView.exportArtboardBitmap();
             String thumbName = "thumb_" + projectId + ".png";
@@ -304,18 +307,29 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
     private void initProject() {
         Intent intent = getIntent();
+        String projectId = intent != null ? intent.getStringExtra("EXTRA_PROJECT_ID") : null;
         String title = intent != null ? intent.getStringExtra("EXTRA_PROJECT_TITLE") : null;
         int width = intent != null ? intent.getIntExtra("EXTRA_PROJECT_WIDTH", 1080) : 1080;
         int height = intent != null ? intent.getIntExtra("EXTRA_PROJECT_HEIGHT", 1920) : 1920;
         int bg = intent != null ? intent.getIntExtra("EXTRA_PROJECT_BG", 0xFFD8DCE3) : 0xFFD8DCE3;
 
-        project = new EditorProject();
-        project.setTitle(title != null && !title.isEmpty() ? title : "New Project 1");
-        project.setCanvasWidth(width);
-        project.setCanvasHeight(height);
-        project.setBackgroundColor(bg);
+        if (projectId != null && !projectId.isEmpty()) {
+            project = ProjectStorageManager.loadProjectContent(this, projectId);
+        }
 
-        // DO NOT add default shape: canvas starts clean as requested
+        if (project == null) {
+            project = new EditorProject();
+            project.setTitle(title != null && !title.isEmpty() ? title : "New Project 1");
+            project.setCanvasWidth(width);
+            project.setCanvasHeight(height);
+            project.setBackgroundColor(bg);
+        } else {
+            if (title != null && !title.isEmpty()) project.setTitle(title);
+            if (width > 0) project.setCanvasWidth(width);
+            if (height > 0) project.setCanvasHeight(height);
+            if (bg != 0) project.setBackgroundColor(bg);
+        }
+
         binding.canvasView.setProject(project);
         binding.canvasView.setOnLayerSelectedListener(this);
     }
@@ -489,26 +503,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 binding.canvasView.invalidate();
                 updateUIForActiveLayer(project.getSelectedLayer());
             }
-        });
-
-        binding.btnFabAddElement.setOnClickListener(v -> {
-            binding.flipperBottomPanels.setVisibility(View.VISIBLE);
-            binding.flipperBottomPanels.setDisplayedChild(SHEET_ADD_ELEMENT);
-        });
-
-        binding.btnMidCompare.setOnClickListener(v -> {
-            CanvasLayer layer = project.getSelectedLayer();
-            if (layer != null) {
-                layer.setVisible(!layer.isVisible());
-                binding.canvasView.invalidate();
-                updateUIForActiveLayer(layer);
-            }
-        });
-
-        binding.btnMidFit.setOnClickListener(v -> {
-            binding.canvasView.resetViewport();
-            TextView tvZoom = findViewById(R.id.tvZoomPercent);
-            if (tvZoom != null) tvZoom.setText("100%");
         });
     }
 
@@ -710,52 +704,115 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
         });
 
-        // Subpanel 4: Photo Adjust
-        Slider sliderBright = binding.getRoot().findViewById(R.id.sliderBrightness);
-        TextView tvBrightVal = binding.getRoot().findViewById(R.id.tvBrightnessVal);
-        sliderBright.addOnChangeListener((slider, value, fromUser) -> {
+        // Subpanel 4: Photo Size Controls (Width X & Height Y)
+        Slider sliderPhotoW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
+        Slider sliderPhotoH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
+        TextView tvPhotoW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
+        TextView tvPhotoH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
+        com.google.android.material.materialswitch.MaterialSwitch switchAspect =
+                binding.getRoot().findViewById(R.id.switchPhotoAspectLock);
+
+        sliderPhotoW.addOnChangeListener((slider, value, fromUser) -> {
             CanvasLayer layer = project.getSelectedLayer();
             if (layer instanceof PhotoLayer && fromUser) {
-                ((PhotoLayer) layer).setBrightness(value);
-                tvBrightVal.setText(String.valueOf(Math.round(value)));
+                PhotoLayer pl = (PhotoLayer) layer;
+                float oldW = pl.getWidth();
+                pl.setWidth(value);
+                tvPhotoW.setText(Math.round(value) + "px");
+
+                if (switchAspect != null && switchAspect.isChecked() && oldW > 0) {
+                    float ratio = value / oldW;
+                    float newH = Math.min(3000, Math.max(20, pl.getHeight() * ratio));
+                    pl.setHeight(newH);
+                    sliderPhotoH.setValue(newH);
+                    tvPhotoH.setText(Math.round(newH) + "px");
+                }
                 binding.canvasView.invalidate();
+                updateTransformCoordinatesUI();
             }
         });
 
-        Slider sliderContrast = binding.getRoot().findViewById(R.id.sliderContrast);
-        TextView tvContrastVal = binding.getRoot().findViewById(R.id.tvContrastVal);
-        sliderContrast.addOnChangeListener((slider, value, fromUser) -> {
+        sliderPhotoH.addOnChangeListener((slider, value, fromUser) -> {
             CanvasLayer layer = project.getSelectedLayer();
             if (layer instanceof PhotoLayer && fromUser) {
-                ((PhotoLayer) layer).setContrast(value);
-                tvContrastVal.setText(String.valueOf(Math.round(value)));
+                PhotoLayer pl = (PhotoLayer) layer;
+                float oldH = pl.getHeight();
+                pl.setHeight(value);
+                tvPhotoH.setText(Math.round(value) + "px");
+
+                if (switchAspect != null && switchAspect.isChecked() && oldH > 0) {
+                    float ratio = value / oldH;
+                    float newW = Math.min(3000, Math.max(20, pl.getWidth() * ratio));
+                    pl.setWidth(newW);
+                    sliderPhotoW.setValue(newW);
+                    tvPhotoW.setText(Math.round(newW) + "px");
+                }
                 binding.canvasView.invalidate();
+                updateTransformCoordinatesUI();
             }
         });
 
-        Slider sliderSat = binding.getRoot().findViewById(R.id.sliderSaturation);
-        TextView tvSatVal = binding.getRoot().findViewById(R.id.tvSaturationVal);
-        sliderSat.addOnChangeListener((slider, value, fromUser) -> {
-            CanvasLayer layer = project.getSelectedLayer();
-            if (layer instanceof PhotoLayer && fromUser) {
-                ((PhotoLayer) layer).setSaturation(value);
-                tvSatVal.setText(String.valueOf(Math.round(value)));
-                binding.canvasView.invalidate();
-            }
-        });
-
+        // Reset to original photo dimensions
         binding.getRoot().findViewById(R.id.btnResetAdjustments).setOnClickListener(v -> {
             CanvasLayer layer = project.getSelectedLayer();
             if (layer instanceof PhotoLayer) {
-                ((PhotoLayer) layer).setBrightness(0);
-                ((PhotoLayer) layer).setContrast(0);
-                ((PhotoLayer) layer).setSaturation(0);
-                sliderBright.setValue(0);
-                sliderContrast.setValue(0);
-                sliderSat.setValue(0);
-                binding.canvasView.invalidate();
+                PhotoLayer pl = (PhotoLayer) layer;
+                float origW = pl.getOriginalWidth();
+                float origH = pl.getOriginalHeight();
+                if (origW > 0 && origH > 0) {
+                    pl.setWidth(origW);
+                    pl.setHeight(origH);
+                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, origW)));
+                    sliderPhotoH.setValue(Math.min(3000, Math.max(20, origH)));
+                    tvPhotoW.setText(Math.round(origW) + "px");
+                    tvPhotoH.setText(Math.round(origH) + "px");
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
             }
         });
+
+        // Fit Canvas
+        View btnFitCanvas = binding.getRoot().findViewById(R.id.btnPhotoMatchCanvas);
+        if (btnFitCanvas != null) {
+            btnFitCanvas.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer instanceof PhotoLayer) {
+                    PhotoLayer pl = (PhotoLayer) layer;
+                    float cw = project.getCanvasWidth();
+                    float ratio = cw / Math.max(1f, pl.getWidth());
+                    float newH = Math.min(3000, Math.max(20, pl.getHeight() * ratio));
+                    pl.setWidth(cw);
+                    pl.setHeight(newH);
+                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, cw)));
+                    sliderPhotoH.setValue(newH);
+                    tvPhotoW.setText(Math.round(cw) + "px");
+                    tvPhotoH.setText(Math.round(newH) + "px");
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
+            });
+        }
+
+        // Square 1:1
+        View btnSquare = binding.getRoot().findViewById(R.id.btnPhotoSquare);
+        if (btnSquare != null) {
+            btnSquare.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer instanceof PhotoLayer) {
+                    PhotoLayer pl = (PhotoLayer) layer;
+                    float size = Math.min(pl.getWidth(), pl.getHeight());
+                    pl.setWidth(size);
+                    pl.setHeight(size);
+                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, size)));
+                    sliderPhotoH.setValue(Math.min(3000, Math.max(20, size)));
+                    tvPhotoW.setText(Math.round(size) + "px");
+                    tvPhotoH.setText(Math.round(size) + "px");
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
+            });
+        }
     }
 
     // -------------------------------------------------------------
@@ -1279,7 +1336,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 tvEditShape.setText("Edit Text");
             } else if (layer instanceof PhotoLayer) {
                 ivEditShape.setImageResource(R.drawable.ic_tool_shape);
-                tvEditShape.setText("Adjust Photo");
+                tvEditShape.setText("Image Size");
             } else {
                 ivEditShape.setImageResource(R.drawable.ic_tool_shape);
                 tvEditShape.setText("Edit Shape");
@@ -1300,6 +1357,20 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             if (sliderRad != null && tvRad != null) {
                 sliderRad.setValue(Math.min(150, Math.max(0, ((ShapeLayer) layer).getCornerRadius())));
                 tvRad.setText(String.valueOf(Math.round(((ShapeLayer) layer).getCornerRadius())));
+            }
+        } else if (layer instanceof PhotoLayer) {
+            PhotoLayer pl = (PhotoLayer) layer;
+            Slider sW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
+            Slider sH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
+            TextView tvW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
+            TextView tvH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
+            if (sW != null && tvW != null) {
+                sW.setValue(Math.min(3000, Math.max(20, pl.getWidth())));
+                tvW.setText(Math.round(pl.getWidth()) + "px");
+            }
+            if (sH != null && tvH != null) {
+                sH.setValue(Math.min(3000, Math.max(20, pl.getHeight())));
+                tvH.setText(Math.round(pl.getHeight()) + "px");
             }
         }
 

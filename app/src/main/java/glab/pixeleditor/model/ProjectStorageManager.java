@@ -296,6 +296,8 @@ public class ProjectStorageManager {
                 File thumbFile = new File(getProjectsDir(context), toRemove.getThumbnailName());
                 if (thumbFile.exists()) thumbFile.delete();
             }
+            File pFile = new File(getProjectsDir(context), "project_" + projectId + ".json");
+            if (pFile.exists()) pFile.delete();
             saveIndex(context, all);
         }
     }
@@ -321,6 +323,19 @@ public class ProjectStorageManager {
             }
         }
 
+        // Copy project JSON file if exists
+        File srcProjFile = new File(dir, "project_" + source.getId() + ".json");
+        if (srcProjFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(srcProjFile);
+                 FileOutputStream fos = new FileOutputStream(new File(dir, "project_" + newId + ".json"))) {
+                byte[] buf = new byte[4096];
+                int len;
+                while ((len = fis.read(buf)) > 0) {
+                    fos.write(buf, 0, len);
+                }
+            } catch (Exception ignored) {}
+        }
+
         ProjectItem copy = new ProjectItem(
                 newId,
                 newTitle,
@@ -338,6 +353,39 @@ public class ProjectStorageManager {
         List<ProjectItem> all = loadAllRaw(context);
         all.add(0, copy);
         saveIndex(context, all);
+    }
+
+    public static synchronized void saveProjectContent(Context context, String projectId, EditorProject project) {
+        if (context == null || projectId == null || project == null) return;
+        File dir = getProjectsDir(context);
+        File projectFile = new File(dir, "project_" + projectId + ".json");
+        try {
+            JSONObject json = project.toJson(context);
+            try (FileOutputStream fos = new FileOutputStream(projectFile)) {
+                fos.write(json.toString(2).getBytes("UTF-8"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error saving project content: " + e.getMessage());
+        }
+    }
+
+    public static synchronized EditorProject loadProjectContent(Context context, String projectId) {
+        if (context == null || projectId == null) return null;
+        File dir = getProjectsDir(context);
+        File projectFile = new File(dir, "project_" + projectId + ".json");
+        if (!projectFile.exists()) return null;
+
+        try (FileInputStream fis = new FileInputStream(projectFile)) {
+            int size = fis.available();
+            byte[] buffer = new byte[size];
+            fis.read(buffer);
+            String jsonStr = new String(buffer, "UTF-8");
+            JSONObject json = new JSONObject(jsonStr);
+            return EditorProject.fromJson(context, json);
+        } catch (Exception e) {
+            System.err.println("Error loading project content: " + e.getMessage());
+            return null;
+        }
     }
 
     public static void shareProject(Context context, ProjectItem item) {

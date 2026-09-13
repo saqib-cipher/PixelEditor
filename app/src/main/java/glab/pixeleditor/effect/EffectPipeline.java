@@ -366,14 +366,24 @@ public class EffectPipeline {
                 }
             }
 
-            // 2. Blur / Gaussian Blur / Box Blur
-            if (id.contains("blur") || name.contains("blur")) {
+            // 2. Blur / Gaussian Blur / Box Blur (Powered by Shader CDATA formulas)
+            String shader = eff.getShaderSource() != null ? eff.getShaderSource().toLowerCase() : "";
+            boolean isBlur = id.contains("blur") || name.contains("blur") || shader.contains("blur") || shader.contains("nsamples");
+            if (isBlur) {
                 EffectParam strParam = eff.getParam("strength");
                 if (strParam == null) strParam = eff.getParam("radius");
                 if (strParam == null) strParam = eff.getParam("size");
-                float radius = strParam != null ? strParam.getFloatValue() * 25f : 12f;
+                float strengthVal = strParam != null ? strParam.getFloatValue() : 0.15f;
+                float radius;
+                if (shader.contains("actualstrength = strength/10.0") || shader.contains("strength/10")) {
+                    radius = (strengthVal / 10.0f) * 350f;
+                } else if (shader.contains("kernelsize") || shader.contains("incrementalgaussian")) {
+                    radius = strengthVal * 45f;
+                } else {
+                    radius = strengthVal * 30f;
+                }
                 if (radius > 0.5f) {
-                    BlurMaskFilter filter = new BlurMaskFilter(Math.min(50f, radius), BlurMaskFilter.Blur.NORMAL);
+                    BlurMaskFilter filter = new BlurMaskFilter(Math.min(60f, radius), BlurMaskFilter.Blur.NORMAL);
                     if (fillPaint != null) fillPaint.setMaskFilter(filter);
                     if (strokePaint != null) strokePaint.setMaskFilter(filter);
                 }

@@ -314,4 +314,46 @@ public class TextLayer extends CanvasLayer {
     public void setHasStroke(boolean hasStroke) { this.hasStroke = hasStroke; }
     public boolean isHasShadow() { return hasShadow; }
     public void setHasShadow(boolean hasShadow) { this.hasShadow = hasShadow; }
+
+    @Override
+    public org.json.JSONObject toJson(android.content.Context context) {
+        org.json.JSONObject json = new org.json.JSONObject();
+        try {
+            json.put("layerType", "TEXT");
+            writeBaseJson(json);
+            json.put("text", text);
+            json.put("textColor", textColor);
+            json.put("textSize", textSize);
+            json.put("isBold", isBold);
+            json.put("isItalic", isItalic);
+            json.put("strokeColor", strokeColor);
+            json.put("strokeWidth", strokeWidth);
+            json.put("hasStroke", hasStroke);
+            json.put("hasShadow", hasShadow);
+        } catch (Exception ignored) {}
+        return json;
+    }
+
+    public static TextLayer fromJson(android.content.Context context, org.json.JSONObject json) {
+        if (json == null) return null;
+        String name = json.optString("name", "Text");
+        String text = json.optString("text", "Pixel Editor");
+        float x = (float) json.optDouble("x", 200);
+        float y = (float) json.optDouble("y", 200);
+
+        TextLayer layer = new TextLayer(name, text, x, y);
+        layer.readBaseJson(json);
+
+        layer.textColor = json.optInt("textColor", 0xFFFFFFFF);
+        layer.textSize = (float) json.optDouble("textSize", 48.0);
+        layer.isBold = json.optBoolean("isBold", true);
+        layer.isItalic = json.optBoolean("isItalic", false);
+        layer.strokeColor = json.optInt("strokeColor", 0xFF000000);
+        layer.strokeWidth = (float) json.optDouble("strokeWidth", 0.0);
+        layer.hasStroke = json.optBoolean("hasStroke", false);
+        layer.hasShadow = json.optBoolean("hasShadow", true);
+
+        layer.recalculateBounds();
+        return layer;
+    }
 }

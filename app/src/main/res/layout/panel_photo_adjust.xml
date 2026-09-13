@@ -27,11 +27,12 @@
             app:tint="@color/pe_text_primary" />
 
         <TextView
+            android:id="@+id/tvPhotoSizeHeader"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/tool_adjust_photo"
+            android:text="Image Size"
             android:textColor="@color/pe_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -41,7 +42,7 @@
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="Reset"
+            android:text="Original"
             android:textColor="@color/pe_accent_mint"
             android:textSize="12sp" />
     </LinearLayout>
@@ -53,7 +54,7 @@
         android:layout_marginBottom="8dp"
         android:background="@color/pe_border" />
 
-    <!-- Brightness Slider -->
+    <!-- Width (X) in Pixels -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -61,100 +62,119 @@
         android:orientation="horizontal">
 
         <TextView
-            android:layout_width="72dp"
+            android:layout_width="80dp"
             android:layout_height="wrap_content"
-            android:text="Brightness"
+            android:text="Width (X)"
             android:textColor="@color/pe_text_secondary"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <com.google.android.material.slider.Slider
-            android:id="@+id/sliderBrightness"
+            android:id="@+id/sliderPhotoWidth"
             style="@style/Widget.PixelEditor.Slider"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:valueFrom="-100"
-            android:valueTo="100"
-            android:value="0" />
+            android:valueFrom="20"
+            android:valueTo="3000"
+            android:value="300" />
 
         <TextView
-            android:id="@+id/tvBrightnessVal"
-            android:layout_width="44dp"
+            android:id="@+id/tvPhotoWidthVal"
+            android:layout_width="60dp"
             android:layout_height="28dp"
             android:background="@drawable/bg_input_box"
             android:gravity="center"
-            android:text="0"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="11sp" />
+            android:text="300px"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Contrast Slider -->
+    <!-- Height (Y) in Pixels -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <TextView
-            android:layout_width="72dp"
+            android:layout_width="80dp"
             android:layout_height="wrap_content"
-            android:text="Contrast"
+            android:text="Height (Y)"
             android:textColor="@color/pe_text_secondary"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <com.google.android.material.slider.Slider
-            android:id="@+id/sliderContrast"
+            android:id="@+id/sliderPhotoHeight"
             style="@style/Widget.PixelEditor.Slider"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:valueFrom="-100"
-            android:valueTo="100"
-            android:value="0" />
+            android:valueFrom="20"
+            android:valueTo="3000"
+            android:value="300" />
 
         <TextView
-            android:id="@+id/tvContrastVal"
-            android:layout_width="44dp"
+            android:id="@+id/tvPhotoHeightVal"
+            android:layout_width="60dp"
             android:layout_height="28dp"
             android:background="@drawable/bg_input_box"
             android:gravity="center"
-            android:text="0"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="11sp" />
+            android:text="300px"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Saturation Slider -->
+    <!-- Controls Row: Lock Proportions Toggle + Quick Fit Presets -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="72dp"
-            android:layout_height="wrap_content"
-            android:text="Saturation"
-            android:textColor="@color/pe_text_secondary"
-            android:textSize="12sp" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderSaturation"
-            style="@style/Widget.PixelEditor.Slider"
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchPhotoAspectLock"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="32dp"
             android:layout_weight="1"
-            android:valueFrom="-100"
-            android:valueTo="100"
-            android:value="0" />
+            android:checked="true"
+            android:text="Lock Proportions"
+            android:textColor="@color/pe_text_secondary"
+            android:textSize="12sp"
+            app:thumbTint="@color/pe_accent_mint"
+            app:trackTint="#334155" />
 
-        <TextView
-            android:id="@+id/tvSaturationVal"
-            android:layout_width="44dp"
-            android:layout_height="28dp"
-            android:background="@drawable/bg_input_box"
-            android:gravity="center"
-            android:text="0"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPhotoMatchCanvas"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="Fit Canvas"
             android:textColor="@color/pe_text_primary"
-            android:textSize="11sp" />
+            android:textSize="11sp"
+            app:backgroundTint="#243048"
+            app:cornerRadius="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPhotoSquare"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="Square 1:1"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="11sp"
+            app:backgroundTint="#243048"
+            app:cornerRadius="6dp" />
     </LinearLayout>
 </LinearLayout>

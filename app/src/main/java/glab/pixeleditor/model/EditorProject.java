@@ -139,4 +139,51 @@ public class EditorProject {
     public List<CanvasLayer> getLayers() { return layers; }
     public int getSelectedIndex() { return selectedIndex; }
     public void setSelectedIndex(int selectedIndex) { this.selectedIndex = selectedIndex; }
+
+    public org.json.JSONObject toJson(android.content.Context context) {
+        org.json.JSONObject json = new org.json.JSONObject();
+        try {
+            json.put("title", title);
+            json.put("canvasWidth", canvasWidth);
+            json.put("canvasHeight", canvasHeight);
+            json.put("backgroundColor", backgroundColor);
+            json.put("selectedIndex", selectedIndex);
+
+            org.json.JSONArray layersArray = new org.json.JSONArray();
+            for (CanvasLayer layer : layers) {
+                layersArray.put(layer.toJson(context));
+            }
+            json.put("layers", layersArray);
+        } catch (Exception ignored) {}
+        return json;
+    }
+
+    public static EditorProject fromJson(android.content.Context context, org.json.JSONObject json) {
+        if (json == null) return null;
+        EditorProject project = new EditorProject();
+        project.title = json.optString("title", "Untitled");
+        project.canvasWidth = json.optInt("canvasWidth", 1080);
+        project.canvasHeight = json.optInt("canvasHeight", 1920);
+        project.backgroundColor = json.optInt("backgroundColor", 0xFFD8DCE3);
+
+        org.json.JSONArray layersArray = json.optJSONArray("layers");
+        if (layersArray != null) {
+            for (int i = 0; i < layersArray.length(); i++) {
+                org.json.JSONObject lJson = layersArray.optJSONObject(i);
+                if (lJson != null) {
+                    CanvasLayer layer = CanvasLayer.fromJson(context, lJson);
+                    if (layer != null) {
+                        project.layers.add(layer);
+                    }
+                }
+            }
+        }
+        int selIdx = json.optInt("selectedIndex", -1);
+        if (selIdx >= 0 && selIdx < project.layers.size()) {
+            project.selectedIndex = selIdx;
+        } else {
+            project.selectedIndex = project.layers.size() - 1;
+        }
+        return project;
+    }
 }
