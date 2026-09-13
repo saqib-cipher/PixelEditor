@@ -1,0 +1,79 @@
+<resources>
+    <string name="app_name">PixelEditor</string>
+    <string name="project_default_title">Untitled Design</string>
+    <string name="project_size_desc">1080 × 1350 • 4:5</string>
+
+    <!-- Mid Toolbar -->
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_add_element">Add Element</string>
+    <string name="action_layers">Layers</string>
+    <string name="action_compare">Before / After</string>
+    <string name="action_fit_screen">Fit to Canvas</string>
+    <string name="action_export">Export</string>
+    <string name="action_settings">Canvas Settings</string>
+
+    <!-- Bottom Layer Menu (Image 3) -->
+    <string name="tool_color_fill">Color &amp; Fill</string>
+    <string name="tool_border_shadow">Border &amp; Shadow</string>
+    <string name="tool_blending_opacity">Blending &amp; Opacity</string>
+    <string name="tool_move_transform">Move &amp; Transform</string>
+    <string name="tool_edit_shape">Edit Shape</string>
+    <string name="tool_adjust_photo">Adjustments</string>
+    <string name="tool_presets">Presets</string>
+    <string name="tool_effects">Effects</string>
+    
+    <!-- Quick Actions -->
+    <string name="action_duplicate">Duplicate</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_bring_forward">Bring Forward</string>
+    <string name="action_send_backward">Send Backward</string>
+    <string name="action_lock">Lock</string>
+
+    <!-- Shape Sub-panel (Image 2) -->
+    <string name="prop_size">Size</string>
+    <string name="prop_radius">Radius</string>
+    <string name="prop_width">Width</string>
+    <string name="prop_height">Height</string>
+
+    <!-- Border & Shadow Sub-panel (Image 5) -->
+    <string name="prop_stroke">Stroke</string>
+    <string name="prop_shadow">Shadow</string>
+    <string name="prop_stroke_width">Stroke Width</string>
+    <string name="prop_opacity">Opacity</string>
+
+    <!-- Add Element Tabs (Image 1) -->
+    <string name="tab_shape">Shape</string>
+    <string name="tab_media">Media</string>
+    <string name="tab_text">Text</string>
+    <string name="tab_element">Graphics</string>
+    <string name="tab_template">Templates</string>
+
+    <!-- Side Actions -->
+    <string name="action_freehand">Freehand</string>
+    <string name="action_pen">Vector Pen</string>
+
+    <!-- Effect Browser (Image 4) -->
+    <string name="effect_browser_title">Effect Browser</string>
+    <string name="effect_search_hint">Search effects, blurs, filters...</string>
+    <string name="cat_color_light">Color &amp; Light</string>
+    <string name="cat_drawing_edge">Drawing &amp; Edge</string>
+    <string name="cat_blur">Blur</string>
+    <string name="cat_distortion_warp">Distortion/Warp</string>
+    <string name="cat_procedural">Procedural</string>
+    <string name="cat_3d">3D</string>
+    <string name="cat_move_transform">Move/Transform</string>
+    <string name="cat_repeat">Repeat</string>
+    <string name="cat_mask_key">Matte/Mask/Key</string>
+    <string name="cat_opacity_visibility">Opacity/Visibility</string>
+    <string name="cat_text">Text</string>
+    <string name="cat_other">Other</string>
+
+    <!-- Export Dialog -->
+    <string name="export_dialog_title">Export Image</string>
+    <string name="export_format_png">PNG (Lossless High Quality)</string>
+    <string name="export_format_jpeg">JPEG (Compressed)</string>
+    <string name="export_share">Share Image</string>
+    <string name="export_save">Save to Gallery</string>
+    <string name="export_success">Saved to gallery successfully!</string>
+</resources>

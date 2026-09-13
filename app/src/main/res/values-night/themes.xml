@@ -1,0 +1,26 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base dark application theme -->
+    <style name="Theme.PixelEditor" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/pe_accent_mint</item>
+        <item name="colorOnPrimary">@color/pe_m3_on_primary</item>
+        <item name="colorPrimaryContainer">@color/pe_m3_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/pe_m3_on_primary_container</item>
+
+        <item name="colorSecondary">@color/pe_accent_cyan</item>
+        <item name="colorTertiary">@color/pe_accent_purple</item>
+
+        <item name="android:colorBackground">@color/pe_bg_canvas_workspace</item>
+        <item name="colorSurface">@color/pe_surface_panel</item>
+        <item name="colorOnSurface">@color/pe_text_primary</item>
+        <item name="colorSurfaceVariant">@color/pe_surface_panel_elevated</item>
+        <item name="colorOnSurfaceVariant">@color/pe_text_secondary</item>
+
+        <item name="colorOutline">@color/pe_border</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+</resources>

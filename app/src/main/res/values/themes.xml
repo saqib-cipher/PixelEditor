@@ -1,0 +1,68 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base Material 3 Expressive Studio Theme -->
+    <style name="Theme.PixelEditor" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Brand / Accent Colors -->
+        <item name="colorPrimary">@color/pe_accent_mint</item>
+        <item name="colorOnPrimary">@color/pe_m3_on_primary</item>
+        <item name="colorPrimaryContainer">@color/pe_m3_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/pe_m3_on_primary_container</item>
+
+        <item name="colorSecondary">@color/pe_accent_cyan</item>
+        <item name="colorTertiary">@color/pe_accent_purple</item>
+
+        <!-- Background & Surfaces -->
+        <item name="android:colorBackground">@color/pe_bg_canvas_workspace</item>
+        <item name="colorSurface">@color/pe_surface_panel</item>
+        <item name="colorOnSurface">@color/pe_text_primary</item>
+        <item name="colorSurfaceVariant">@color/pe_surface_panel_elevated</item>
+        <item name="colorOnSurfaceVariant">@color/pe_text_secondary</item>
+
+        <item name="colorOutline">@color/pe_border</item>
+
+        <!-- System Bars for Edge-to-Edge -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+
+    <!-- Material 3 Expressive Card Style -->
+    <style name="Widget.PixelEditor.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/pe_surface_card</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/pe_border</item>
+    </style>
+
+    <!-- Material 3 Expressive Elevated Card Style -->
+    <style name="Widget.PixelEditor.Card.Elevated" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/pe_surface_panel_elevated</item>
+        <item name="cardCornerRadius">18dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/pe_border</item>
+    </style>
+
+    <!-- Expressive Slider -->
+    <style name="Widget.PixelEditor.Slider" parent="Widget.Material3.Slider">
+        <item name="thumbColor">@color/pe_accent_mint</item>
+        <item name="trackColorActive">@color/pe_accent_mint</item>
+        <item name="trackColorInactive">@color/pe_surface_card</item>
+        <item name="haloColor">#3300E5BC</item>
+    </style>
+
+    <!-- Bottom Sheet Style -->
+    <style name="Widget.PixelEditor.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="backgroundTint">@color/pe_surface_panel</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.PixelEditor.BottomSheet</item>
+    </style>
+
+    <style name="ShapeAppearance.PixelEditor.BottomSheet" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+</resources>
