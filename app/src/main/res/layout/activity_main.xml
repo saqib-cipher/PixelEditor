@@ -263,187 +263,199 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- 3. Mid Transport & Layer Controls Toolbar (Alight Motion Inspired) -->
+        <!-- 3. Bottom Controls Container (mid toolbar, active layer bar, flipperBottomPanels) -->
         <LinearLayout
-            android:id="@+id/midToolbar"
+            android:id="@+id/layoutBottomContainer"
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="wrap_content"
             android:background="@color/pe_surface_panel"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
+            android:orientation="vertical">
 
-            <!-- Undo -->
-            <ImageButton
-                android:id="@+id/btnMidUndo"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_undo"
-                app:tint="@color/pe_text_primary" />
-
-            <!-- Redo -->
-            <ImageButton
-                android:id="@+id/btnMidRedo"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_redo"
-                app:tint="@color/pe_text_primary" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <!-- Add Element Button (+ glowing mint button) -->
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/btnFabAddElement"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:backgroundTint="@color/pe_accent_mint"
-                app:elevation="2dp"
-                app:fabCustomSize="38dp"
-                app:maxImageSize="20dp"
-                app:srcCompat="@drawable/ic_pe_add"
-                app:tint="@color/pe_bg_canvas_workspace" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <!-- Before / After Compare -->
-            <ImageButton
-                android:id="@+id/btnMidCompare"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_visible"
-                app:tint="@color/pe_text_primary" />
-
-            <!-- Fit Canvas -->
-            <ImageButton
-                android:id="@+id/btnMidFit"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_fit"
-                app:tint="@color/pe_text_primary" />
-        </LinearLayout>
-
-        <!-- 4. Active Layer Indicator Bar (matching layer banner in Images 2, 3, 5) -->
-        <LinearLayout
-            android:id="@+id/activeLayerBar"
-            android:layout_width="match_parent"
-            android:layout_height="38dp"
-            android:background="@color/pe_surface_panel_elevated"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
-
-            <!-- Visibility Eye -->
-            <ImageButton
-                android:id="@+id/btnLayerVisibility"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_visible"
-                app:tint="@color/pe_text_primary" />
-
-            <!-- Layer Color / Thumbnail Chip -->
-            <View
-                android:id="@+id/viewLayerColorChip"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_pill_accent"
-                android:backgroundTint="#FF7A4B58" />
-
-            <!-- Layer Name Chip Container (Mint / Cyan style from Image 2 & 3) -->
+            <!-- Mid Transport & Layer Controls Toolbar -->
             <LinearLayout
-                android:id="@+id/chipActiveLayerContainer"
-                android:layout_width="0dp"
-                android:layout_height="28dp"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_pill_accent"
-                android:backgroundTint="#4000E5BC"
+                android:id="@+id/midToolbar"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:background="@color/pe_surface_panel"
                 android:gravity="center_vertical"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp">
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
 
-                <TextView
-                    android:id="@+id/tvActiveLayerName"
+                <!-- Undo -->
+                <ImageButton
+                    android:id="@+id/btnMidUndo"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_undo"
+                    app:tint="@color/pe_text_primary" />
+
+                <!-- Redo -->
+                <ImageButton
+                    android:id="@+id/btnMidRedo"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_redo"
+                    app:tint="@color/pe_text_primary" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Add Element Button (+ glowing mint button) -->
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btnFabAddElement"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="Rounded Rectangle 1"
-                    android:textColor="@color/pe_accent_mint"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    app:backgroundTint="@color/pe_accent_mint"
+                    app:elevation="2dp"
+                    app:fabCustomSize="38dp"
+                    app:maxImageSize="20dp"
+                    app:srcCompat="@drawable/ic_pe_add"
+                    app:tint="@color/pe_bg_canvas_workspace" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Before / After Compare -->
+                <ImageButton
+                    android:id="@+id/btnMidCompare"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_visible"
+                    app:tint="@color/pe_text_primary" />
+
+                <!-- Fit Canvas -->
+                <ImageButton
+                    android:id="@+id/btnMidFit"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_fit"
+                    app:tint="@color/pe_text_primary" />
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnLayerBarDuplicate"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_duplicate"
-                app:tint="@color/pe_text_secondary" />
+            <!-- 4. Active Layer Indicator Bar -->
+            <LinearLayout
+                android:id="@+id/activeLayerBar"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:background="@color/pe_surface_panel_elevated"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
 
-            <ImageButton
-                android:id="@+id/btnLayerBarDelete"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_marginStart="6dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_delete"
-                app:tint="@color/pe_accent_danger" />
+                <!-- Visibility Eye -->
+                <ImageButton
+                    android:id="@+id/btnLayerVisibility"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_visible"
+                    app:tint="@color/pe_text_primary" />
+
+                <!-- Layer Color / Thumbnail Chip -->
+                <View
+                    android:id="@+id/viewLayerColorChip"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_pill_accent"
+                    android:backgroundTint="#FF7A4B58" />
+
+                <!-- Layer Name Chip Container -->
+                <LinearLayout
+                    android:id="@+id/chipActiveLayerContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_pill_accent"
+                    android:backgroundTint="#4000E5BC"
+                    android:gravity="center_vertical"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp">
+
+                    <TextView
+                        android:id="@+id/tvActiveLayerName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Rounded Rectangle 1"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnLayerBarDuplicate"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_duplicate"
+                    app:tint="@color/pe_text_secondary" />
+
+                <ImageButton
+                    android:id="@+id/btnLayerBarDelete"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_delete"
+                    app:tint="@color/pe_accent_danger" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- 5. Dynamic Bottom Panel Container (ViewFlipper) -->
+            <ViewFlipper
+                android:id="@+id/flipperBottomPanels"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- 0: Layer Menu -->
+                <include layout="@layout/panel_layer_menu" />
+
+                <!-- 1: Edit Shape -->
+                <include layout="@layout/panel_edit_shape" />
+
+                <!-- 2: Border & Shadow -->
+                <include layout="@layout/panel_border_shadow" />
+
+                <!-- 3: Color & Fill -->
+                <include layout="@layout/panel_color_fill" />
+
+                <!-- 4: Photo Adjust -->
+                <include layout="@layout/panel_photo_adjust" />
+
+                <!-- 5: Add Elements Sheet -->
+                <include layout="@layout/sheet_add_element" />
+
+                <!-- 6: Dynamic Effect Controls Panel -->
+                <include layout="@layout/panel_effect_controls" />
+
+                <!-- 7: Move & Transform Panel -->
+                <include layout="@layout/panel_move_transform" />
+
+                <!-- 8: Layers Overview Panel (Shown when no layer is selected) -->
+                <include layout="@layout/panel_layers_overview" />
+
+            </ViewFlipper>
         </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/pe_border" />
-
-        <!-- 5. Dynamic Bottom Panel Container (ViewFlipper) -->
-        <ViewFlipper
-            android:id="@+id/flipperBottomPanels"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <!-- 0: Layer Menu (Image 3) -->
-            <include layout="@layout/panel_layer_menu" />
-
-            <!-- 1: Edit Shape (Image 2) -->
-            <include layout="@layout/panel_edit_shape" />
-
-            <!-- 2: Border & Shadow (Image 5) -->
-            <include layout="@layout/panel_border_shadow" />
-
-            <!-- 3: Color & Fill -->
-            <include layout="@layout/panel_color_fill" />
-
-            <!-- 4: Photo Adjust -->
-            <include layout="@layout/panel_photo_adjust" />
-
-            <!-- 5: Add Elements Sheet (Image 1) -->
-            <include layout="@layout/sheet_add_element" />
-
-            <!-- 6: Dynamic Effect Controls Panel -->
-            <include layout="@layout/panel_effect_controls" />
-
-            <!-- 7: Move & Transform Panel -->
-            <include layout="@layout/panel_move_transform" />
-
-        </ViewFlipper>
     </LinearLayout>
 
     <!-- Fullscreen Overlay for Effect Browser (Image 4) -->

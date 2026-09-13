@@ -224,7 +224,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Edit Shape / Adjust -->
+        <!-- Edit Shape / Edit Text / Adjust -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnToolEditShape"
             style="@style/Widget.PixelEditor.Card"
@@ -254,39 +254,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="@string/tool_edit_shape"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Presets -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btnToolPresets"
-            style="@style/Widget.PixelEditor.Card"
-            android:layout_width="0dp"
-            android:layout_height="72dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_tool_presets"
-                    app:tint="@color/pe_text_primary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/tool_presets"
                     android:textColor="@color/pe_text_secondary"
                     android:textSize="11sp" />
             </LinearLayout>

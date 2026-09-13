@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private static final int SHEET_ADD_ELEMENT = 5;
     private static final int PANEL_EFFECT_CONTROLS = 6;
     private static final int PANEL_MOVE_TRANSFORM = 7;
+    private static final int PANEL_LAYERS_OVERVIEW = 8;
 
     private enum TransformMode {
         POSITION,
@@ -80,7 +81,31 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         SKEW
     }
 
+    private enum PositionAxis {
+        XY,
+        Z
+    }
+
+    private enum ScaleAxis {
+        WIDTH,
+        HEIGHT,
+        BOTH
+    }
+
+    private enum SkewAxis {
+        X,
+        Y
+    }
+
     private TransformMode currentTransformMode = TransformMode.POSITION;
+    private PositionAxis activePositionAxis = PositionAxis.XY;
+    private ScaleAxis activeScaleAxis = ScaleAxis.BOTH;
+    private SkewAxis activeSkewAxis = SkewAxis.X;
+
+    // Transform clipboard for Copy / Paste
+    private boolean hasCopiedTransform = false;
+    private float copyX, copyY, copyRot, copyScaleX = 1f, copyScaleY = 1f, copyWidth = 300f, copyHeight = 300f;
+
     private glab.pixeleditor.ui.CanvasLayerSidebarAdapter sidebarAdapter;
 
     // Aspect ratio definitions
@@ -157,8 +182,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     0
             );
 
-            // Pad Bottom Panels ViewFlipper for Navigation Bar
-            binding.flipperBottomPanels.setPadding(
+            // Pad Bottom Controls Container for Navigation Bar
+            binding.layoutBottomContainer.setPadding(
                     insets.left,
                     0,
                     insets.right,
@@ -211,14 +236,19 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             return;
         }
 
-        // 2. If inside a subpanel or add element sheet, return to layer menu
+        // 2. If inside a subpanel or add element sheet, return to layer menu or overview
         int currentPanel = binding.flipperBottomPanels.getDisplayedChild();
-        if (currentPanel != PANEL_LAYER_MENU) {
-            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+        if (currentPanel != PANEL_LAYER_MENU && currentPanel != PANEL_LAYERS_OVERVIEW) {
+            if (project != null && project.getSelectedLayer() != null) {
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            } else {
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
+                populateLayersOverviewPanel();
+            }
             return;
         }
 
-        // 3. If a layer is selected, deselect it
+        // 3. If a layer is selected, deselect it and show overview panel
         if (project != null && project.getSelectedLayer() != null) {
             project.setSelectedIndex(-1);
             updateUIForActiveLayer(null);
@@ -614,25 +644,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 .show();
     }
 
-    private void showPresetsDialog() {
-        String[] presets = {"Original / Neutral", "Cyberpunk Mint", "Vintage Warm", "Noir Black & White", "Cinematic Teal"};
-        String[] keys = {"NORMAL", "CYBERPUNK", "VINTAGE", "BW", "CINEMATIC"};
 
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Aesthetic Presets")
-                .setItems(presets, (dialog, which) -> {
-                    CanvasLayer layer = project.getSelectedLayer();
-                    if (layer instanceof PhotoLayer) {
-                        ((PhotoLayer) layer).setFilterPreset(keys[which]);
-                    } else if (layer instanceof ShapeLayer) {
-                        int[] colors = {0xFF7A4B58, 0xFF00E5BC, 0xFFE07A5F, 0xFF333333, 0xFF118AB2};
-                        ((ShapeLayer) layer).setFillColor(colors[which]);
-                    }
-                    binding.canvasView.invalidate();
-                    updateUIForActiveLayer(layer);
-                })
-                .show();
-    }
 
     // -------------------------------------------------------------
     // 5. SUBPANELS SETUP
@@ -1314,18 +1326,39 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private void updateUIForActiveLayer(@Nullable CanvasLayer layer) {
         if (layer == null) {
             binding.activeLayerBar.setVisibility(View.GONE);
-            binding.flipperBottomPanels.setVisibility(View.GONE);
+            binding.flipperBottomPanels.setVisibility(View.VISIBLE);
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
+            populateLayersOverviewPanel();
             return;
         }
 
         binding.activeLayerBar.setVisibility(View.VISIBLE);
         binding.flipperBottomPanels.setVisibility(View.VISIBLE);
+        if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_LAYERS_OVERVIEW) {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+        }
         binding.tvActiveLayerName.setText(layer.getName());
 
         // Update Visibility Icon
         binding.btnLayerVisibility.setImageResource(
                 layer.isVisible() ? R.drawable.ic_pe_visible : R.drawable.ic_pe_invisible
         );
+
+        // Dynamically update Edit Shape / Edit Text / Adjust Photo in Layer Menu
+        ImageView ivEditShape = binding.getRoot().findViewById(R.id.ivEditShapeIcon);
+        TextView tvEditShape = binding.getRoot().findViewById(R.id.tvEditShapeTitle);
+        if (ivEditShape != null && tvEditShape != null) {
+            if (layer instanceof TextLayer) {
+                ivEditShape.setImageResource(R.drawable.ic_pe_element);
+                tvEditShape.setText("Edit Text");
+            } else if (layer instanceof PhotoLayer) {
+                ivEditShape.setImageResource(R.drawable.ic_tool_shape);
+                tvEditShape.setText("Adjust Photo");
+            } else {
+                ivEditShape.setImageResource(R.drawable.ic_tool_shape);
+                tvEditShape.setText("Edit Shape");
+            }
+        }
 
         // Update Layer Color Chip
         if (layer instanceof ShapeLayer) {
@@ -1336,13 +1369,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             // Shape subpanel values
             Slider sliderSize = binding.getRoot().findViewById(R.id.sliderSize);
             TextView tvSize = binding.getRoot().findViewById(R.id.tvSizeVal);
-            sliderSize.setValue(Math.min(800, Math.max(30, layer.getWidth())));
-            tvSize.setText(String.valueOf(Math.round(layer.getWidth())));
+            if (sliderSize != null && tvSize != null) {
+                sliderSize.setValue(Math.min(800, Math.max(30, layer.getWidth())));
+                tvSize.setText(String.valueOf(Math.round(layer.getWidth())));
+            }
 
             Slider sliderRad = binding.getRoot().findViewById(R.id.sliderRadius);
             TextView tvRad = binding.getRoot().findViewById(R.id.tvRadiusVal);
-            sliderRad.setValue(Math.min(150, Math.max(0, ((ShapeLayer) layer).getCornerRadius())));
-            tvRad.setText(String.valueOf(Math.round(((ShapeLayer) layer).getCornerRadius())));
+            if (sliderRad != null && tvRad != null) {
+                sliderRad.setValue(Math.min(150, Math.max(0, ((ShapeLayer) layer).getCornerRadius())));
+                tvRad.setText(String.valueOf(Math.round(((ShapeLayer) layer).getCornerRadius())));
+            }
         } else if (layer instanceof TextLayer) {
             int col = ((TextLayer) layer).getTextColor();
             binding.viewLayerColorChip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(col));
@@ -1355,6 +1392,66 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_EFFECT_CONTROLS) {
             refreshAppliedEffectsPanel();
+        }
+    }
+
+    private void populateLayersOverviewPanel() {
+        LinearLayout container = binding.getRoot().findViewById(R.id.containerOverviewLayerCards);
+        TextView tvCount = binding.getRoot().findViewById(R.id.tvOverviewLayersCount);
+        View btnAdd = binding.getRoot().findViewById(R.id.btnOverviewAddLayer);
+
+        if (container == null) return;
+        container.removeAllViews();
+
+        int layerCount = project != null ? project.getLayers().size() : 0;
+        if (tvCount != null) {
+            tvCount.setText("Layers (" + layerCount + ")");
+        }
+
+        if (btnAdd != null) {
+            btnAdd.setOnClickListener(v -> {
+                binding.flipperBottomPanels.setVisibility(View.VISIBLE);
+                binding.flipperBottomPanels.setDisplayedChild(SHEET_ADD_ELEMENT);
+            });
+        }
+
+        if (project == null || project.getLayers().isEmpty()) {
+            TextView emptyTv = new TextView(this);
+            emptyTv.setText("No layers in project. Tap + to add element.");
+            emptyTv.setTextColor(0xFF94A3B8);
+            emptyTv.setTextSize(12);
+            emptyTv.setPadding(20, 10, 20, 10);
+            container.addView(emptyTv);
+            return;
+        }
+
+        for (int i = 0; i < project.getLayers().size(); i++) {
+            final int layerIndex = i;
+            CanvasLayer l = project.getLayers().get(i);
+
+            View chip = getLayoutInflater().inflate(R.layout.item_overview_layer_chip, container, false);
+            ImageView ivIcon = chip.findViewById(R.id.ivOverviewChipIcon);
+            TextView tvName = chip.findViewById(R.id.tvOverviewChipName);
+
+            tvName.setText(l.getName());
+            if (l instanceof TextLayer) {
+                ivIcon.setImageResource(R.drawable.ic_pe_element);
+                ivIcon.setColorFilter(0xFF00E5BC);
+            } else if (l instanceof PhotoLayer) {
+                ivIcon.setImageResource(R.drawable.ic_tool_shape);
+                ivIcon.setColorFilter(0xFF7F5AF0);
+            } else {
+                ivIcon.setImageResource(R.drawable.ic_tool_shape);
+                ivIcon.setColorFilter(0xFF00E5BC);
+            }
+
+            chip.setOnClickListener(v -> {
+                project.setSelectedIndex(layerIndex);
+                updateUIForActiveLayer(project.getSelectedLayer());
+                binding.canvasView.invalidate();
+            });
+
+            container.addView(chip);
         }
     }
 
@@ -1481,7 +1578,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         // Back buttons
         View.OnClickListener backClick = v -> binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
         panel.findViewById(R.id.btnBackFromTransform).setOnClickListener(backClick);
-        panel.findViewById(R.id.btnTransformBackRail).setOnClickListener(backClick);
 
         // Mode cards
         MaterialCardView cardPos = panel.findViewById(R.id.cardModePosition);
@@ -1508,23 +1604,212 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         glab.pixeleditor.view.ScrubRulerView rulerScale = panel.findViewById(R.id.rulerScale);
         glab.pixeleditor.view.ScrubRulerView rulerSkew = panel.findViewById(R.id.rulerSkew);
 
-        // Link Aspect Ratio Toggle
-        MaterialCardView btnLinkAspect = panel.findViewById(R.id.btnToggleLinkAspect);
-        ImageView ivLinkIcon = panel.findViewById(R.id.ivLinkAspectIcon);
-        if (btnLinkAspect != null) {
-            btnLinkAspect.setOnClickListener(v -> {
-                isScaleAspectLinked = !isScaleAspectLinked;
-                if (ivLinkIcon != null) {
-                    ivLinkIcon.setColorFilter(isScaleAspectLinked ? 0xFF00E5BC : 0xFF64748B);
+        // Left Sub-Rail Action Buttons: Reset, Copy, Paste, Center
+        View btnReset = panel.findViewById(R.id.btnTransformReset);
+        if (btnReset != null) {
+            btnReset.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    layer.setX(project.getCanvasWidth() / 2f);
+                    layer.setY(project.getCanvasHeight() / 2f);
+                    layer.setRotation(0f);
+                    layer.setScaleX(1f);
+                    layer.setScaleY(1f);
+                    layer.setWidth(300f);
+                    layer.setHeight(300f);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                    Toast.makeText(this, "Transform reset", Toast.LENGTH_SHORT).show();
                 }
-                Toast.makeText(this, isScaleAspectLinked ? "Aspect ratio locked" : "Freeform scaling", Toast.LENGTH_SHORT).show();
             });
         }
 
-        // Z-Index Order Pill Click
+        View btnCopy = panel.findViewById(R.id.btnTransformCopy);
+        if (btnCopy != null) {
+            btnCopy.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    copyX = layer.getX();
+                    copyY = layer.getY();
+                    copyRot = layer.getRotation();
+                    copyScaleX = layer.getScaleX();
+                    copyScaleY = layer.getScaleY();
+                    copyWidth = layer.getWidth();
+                    copyHeight = layer.getHeight();
+                    hasCopiedTransform = true;
+                    Toast.makeText(this, "Transform copied", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        View btnPaste = panel.findViewById(R.id.btnTransformPaste);
+        if (btnPaste != null) {
+            btnPaste.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null && hasCopiedTransform) {
+                    layer.setX(copyX);
+                    layer.setY(copyY);
+                    layer.setRotation(copyRot);
+                    layer.setScaleX(copyScaleX);
+                    layer.setScaleY(copyScaleY);
+                    layer.setWidth(copyWidth);
+                    layer.setHeight(copyHeight);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                    Toast.makeText(this, "Transform applied", Toast.LENGTH_SHORT).show();
+                } else if (!hasCopiedTransform) {
+                    Toast.makeText(this, "No transform copied yet", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        View btnCenter = panel.findViewById(R.id.btnTransformCenter);
+        if (btnCenter != null) {
+            btnCenter.setOnClickListener(v -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    layer.setX(project.getCanvasWidth() / 2f);
+                    layer.setY(project.getCanvasHeight() / 2f);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                    Toast.makeText(this, "Centered to canvas", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        // Link Aspect Ratio Toggle & Scale Pills
+        MaterialCardView btnLinkAspect = panel.findViewById(R.id.btnToggleLinkAspect);
+        ImageView ivLinkIcon = panel.findViewById(R.id.ivLinkAspectIcon);
+        View pillScaleWidth = panel.findViewById(R.id.layoutPillScaleWidth);
+        View pillScaleHeight = panel.findViewById(R.id.layoutPillScaleHeight);
+
+        Runnable updateScalePillsUI = () -> {
+            if (ivLinkIcon != null) {
+                ivLinkIcon.setColorFilter(isScaleAspectLinked ? 0xFF00E5BC : 0xFF64748B);
+            }
+            TextView tvWVal = panel.findViewById(R.id.tvScaleWidthVal);
+            TextView tvHVal = panel.findViewById(R.id.tvScaleHeightVal);
+            if (tvWVal != null && tvHVal != null) {
+                if (isScaleAspectLinked || activeScaleAxis == ScaleAxis.BOTH) {
+                    tvWVal.setTextColor(0xFF00E5BC);
+                    tvHVal.setTextColor(0xFF00E5BC);
+                } else if (activeScaleAxis == ScaleAxis.WIDTH) {
+                    tvWVal.setTextColor(0xFF00E5BC);
+                    tvHVal.setTextColor(0xFFFFFFFF);
+                } else {
+                    tvWVal.setTextColor(0xFFFFFFFF);
+                    tvHVal.setTextColor(0xFF00E5BC);
+                }
+            }
+        };
+
+        if (btnLinkAspect != null) {
+            btnLinkAspect.setOnClickListener(v -> {
+                isScaleAspectLinked = !isScaleAspectLinked;
+                if (isScaleAspectLinked) {
+                    activeScaleAxis = ScaleAxis.BOTH;
+                } else {
+                    activeScaleAxis = ScaleAxis.WIDTH;
+                }
+                updateScalePillsUI.run();
+                Toast.makeText(this, isScaleAspectLinked ? "Aspect ratio locked" : "Freeform scaling (Tap Width / Height)", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (pillScaleWidth != null) {
+            pillScaleWidth.setOnClickListener(v -> {
+                if (!isScaleAspectLinked) {
+                    activeScaleAxis = ScaleAxis.WIDTH;
+                    updateScalePillsUI.run();
+                }
+            });
+        }
+
+        if (pillScaleHeight != null) {
+            pillScaleHeight.setOnClickListener(v -> {
+                if (!isScaleAspectLinked) {
+                    activeScaleAxis = ScaleAxis.HEIGHT;
+                    updateScalePillsUI.run();
+                }
+            });
+        }
+
+        // Skew Pills (X Skew / Y Skew)
+        View pillSkewX = panel.findViewById(R.id.layoutPillSkewX);
+        View pillSkewY = panel.findViewById(R.id.layoutPillSkewY);
+
+        Runnable updateSkewPillsUI = () -> {
+            TextView tvSXVal = panel.findViewById(R.id.tvSkewXVal);
+            TextView tvSYVal = panel.findViewById(R.id.tvSkewYVal);
+            if (tvSXVal != null && tvSYVal != null) {
+                if (activeSkewAxis == SkewAxis.X) {
+                    tvSXVal.setTextColor(0xFF00E5BC);
+                    tvSYVal.setTextColor(0xFFFFFFFF);
+                } else {
+                    tvSXVal.setTextColor(0xFFFFFFFF);
+                    tvSYVal.setTextColor(0xFF00E5BC);
+                }
+            }
+        };
+
+        if (pillSkewX != null) {
+            pillSkewX.setOnClickListener(v -> {
+                activeSkewAxis = SkewAxis.X;
+                updateSkewPillsUI.run();
+            });
+        }
+
+        if (pillSkewY != null) {
+            pillSkewY.setOnClickListener(v -> {
+                activeSkewAxis = SkewAxis.Y;
+                updateSkewPillsUI.run();
+            });
+        }
+
+        // Position Mode: X, Y, Z Pills
+        View pillX = panel.findViewById(R.id.layoutPillX);
+        View pillY = panel.findViewById(R.id.layoutPillY);
         View pillZ = panel.findViewById(R.id.layoutPillZ);
+        TextView tvPadHint = panel.findViewById(R.id.tvTransformHint);
+
+        Runnable updatePositionPillsUI = () -> {
+            TextView tvXVal = panel.findViewById(R.id.tvCoordVal1);
+            TextView tvYVal = panel.findViewById(R.id.tvCoordVal2);
+            TextView tvZVal = panel.findViewById(R.id.tvCoordVal3);
+            if (tvXVal != null && tvYVal != null && tvZVal != null) {
+                if (activePositionAxis == PositionAxis.XY) {
+                    tvXVal.setTextColor(0xFF00E5BC);
+                    tvYVal.setTextColor(0xFF00E5BC);
+                    tvZVal.setTextColor(0xFFFFFFFF);
+                    if (tvPadHint != null) tvPadHint.setText("Swipe here to move layer");
+                } else {
+                    tvXVal.setTextColor(0xFFFFFFFF);
+                    tvYVal.setTextColor(0xFFFFFFFF);
+                    tvZVal.setTextColor(0xFF00E5BC);
+                    if (tvPadHint != null) tvPadHint.setText("Swipe up / down for layer depth");
+                }
+            }
+        };
+
+        if (pillX != null) {
+            pillX.setOnClickListener(v -> {
+                activePositionAxis = PositionAxis.XY;
+                updatePositionPillsUI.run();
+            });
+        }
+
+        if (pillY != null) {
+            pillY.setOnClickListener(v -> {
+                activePositionAxis = PositionAxis.XY;
+                updatePositionPillsUI.run();
+            });
+        }
+
         if (pillZ != null) {
-            pillZ.setOnClickListener(v -> showZOrderSelectionDialog());
+            pillZ.setOnClickListener(v -> {
+                activePositionAxis = (activePositionAxis == PositionAxis.Z) ? PositionAxis.XY : PositionAxis.Z;
+                updatePositionPillsUI.run();
+            });
         }
 
         Runnable updateModeSelectorUI = () -> {
@@ -1552,6 +1837,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 }
             }
 
+            updatePositionPillsUI.run();
+            updateScalePillsUI.run();
+            updateSkewPillsUI.run();
             updateTransformCoordinatesUI();
         };
 
@@ -1581,12 +1869,18 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
                     float factor = 1.0f + (delta * 0.005f);
-                    float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
-                    float newH = isScaleAspectLinked
-                            ? Math.max(20f, Math.min(3000f, layer.getHeight() * factor))
-                            : layer.getHeight();
-                    layer.setWidth(newW);
-                    layer.setHeight(newH);
+                    if (isScaleAspectLinked || activeScaleAxis == ScaleAxis.BOTH) {
+                        float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                        float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                        layer.setWidth(newW);
+                        layer.setHeight(newH);
+                    } else if (activeScaleAxis == ScaleAxis.WIDTH) {
+                        float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                        layer.setWidth(newW);
+                    } else if (activeScaleAxis == ScaleAxis.HEIGHT) {
+                        float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                        layer.setHeight(newH);
+                    }
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
                 }
@@ -1598,31 +1892,27 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             rulerSkew.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
-                    float deg = (layer.getRotation() + (delta * 0.4f)) % 360f;
-                    if (deg < 0) deg += 360f;
-                    layer.setRotation(deg);
+                    if (activeSkewAxis == SkewAxis.X) {
+                        float deg = (layer.getRotation() + (delta * 0.4f)) % 360f;
+                        if (deg < 0) deg += 360f;
+                        layer.setRotation(deg);
+                    } else {
+                        float deg = (layer.getRotation() - (delta * 0.4f)) % 360f;
+                        if (deg < 0) deg += 360f;
+                        layer.setRotation(deg);
+                    }
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
                 }
             });
         }
 
-        // Sub-rail actions: Keyframe, Curve, More
-        panel.findViewById(R.id.btnTransformKeyframe).setOnClickListener(v -> {
-            Toast.makeText(this, "Position Keyframe pinned", Toast.LENGTH_SHORT).show();
-        });
-
-        panel.findViewById(R.id.btnTransformCurve).setOnClickListener(v -> {
-            Toast.makeText(this, "Standard Ease In-Out Curve applied", Toast.LENGTH_SHORT).show();
-        });
-
-        panel.findViewById(R.id.btnTransformMore).setOnClickListener(v -> showTransformMoreDialog());
-
-        // Mode 1: Large Interactive Touchpad Surface
+        // Mode 1: Large Interactive Touchpad Surface with Z-Order swipe support
         View pad = panel.findViewById(R.id.viewTransformPad);
         if (pad != null) {
             pad.setOnTouchListener(new View.OnTouchListener() {
                 private float lastTouchX, lastTouchY;
+                private float accumulatedZDy = 0f;
 
                 @Override
                 public boolean onTouch(View v, android.view.MotionEvent event) {
@@ -1633,6 +1923,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         case android.view.MotionEvent.ACTION_DOWN:
                             lastTouchX = event.getX();
                             lastTouchY = event.getY();
+                            accumulatedZDy = 0f;
                             v.getParent().requestDisallowInterceptTouchEvent(true);
                             return true;
 
@@ -1642,15 +1933,35 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                             lastTouchX = event.getX();
                             lastTouchY = event.getY();
 
-                            layer.setX(layer.getX() + dx);
-                            layer.setY(layer.getY() + dy);
-
-                            binding.canvasView.invalidate();
-                            updateTransformCoordinatesUI();
+                            if (activePositionAxis == PositionAxis.Z) {
+                                accumulatedZDy += dy;
+                                float threshold = 32f * getResources().getDisplayMetrics().density;
+                                if (accumulatedZDy <= -threshold) {
+                                    // Swiped Up -> Bring layer forward (up)
+                                    project.moveLayerUp(project.getSelectedIndex());
+                                    accumulatedZDy = 0f;
+                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                                    binding.canvasView.invalidate();
+                                    updateTransformCoordinatesUI();
+                                } else if (accumulatedZDy >= threshold) {
+                                    // Swiped Down -> Send layer backward (down)
+                                    project.moveLayerDown(project.getSelectedIndex());
+                                    accumulatedZDy = 0f;
+                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                                    binding.canvasView.invalidate();
+                                    updateTransformCoordinatesUI();
+                                }
+                            } else {
+                                layer.setX(layer.getX() + dx);
+                                layer.setY(layer.getY() + dy);
+                                binding.canvasView.invalidate();
+                                updateTransformCoordinatesUI();
+                            }
                             return true;
 
                         case android.view.MotionEvent.ACTION_UP:
                         case android.view.MotionEvent.ACTION_CANCEL:
+                            accumulatedZDy = 0f;
                             v.getParent().requestDisallowInterceptTouchEvent(false);
                             return true;
                     }
@@ -1660,42 +1971,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
 
         updateModeSelectorUI.run();
-    }
-
-    private void showZOrderSelectionDialog() {
-        CanvasLayer layer = project.getSelectedLayer();
-        if (layer == null) return;
-
-        String[] zOptions = {
-                "Bring Forward (Z + 1)",
-                "Send Backward (Z - 1)",
-                "Bring to Top (Front)",
-                "Send to Bottom (Back)"
-        };
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Layer Depth (Z-Order)")
-                .setItems(zOptions, (dialog, which) -> {
-                    int idx = project.getSelectedIndex();
-                    if (which == 0) {
-                        project.moveLayerUp(idx);
-                    } else if (which == 1) {
-                        project.moveLayerDown(idx);
-                    } else if (which == 2) {
-                        while (project.getSelectedIndex() < project.getLayers().size() - 1) {
-                            project.moveLayerUp(project.getSelectedIndex());
-                        }
-                    } else if (which == 3) {
-                        while (project.getSelectedIndex() > 0) {
-                            project.moveLayerDown(project.getSelectedIndex());
-                        }
-                    }
-
-                    binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
-                    Toast.makeText(this, zOptions[which], Toast.LENGTH_SHORT).show();
-                })
-                .show();
     }
 
     private void openMoveTransformPanel() {
@@ -1737,41 +2012,5 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         // Skew coordinates
         if (tvSkewX != null) tvSkewX.setText(String.format(java.util.Locale.US, "%.1f°", layer.getRotation()));
         if (tvSkewY != null) tvSkewY.setText("0.0°");
-    }
-
-    private void showTransformMoreDialog() {
-        String[] actions = {
-                "Center to Canvas",
-                "Reset Rotation (0°)",
-                "Reset Size (1:1)",
-                "Flip Horizontally",
-                "Flip Vertically"
-        };
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Transform Options")
-                .setItems(actions, (dialog, which) -> {
-                    CanvasLayer layer = project.getSelectedLayer();
-                    if (layer == null) return;
-
-                    if (which == 0) {
-                        layer.setX(project.getCanvasWidth() / 2f);
-                        layer.setY(project.getCanvasHeight() / 2f);
-                    } else if (which == 1) {
-                        layer.setRotation(0f);
-                    } else if (which == 2) {
-                        layer.setWidth(300f);
-                        layer.setHeight(300f);
-                    } else if (which == 3) {
-                        layer.setRotation((layer.getRotation() + 180f) % 360f);
-                    } else if (which == 4) {
-                        layer.setRotation((layer.getRotation() + 180f) % 360f);
-                    }
-
-                    binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
-                    Toast.makeText(this, actions[which], Toast.LENGTH_SHORT).show();
-                })
-                .show();
     }
 }

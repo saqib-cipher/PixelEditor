@@ -161,6 +161,26 @@ public class TextLayer extends CanvasLayer {
     public void setStrokeColor(int strokeColor) { this.strokeColor = strokeColor; }
     public float getStrokeWidth() { return strokeWidth; }
     public void setStrokeWidth(float strokeWidth) { this.strokeWidth = strokeWidth; }
+    @Override
+    public void setWidth(float width) {
+        float oldW = Math.max(10f, this.width);
+        super.setWidth(width);
+        if (oldW > 0 && this.width > 0) {
+            float ratio = this.width / oldW;
+            this.textSize = Math.max(8f, this.textSize * ratio);
+        }
+    }
+
+    @Override
+    public void setHeight(float height) {
+        float oldH = Math.max(10f, this.height);
+        super.setHeight(height);
+        if (oldH > 0 && this.height > 0) {
+            float ratio = this.height / oldH;
+            this.textSize = Math.max(8f, this.textSize * ratio);
+        }
+    }
+
     public boolean isHasStroke() { return hasStroke; }
     public void setHasStroke(boolean hasStroke) { this.hasStroke = hasStroke; }
     public boolean isHasShadow() { return hasShadow; }

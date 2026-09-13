@@ -265,12 +265,12 @@ public class EffectControlHelper {
         tvValue.setLayoutParams(valLp);
         row.addView(tvValue);
 
-        // Wire Scrub Ruler Listener
+        // Wire Scrub Ruler Listener (sliding left increases value, sliding right decreases value)
         ruler.setOnScrubListener(delta -> {
             float step = param.getStep() > 0 ? param.getStep() : 0.01f;
             float range = param.getMaxValue() - param.getMinValue();
             float sensitivity = Math.max(step, range / 300f);
-            float change = (delta / 6f) * sensitivity;
+            float change = -(delta / 6f) * sensitivity;
 
             float newVal = param.getFloatValue() + change;
             param.setFloatValue(newVal);

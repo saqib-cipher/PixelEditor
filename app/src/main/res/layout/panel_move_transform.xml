@@ -49,46 +49,50 @@
         android:layout_height="200dp"
         android:orientation="horizontal">
 
-        <!-- 1. Left Vertical Sub-Rail -->
+        <!-- 1. Left Vertical Sub-Rail: Reset, Copy, Paste, Center -->
         <LinearLayout
             android:layout_width="44dp"
             android:layout_height="match_parent"
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
+            <!-- Reset Transform -->
             <ImageButton
-                android:id="@+id/btnTransformBackRail"
+                android:id="@+id/btnTransformReset"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_back"
+                android:src="@drawable/ic_pe_undo"
                 app:tint="@color/pe_text_secondary" />
 
+            <!-- Copy Transform -->
             <ImageButton
-                android:id="@+id/btnTransformKeyframe"
+                android:id="@+id/btnTransformCopy"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:layout_marginTop="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_diamond"
+                android:src="@drawable/ic_pe_duplicate"
                 app:tint="@color/pe_text_secondary" />
 
+            <!-- Paste Transform -->
             <ImageButton
-                android:id="@+id/btnTransformCurve"
+                android:id="@+id/btnTransformPaste"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:layout_marginTop="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_curve"
+                android:src="@drawable/ic_pe_element"
                 app:tint="@color/pe_text_secondary" />
 
+            <!-- Center on Canvas -->
             <ImageButton
-                android:id="@+id/btnTransformMore"
+                android:id="@+id/btnTransformCenter"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:layout_marginTop="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_more"
+                android:src="@drawable/ic_pe_fit"
                 app:tint="@color/pe_text_secondary" />
         </LinearLayout>
 
@@ -299,11 +303,14 @@
 
                     <!-- Width -->
                     <LinearLayout
+                        android:id="@+id/layoutPillScaleWidth"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:background="@drawable/bg_pill_accent"
                         android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
                         android:orientation="vertical">
 
@@ -317,6 +324,7 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tvScaleWidthLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Width"
@@ -348,11 +356,14 @@
 
                     <!-- Height -->
                     <LinearLayout
+                        android:id="@+id/layoutPillScaleHeight"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:background="@drawable/bg_pill_accent"
                         android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
                         android:orientation="vertical">
 
@@ -361,11 +372,12 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="1080.0"
-                            android:textColor="@color/pe_accent_mint"
+                            android:textColor="@color/pe_text_primary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tvScaleHeightLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Height"
@@ -401,12 +413,15 @@
 
                     <!-- X Skew -->
                     <LinearLayout
+                        android:id="@+id/layoutPillSkewX"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:layout_marginEnd="6dp"
                         android:background="@drawable/bg_pill_accent"
                         android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
                         android:orientation="vertical">
 
@@ -420,6 +435,7 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tvSkewXLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="X SKEW"
@@ -429,11 +445,14 @@
 
                     <!-- Y Skew -->
                     <LinearLayout
+                        android:id="@+id/layoutPillSkewY"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:background="@drawable/bg_pill_accent"
                         android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
                         android:orientation="vertical">
 
@@ -447,6 +466,7 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tvSkewYLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Y SKEW"
