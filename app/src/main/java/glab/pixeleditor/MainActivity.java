@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
     // Transform clipboard for Copy / Paste
     private boolean hasCopiedTransform = false;
-    private float copyX, copyY, copyRot, copyScaleX = 1f, copyScaleY = 1f, copyWidth = 300f, copyHeight = 300f;
+    private float copyX, copyY, copyRot, copyScaleX = 1f, copyScaleY = 1f, copyWidth = 300f, copyHeight = 300f, copySkewX = 0f, copySkewY = 0f;
 
     private glab.pixeleditor.ui.CanvasLayerSidebarAdapter sidebarAdapter;
 
@@ -146,7 +146,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         initPhotoPicker();
         setupTopBar();
         setupMidToolbar();
-        setupLayerIndicatorBar();
         setupLayerMenu();
         setupSubpanels();
         setupAddElementSheet();
@@ -355,7 +354,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 binding.canvasView.invalidate();
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
                 updateUIForActiveLayer(photoLayer);
-                Toast.makeText(this, "Photo added to canvas", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             Toast.makeText(this, "Failed to load image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -379,7 +377,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             binding.chipAspectRatio.setText(aspectLabels[currentAspectIndex]);
             binding.tvProjectDimensions.setText(w + " × " + h + " • " + aspectLabels[currentAspectIndex]);
             binding.canvasView.resetViewport();
-            Toast.makeText(this, "Canvas set to " + aspectLabels[currentAspectIndex] + " (" + w + "x" + h + ")", Toast.LENGTH_SHORT).show();
         });
 
         // Settings (Canvas background)
@@ -474,28 +471,23 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     }
 
     // -------------------------------------------------------------
-    // 2. MID TOOLBAR SETUP
+    // 2. CANVAS TOOLS & MID TOOLBAR SETUP
     // -------------------------------------------------------------
     private void setupMidToolbar() {
-        binding.btnMidUndo.setOnClickListener(v -> {
+        // Floating Left-Side Undo / Redo
+        binding.btnLeftUndo.setOnClickListener(v -> {
             if (project.canUndo()) {
                 project.undo();
                 binding.canvasView.invalidate();
                 updateUIForActiveLayer(project.getSelectedLayer());
-                Toast.makeText(this, "Undo", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Nothing to undo", Toast.LENGTH_SHORT).show();
             }
         });
 
-        binding.btnMidRedo.setOnClickListener(v -> {
+        binding.btnLeftRedo.setOnClickListener(v -> {
             if (project.canRedo()) {
                 project.redo();
                 binding.canvasView.invalidate();
                 updateUIForActiveLayer(project.getSelectedLayer());
-                Toast.makeText(this, "Redo", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Nothing to redo", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -515,74 +507,19 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         binding.btnMidFit.setOnClickListener(v -> {
             binding.canvasView.resetViewport();
-            Toast.makeText(this, "Fit to canvas", Toast.LENGTH_SHORT).show();
+            TextView tvZoom = findViewById(R.id.tvZoomPercent);
+            if (tvZoom != null) tvZoom.setText("100%");
         });
     }
 
     // -------------------------------------------------------------
-    // 3. LAYER INDICATOR BAR
-    // -------------------------------------------------------------
-    private void setupLayerIndicatorBar() {
-        binding.btnLayerVisibility.setOnClickListener(v -> {
-            CanvasLayer layer = project.getSelectedLayer();
-            if (layer != null) {
-                layer.setVisible(!layer.isVisible());
-                binding.canvasView.invalidate();
-                updateUIForActiveLayer(layer);
-            }
-        });
-
-        binding.chipActiveLayerContainer.setOnClickListener(v -> {
-            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
-        });
-
-        binding.btnLayerBarDuplicate.setOnClickListener(v -> {
-            int idx = project.getSelectedIndex();
-            if (idx >= 0) {
-                project.duplicateLayer(idx);
-                binding.canvasView.invalidate();
-                updateUIForActiveLayer(project.getSelectedLayer());
-                Toast.makeText(this, "Layer duplicated", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        binding.btnLayerBarDelete.setOnClickListener(v -> {
-            int idx = project.getSelectedIndex();
-            if (idx >= 0) {
-                project.removeLayer(idx);
-                binding.canvasView.invalidate();
-                updateUIForActiveLayer(project.getSelectedLayer());
-                Toast.makeText(this, "Layer deleted", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    // -------------------------------------------------------------
-    // 4. LAYER MENU (Image 3)
+    // 3. LAYER MENU
     // -------------------------------------------------------------
     private void setupLayerMenu() {
         View menuView = binding.flipperBottomPanels.getChildAt(PANEL_LAYER_MENU);
-        menuView.findViewById(R.id.btnQuickDuplicate).setOnClickListener(v -> binding.btnLayerBarDuplicate.performClick());
-        menuView.findViewById(R.id.btnQuickDelete).setOnClickListener(v -> binding.btnLayerBarDelete.performClick());
-        menuView.findViewById(R.id.btnQuickForward).setOnClickListener(v -> {
-            project.moveLayerUp(project.getSelectedIndex());
-            binding.canvasView.invalidate();
-            Toast.makeText(this, "Brought forward", Toast.LENGTH_SHORT).show();
-        });
-        menuView.findViewById(R.id.btnQuickBackward).setOnClickListener(v -> {
-            project.moveLayerDown(project.getSelectedIndex());
-            binding.canvasView.invalidate();
-            Toast.makeText(this, "Sent backward", Toast.LENGTH_SHORT).show();
-        });
-        menuView.findViewById(R.id.btnQuickLock).setOnClickListener(v -> {
-            CanvasLayer layer = project.getSelectedLayer();
-            if (layer != null) {
-                layer.setLocked(!layer.isLocked());
-                Toast.makeText(this, layer.isLocked() ? "Layer locked" : "Layer unlocked", Toast.LENGTH_SHORT).show();
-            }
-        });
+        if (menuView == null) return;
 
-        // 7 Grid Actions
+        // 6 Primary Grid Actions
         menuView.findViewById(R.id.btnToolColorFill).setOnClickListener(v -> {
             binding.flipperBottomPanels.setDisplayedChild(PANEL_COLOR_FILL);
         });
@@ -599,8 +536,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             CanvasLayer layer = project.getSelectedLayer();
             if (layer != null) {
                 openMoveTransformPanel();
-            } else {
-                Toast.makeText(this, "Select a layer first", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -637,6 +572,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 .setPositiveButton("Update", (dialog, which) -> {
                     String txt = input.getText().toString();
                     textLayer.setText(txt);
+                    textLayer.recalculateBounds();
                     binding.canvasView.invalidate();
                     updateUIForActiveLayer(textLayer);
                 })
@@ -757,8 +693,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 }
                 binding.getRoot().findViewById(R.id.viewCurrentFillColorPreview).setBackgroundTintList(
                         android.content.res.ColorStateList.valueOf(col));
-                binding.viewLayerColorChip.setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(col));
                 binding.canvasView.invalidate();
             });
             fillChips.addView(swatch);
@@ -873,7 +807,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 binding.canvasView.invalidate();
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
                 updateUIForActiveLayer(shape);
-                Toast.makeText(this, shapeNames[index] + " added", Toast.LENGTH_SHORT).show();
             });
 
             grid.addView(iv);
@@ -893,19 +826,16 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             binding.canvasView.invalidate();
             binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
             updateUIForActiveLayer(textLayer);
-            Toast.makeText(this, "Text added", Toast.LENGTH_SHORT).show();
         };
         binding.getRoot().findViewById(R.id.tabAddText).setOnClickListener(textClick);
         binding.getRoot().findViewById(R.id.btnRailText).setOnClickListener(textClick);
 
         // Freehand drawing rail
         binding.getRoot().findViewById(R.id.btnRailFreehand).setOnClickListener(v -> {
-            Toast.makeText(this, "Freehand Brush activated", Toast.LENGTH_SHORT).show();
         });
 
         // Vector Pen rail
         binding.getRoot().findViewById(R.id.btnRailVector).setOnClickListener(v -> {
-            Toast.makeText(this, "Vector Pen mode activated", Toast.LENGTH_SHORT).show();
         });
 
         // Templates tab
@@ -1202,15 +1132,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         binding.getRoot().findViewById(R.id.btnEffectBackRail).setOnClickListener(v ->
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
 
-        binding.getRoot().findViewById(R.id.btnEffectKeyframe).setOnClickListener(v ->
-                Toast.makeText(this, "Keyframe added for effect", Toast.LENGTH_SHORT).show());
-
-        binding.getRoot().findViewById(R.id.btnEffectCurve).setOnClickListener(v ->
-                Toast.makeText(this, "Easing: Linear", Toast.LENGTH_SHORT).show());
-
-        binding.getRoot().findViewById(R.id.btnEffectMore).setOnClickListener(v ->
-                Toast.makeText(this, "Effect options", Toast.LENGTH_SHORT).show());
-
         binding.getRoot().findViewById(R.id.btnAddEffectCard).setOnClickListener(v ->
                 binding.containerEffectBrowser.setVisibility(View.VISIBLE));
 
@@ -1220,9 +1141,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 for (EffectDefinition eff : layer.getAppliedEffects()) {
                     eff.resetAllParams();
                 }
+                if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).recalculateBounds();
+                }
                 refreshAppliedEffectsPanel();
                 binding.canvasView.invalidate();
-                Toast.makeText(this, "All effects reset to defaults", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -1230,7 +1153,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     public void openAppliedEffectsPanel() {
         CanvasLayer layer = project.getSelectedLayer();
         if (layer == null) {
-            Toast.makeText(this, "Please select a layer first", Toast.LENGTH_SHORT).show();
             return;
         }
         binding.containerEffectBrowser.setVisibility(View.GONE);
@@ -1244,7 +1166,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     public void openEffectControls(EffectDefinition effectTemplate) {
         CanvasLayer layer = project.getSelectedLayer();
         if (layer == null) {
-            Toast.makeText(this, "Please select a layer to apply effect", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -1252,12 +1173,15 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         cloned.setExpanded(true);
         layer.addEffect(cloned);
 
+        if (layer instanceof TextLayer) {
+            ((TextLayer) layer).recalculateBounds();
+        }
+
         binding.containerEffectBrowser.setVisibility(View.GONE);
         binding.flipperBottomPanels.setDisplayedChild(PANEL_EFFECT_CONTROLS);
 
         refreshAppliedEffectsPanel();
         binding.canvasView.invalidate();
-        Toast.makeText(this, cloned.getName() + " added", Toast.LENGTH_SHORT).show();
     }
 
     private void refreshAppliedEffectsPanel() {
@@ -1283,11 +1207,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 new EffectControlHelper.OnEffectInteractionListener() {
                     @Override
                     public void onParamChanged(EffectDefinition effect, EffectParam param) {
+                        if (layer instanceof TextLayer) {
+                            ((TextLayer) layer).recalculateBounds();
+                        }
                         binding.canvasView.invalidate();
                     }
 
                     @Override
                     public void onEffectToggled(EffectDefinition effect, boolean isEnabled) {
+                        if (layer instanceof TextLayer) {
+                            ((TextLayer) layer).recalculateBounds();
+                        }
                         binding.canvasView.invalidate();
                     }
 
@@ -1295,16 +1225,20 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     public void onEffectDeleted(EffectDefinition effect) {
                         if (layer != null) {
                             layer.removeEffect(effect);
+                            if (layer instanceof TextLayer) {
+                                ((TextLayer) layer).recalculateBounds();
+                            }
                             refreshAppliedEffectsPanel();
                             binding.canvasView.invalidate();
-                            Toast.makeText(MainActivity.this, effect.getName() + " removed", Toast.LENGTH_SHORT).show();
                         }
                     }
 
                     @Override
                     public void onEffectReset(EffectDefinition effect) {
+                        if (layer instanceof TextLayer) {
+                            ((TextLayer) layer).recalculateBounds();
+                        }
                         binding.canvasView.invalidate();
-                        Toast.makeText(MainActivity.this, effect.getName() + " reset", Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -1325,24 +1259,16 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
     private void updateUIForActiveLayer(@Nullable CanvasLayer layer) {
         if (layer == null) {
-            binding.activeLayerBar.setVisibility(View.GONE);
             binding.flipperBottomPanels.setVisibility(View.VISIBLE);
             binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
             populateLayersOverviewPanel();
             return;
         }
 
-        binding.activeLayerBar.setVisibility(View.VISIBLE);
         binding.flipperBottomPanels.setVisibility(View.VISIBLE);
         if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_LAYERS_OVERVIEW) {
             binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
         }
-        binding.tvActiveLayerName.setText(layer.getName());
-
-        // Update Visibility Icon
-        binding.btnLayerVisibility.setImageResource(
-                layer.isVisible() ? R.drawable.ic_pe_visible : R.drawable.ic_pe_invisible
-        );
 
         // Dynamically update Edit Shape / Edit Text / Adjust Photo in Layer Menu
         ImageView ivEditShape = binding.getRoot().findViewById(R.id.ivEditShapeIcon);
@@ -1360,13 +1286,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
         }
 
-        // Update Layer Color Chip
+        // Update subpanel values if shape is selected
         if (layer instanceof ShapeLayer) {
-            int col = ((ShapeLayer) layer).getFillColor();
-            binding.viewLayerColorChip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(col));
-            binding.viewLayerColorChip.setVisibility(View.VISIBLE);
-
-            // Shape subpanel values
             Slider sliderSize = binding.getRoot().findViewById(R.id.sliderSize);
             TextView tvSize = binding.getRoot().findViewById(R.id.tvSizeVal);
             if (sliderSize != null && tvSize != null) {
@@ -1380,12 +1301,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 sliderRad.setValue(Math.min(150, Math.max(0, ((ShapeLayer) layer).getCornerRadius())));
                 tvRad.setText(String.valueOf(Math.round(((ShapeLayer) layer).getCornerRadius())));
             }
-        } else if (layer instanceof TextLayer) {
-            int col = ((TextLayer) layer).getTextColor();
-            binding.viewLayerColorChip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(col));
-            binding.viewLayerColorChip.setVisibility(View.VISIBLE);
-        } else {
-            binding.viewLayerColorChip.setVisibility(View.GONE);
         }
 
         updateTransformCoordinatesUI();
@@ -1425,33 +1340,52 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             return;
         }
 
-        for (int i = 0; i < project.getLayers().size(); i++) {
+        // Render layers vertically in timeline stack (Alight Motion style)
+        for (int i = project.getLayers().size() - 1; i >= 0; i--) {
             final int layerIndex = i;
             CanvasLayer l = project.getLayers().get(i);
 
-            View chip = getLayoutInflater().inflate(R.layout.item_overview_layer_chip, container, false);
-            ImageView ivIcon = chip.findViewById(R.id.ivOverviewChipIcon);
-            TextView tvName = chip.findViewById(R.id.tvOverviewChipName);
+            View row = getLayoutInflater().inflate(R.layout.item_overview_layer_chip, container, false);
+            ImageView ivIcon = row.findViewById(R.id.ivOverviewChipIcon);
+            TextView tvName = row.findViewById(R.id.tvOverviewChipName);
+            ImageButton btnVis = row.findViewById(R.id.btnOverviewLayerVisibility);
+            com.google.android.material.card.MaterialCardView card = row.findViewById(R.id.cardOverviewLayerRow);
 
             tvName.setText(l.getName());
             if (l instanceof TextLayer) {
                 ivIcon.setImageResource(R.drawable.ic_pe_element);
                 ivIcon.setColorFilter(0xFF00E5BC);
+                if (card != null) card.setCardBackgroundColor(0xFF2C2240);
             } else if (l instanceof PhotoLayer) {
                 ivIcon.setImageResource(R.drawable.ic_tool_shape);
                 ivIcon.setColorFilter(0xFF7F5AF0);
+                if (card != null) card.setCardBackgroundColor(0xFF1E2D48);
             } else {
                 ivIcon.setImageResource(R.drawable.ic_tool_shape);
                 ivIcon.setColorFilter(0xFF00E5BC);
+                if (card != null) card.setCardBackgroundColor(0xFF1E3A52);
             }
 
-            chip.setOnClickListener(v -> {
-                project.setSelectedIndex(layerIndex);
-                updateUIForActiveLayer(project.getSelectedLayer());
-                binding.canvasView.invalidate();
-            });
+            if (btnVis != null) {
+                btnVis.setImageResource(l.isVisible() ? R.drawable.ic_pe_visible : R.drawable.ic_pe_invisible);
+                btnVis.setColorFilter(l.isVisible() ? 0xFF00E5BC : 0xFF64748B);
+                btnVis.setOnClickListener(v -> {
+                    l.setVisible(!l.isVisible());
+                    btnVis.setImageResource(l.isVisible() ? R.drawable.ic_pe_visible : R.drawable.ic_pe_invisible);
+                    btnVis.setColorFilter(l.isVisible() ? 0xFF00E5BC : 0xFF64748B);
+                    binding.canvasView.invalidate();
+                });
+            }
 
-            container.addView(chip);
+            if (card != null) {
+                card.setOnClickListener(v -> {
+                    project.setSelectedIndex(layerIndex);
+                    updateUIForActiveLayer(project.getSelectedLayer());
+                    binding.canvasView.invalidate();
+                });
+            }
+
+            container.addView(row);
         }
     }
 
@@ -1475,7 +1409,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 if (ivGrid != null) {
                     ivGrid.setColorFilter(on ? 0xFF00E5BC : 0xFF94A3B8);
                 }
-                Toast.makeText(this, on ? "Grid overlay enabled" : "Grid overlay disabled", Toast.LENGTH_SHORT).show();
             });
         }
 
@@ -1492,11 +1425,23 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 binding.canvasView.resetViewport();
                 TextView tvZoom = findViewById(R.id.tvZoomPercent);
                 if (tvZoom != null) tvZoom.setText("100%");
-                Toast.makeText(this, "Fit to Canvas", Toast.LENGTH_SHORT).show();
             });
         }
 
-        // 5. Zoom Widget (+ / 100% / -)
+        // 5. Pan / Hand Navigation Tool Toggle
+        View btnPan = findViewById(R.id.btnRightPanToggle);
+        ImageView ivPan = findViewById(R.id.ivPanIcon);
+        if (btnPan != null) {
+            btnPan.setOnClickListener(v -> {
+                binding.canvasView.togglePanMode();
+                boolean active = binding.canvasView.isPanModeActive();
+                if (ivPan != null) {
+                    ivPan.setColorFilter(active ? 0xFF00E5BC : 0xFF94A3B8);
+                }
+            });
+        }
+
+        // 6. Zoom Widget (+ / 100% / -)
         View btnZoomIn = findViewById(R.id.btnZoomIn);
         View btnZoomOut = findViewById(R.id.btnZoomOut);
         TextView tvZoom = findViewById(R.id.tvZoomPercent);
@@ -1519,7 +1464,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             tvZoom.setOnClickListener(v -> {
                 binding.canvasView.resetViewport();
                 tvZoom.setText("100%");
-                Toast.makeText(this, "Zoom reset (100%)", Toast.LENGTH_SHORT).show();
             });
         }
     }
@@ -1617,9 +1561,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     layer.setScaleY(1f);
                     layer.setWidth(300f);
                     layer.setHeight(300f);
+                    layer.setSkewX(0f);
+                    layer.setSkewY(0f);
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
-                    Toast.makeText(this, "Transform reset", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -1636,8 +1581,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     copyScaleY = layer.getScaleY();
                     copyWidth = layer.getWidth();
                     copyHeight = layer.getHeight();
+                    copySkewX = layer.getSkewX();
+                    copySkewY = layer.getSkewY();
                     hasCopiedTransform = true;
-                    Toast.makeText(this, "Transform copied", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -1654,11 +1600,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     layer.setScaleY(copyScaleY);
                     layer.setWidth(copyWidth);
                     layer.setHeight(copyHeight);
+                    layer.setSkewX(copySkewX);
+                    layer.setSkewY(copySkewY);
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
-                    Toast.makeText(this, "Transform applied", Toast.LENGTH_SHORT).show();
-                } else if (!hasCopiedTransform) {
-                    Toast.makeText(this, "No transform copied yet", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -1672,7 +1617,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     layer.setY(project.getCanvasHeight() / 2f);
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
-                    Toast.makeText(this, "Centered to canvas", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -1712,7 +1656,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     activeScaleAxis = ScaleAxis.WIDTH;
                 }
                 updateScalePillsUI.run();
-                Toast.makeText(this, isScaleAspectLinked ? "Aspect ratio locked" : "Freeform scaling (Tap Width / Height)", Toast.LENGTH_SHORT).show();
             });
         }
 
@@ -1893,13 +1836,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
                     if (activeSkewAxis == SkewAxis.X) {
-                        float deg = (layer.getRotation() + (delta * 0.4f)) % 360f;
-                        if (deg < 0) deg += 360f;
-                        layer.setRotation(deg);
+                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewX() + (delta * 0.3f)));
+                        layer.setSkewX(newSkew);
                     } else {
-                        float deg = (layer.getRotation() - (delta * 0.4f)) % 360f;
-                        if (deg < 0) deg += 360f;
-                        layer.setRotation(deg);
+                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewY() + (delta * 0.3f)));
+                        layer.setSkewY(newSkew);
                     }
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
@@ -2010,7 +1951,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         if (tvScaleH != null) tvScaleH.setText(String.format(java.util.Locale.US, "%.1f", layer.getHeight()));
 
         // Skew coordinates
-        if (tvSkewX != null) tvSkewX.setText(String.format(java.util.Locale.US, "%.1f°", layer.getRotation()));
-        if (tvSkewY != null) tvSkewY.setText("0.0°");
+        if (tvSkewX != null) tvSkewX.setText(String.format(java.util.Locale.US, "%.1f°", layer.getSkewX()));
+        if (tvSkewY != null) tvSkewY.setText(String.format(java.util.Locale.US, "%.1f°", layer.getSkewY()));
     }
 }

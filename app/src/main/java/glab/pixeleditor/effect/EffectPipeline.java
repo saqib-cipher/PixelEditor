@@ -1,6 +1,7 @@
 package glab.pixeleditor.effect;
 
 import android.graphics.BlurMaskFilter;
+import android.graphics.Camera;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -21,13 +22,14 @@ import glab.pixeleditor.model.ShapeLayer;
 public class EffectPipeline {
 
     /**
-     * Applies geometric transforms introduced by effects (e.g. Stretch Axis, Flip, Offset)
+     * Applies geometric transforms introduced by effects (e.g. Stretch Axis, Flip, Offset, 3D Camera)
      */
     public static void applyEffectTransforms(Canvas canvas, CanvasLayer layer) {
         for (EffectDefinition eff : layer.getAppliedEffects()) {
             if (!eff.isEnabled()) continue;
             String id = eff.getId().toLowerCase();
             String name = eff.getName().toLowerCase();
+            String cat = eff.getCategory() != null ? eff.getCategory().toLowerCase() : "";
 
             // 1. Stretch / Stretch Axis
             if (id.contains("stretch") || name.contains("stretch")) {
@@ -59,11 +61,55 @@ public class EffectPipeline {
             // 3. Offset
             if (id.contains("offset") || name.contains("offset")) {
                 EffectParam xParam = eff.getParam("x");
+                if (xParam == null) xParam = eff.getParam("offset_x");
                 EffectParam yParam = eff.getParam("y");
+                if (yParam == null) yParam = eff.getParam("offset_y");
                 if (xParam != null || yParam != null) {
                     float ox = xParam != null ? xParam.getFloatValue() : 0f;
                     float oy = yParam != null ? yParam.getFloatValue() : 0f;
                     canvas.translate(ox, oy);
+                }
+            }
+
+            // 4. 3D Perspective Rotation & Depth (Box, Cube, Cylinder, Extrude, etc.)
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+            if (cat.contains("3d") || id.contains("s3d") || id.contains("3d") || id.contains("cube") || id.contains("box") || fn.contains("3d") || fn.contains("s3d") || fn.contains("cube") || fn.contains("box") || name.contains("3d")) {
+                EffectParam rxParam = eff.getParam("rotate_x");
+                EffectParam ryParam = eff.getParam("rotate_y");
+                EffectParam rzParam = eff.getParam("rotate_z");
+
+                float rx = rxParam != null ? rxParam.getFloatValue() : 0f;
+                float ry = ryParam != null ? ryParam.getFloatValue() : 0f;
+                float rz = rzParam != null ? rzParam.getFloatValue() : 0f;
+
+                // Orient offsets
+                EffectParam ox = eff.getParam("orient_x");
+                EffectParam oy = eff.getParam("orient_y");
+                EffectParam oz = eff.getParam("orient_z");
+                if (ox != null) rx += ox.getFloatValue();
+                if (oy != null) ry += oy.getFloatValue();
+                if (oz != null) rz += oz.getFloatValue();
+
+                // If orientation is untouched (0, 0, 0), supply default noticeable 3D tilt
+                if (rx == 0f && ry == 0f && rz == 0f) {
+                    rx = 25f;
+                    ry = -30f;
+                }
+
+                EffectParam scaleParam = eff.getParam("scale");
+                float sc = scaleParam != null ? scaleParam.getFloatValue() : 1.0f;
+
+                Camera camera = new Camera();
+                camera.save();
+                camera.setLocation(0, 0, -50f);
+                camera.rotateX(rx);
+                camera.rotateY(ry);
+                camera.rotateZ(rz);
+                camera.applyToCanvas(canvas);
+                camera.restore();
+
+                if (sc != 1.0f && sc > 0f) {
+                    canvas.scale(sc, sc);
                 }
             }
         }

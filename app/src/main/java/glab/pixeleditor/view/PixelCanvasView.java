@@ -144,6 +144,23 @@ public class PixelCanvasView extends View {
         });
     }
 
+    private boolean hasInitializedViewport = false;
+    private boolean isPanModeActive = false;
+
+    public boolean isPanModeActive() {
+        return isPanModeActive;
+    }
+
+    public void setPanModeActive(boolean active) {
+        this.isPanModeActive = active;
+        this.isViewportLocked = !active;
+        invalidate();
+    }
+
+    public void togglePanMode() {
+        setPanModeActive(!isPanModeActive);
+    }
+
     public boolean isViewportLocked() {
         return isViewportLocked;
     }
@@ -169,7 +186,10 @@ public class PixelCanvasView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        resetViewport();
+        if (!hasInitializedViewport && w > 0 && h > 0) {
+            resetViewport();
+            hasInitializedViewport = true;
+        }
     }
 
     public boolean isGridLinesEnabled() {
@@ -219,6 +239,7 @@ public class PixelCanvasView extends View {
         viewportTransX = (getWidth() - artW * viewportScale) / 2f;
         viewportTransY = (getHeight() - artH * viewportScale) / 2f;
 
+        hasInitializedViewport = true;
         updateViewportMatrix();
         invalidate();
     }
@@ -310,6 +331,11 @@ public class PixelCanvasView extends View {
         };
 
         Matrix layerMat = new Matrix();
+        if (layer.getSkewX() != 0f || layer.getSkewY() != 0f) {
+            float kx = (float) Math.tan(Math.toRadians(layer.getSkewX()));
+            float ky = (float) Math.tan(Math.toRadians(layer.getSkewY()));
+            layerMat.postSkew(kx, ky);
+        }
         layerMat.postRotate(rot);
         layerMat.postTranslate(lx, ly);
         layerMat.postConcat(viewportMatrix); // Direct to view coordinates!
@@ -372,6 +398,12 @@ public class PixelCanvasView extends View {
             case MotionEvent.ACTION_DOWN:
                 lastTouchX = vx;
                 lastTouchY = vy;
+
+                // When pan mode is active, directly pan viewport without selecting or dragging layers
+                if (isPanModeActive) {
+                    currentTouchMode = TouchMode.PAN_VIEWPORT;
+                    return true;
+                }
 
                 // 1. Check if clicking on an active handle
                 CanvasLayer selectedLayer = project != null ? project.getSelectedLayer() : null;
@@ -468,7 +500,7 @@ public class PixelCanvasView extends View {
                     }
                     invalidate();
                 } else if (currentTouchMode == TouchMode.PAN_VIEWPORT) {
-                    if (!isViewportLocked) {
+                    if (isPanModeActive || !isViewportLocked) {
                         viewportTransX += dx;
                         viewportTransY += dy;
                         updateViewportMatrix();
@@ -652,6 +684,11 @@ public class PixelCanvasView extends View {
         };
 
         Matrix layerMat = new Matrix();
+        if (layer.getSkewX() != 0f || layer.getSkewY() != 0f) {
+            float kx = (float) Math.tan(Math.toRadians(layer.getSkewX()));
+            float ky = (float) Math.tan(Math.toRadians(layer.getSkewY()));
+            layerMat.postSkew(kx, ky);
+        }
         layerMat.postRotate(rot);
         layerMat.postTranslate(layer.getX(), layer.getY());
         layerMat.postConcat(viewportMatrix);

@@ -167,6 +167,36 @@ public class EffectHelper {
 
                         String cleanLabel = humanizeLabel(label, paramId);
                         effect.addParam(new EffectParam(paramId, cleanLabel, col));
+
+                    } else if ("xyz".equalsIgnoreCase(tagName) || "orient".equalsIgnoreCase(tagName)) {
+                        String paramId = el.getAttribute("id");
+                        String label = el.getAttribute("label");
+                        String cleanLabel = humanizeLabel(label, paramId);
+                        String defVal = el.getAttribute("default");
+                        float defX = 0f, defY = 0f, defZ = 0f;
+                        if (!defVal.isEmpty()) {
+                            String[] parts = defVal.split(",");
+                            if (parts.length >= 1) defX = parseSafeFloat(parts[0].trim(), 0f);
+                            if (parts.length >= 2) defY = parseSafeFloat(parts[1].trim(), 0f);
+                            if (parts.length >= 3) defZ = parseSafeFloat(parts[2].trim(), 0f);
+                        }
+                        effect.addParam(new EffectParam(paramId + "_x", EffectParam.ParamType.SLIDER, cleanLabel + " X", defX, -360f, 360f, 1f, "angle"));
+                        effect.addParam(new EffectParam(paramId + "_y", EffectParam.ParamType.SLIDER, cleanLabel + " Y", defY, -360f, 360f, 1f, "angle"));
+                        effect.addParam(new EffectParam(paramId + "_z", EffectParam.ParamType.SLIDER, cleanLabel + " Z", defZ, -360f, 360f, 1f, "angle"));
+
+                    } else if ("point".equalsIgnoreCase(tagName)) {
+                        String paramId = el.getAttribute("id");
+                        String label = el.getAttribute("label");
+                        String cleanLabel = humanizeLabel(label, paramId);
+                        String defVal = el.getAttribute("default");
+                        float defX = 0f, defY = 0f;
+                        if (!defVal.isEmpty()) {
+                            String[] parts = defVal.split(",");
+                            if (parts.length >= 1) defX = parseSafeFloat(parts[0].trim(), 0f);
+                            if (parts.length >= 2) defY = parseSafeFloat(parts[1].trim(), 0f);
+                        }
+                        effect.addParam(new EffectParam(paramId + "_x", EffectParam.ParamType.SLIDER, cleanLabel + " X", defX, -1000f, 1000f, 1f, "distance"));
+                        effect.addParam(new EffectParam(paramId + "_y", EffectParam.ParamType.SLIDER, cleanLabel + " Y", defY, -1000f, 1000f, 1f, "distance"));
                     }
                 }
             }

@@ -21,6 +21,8 @@ public abstract class CanvasLayer {
     protected float rotation = 0f; // in degrees
     protected float scaleX = 1f;
     protected float scaleY = 1f;
+    protected float skewX = 0f; // horizontal shear in degrees
+    protected float skewY = 0f; // vertical shear in degrees
     protected int opacity = 255; // 0..255
     protected boolean isVisible = true;
     protected boolean isLocked = false;
@@ -41,10 +43,13 @@ public abstract class CanvasLayer {
 
     public boolean containsPoint(float px, float py) {
         if (!isVisible) return false;
-        // Transform point into layer local coordinates (inverse rotation and translation)
+        // Transform point into layer local coordinates (inverse rotation, skew, and translation)
         float[] pts = new float[]{px, py};
         Matrix matrix = new Matrix();
         matrix.setRotate(-rotation, x, y);
+        if (skewX != 0f || skewY != 0f) {
+            matrix.preSkew(-(float) Math.tan(Math.toRadians(skewX)), -(float) Math.tan(Math.toRadians(skewY)));
+        }
         matrix.mapPoints(pts);
 
         float halfW = (width * Math.abs(scaleX)) / 2f;
@@ -99,6 +104,10 @@ public abstract class CanvasLayer {
     public void setScaleX(float scaleX) { this.scaleX = scaleX; }
     public float getScaleY() { return scaleY; }
     public void setScaleY(float scaleY) { this.scaleY = scaleY; }
+    public float getSkewX() { return skewX; }
+    public void setSkewX(float skewX) { this.skewX = skewX; }
+    public float getSkewY() { return skewY; }
+    public void setSkewY(float skewY) { this.skewY = skewY; }
     public int getOpacity() { return opacity; }
     public void setOpacity(int opacity) { this.opacity = Math.max(0, Math.min(255, opacity)); }
     public boolean isVisible() { return isVisible; }

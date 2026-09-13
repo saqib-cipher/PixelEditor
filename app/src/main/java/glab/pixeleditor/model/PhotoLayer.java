@@ -34,8 +34,11 @@ public class PhotoLayer extends CanvasLayer {
         canvas.translate(x, y);
         canvas.rotate(rotation);
         canvas.scale(scaleX, scaleY);
+        if (skewX != 0f || skewY != 0f) {
+            canvas.skew((float) Math.tan(Math.toRadians(skewX)), (float) Math.tan(Math.toRadians(skewY)));
+        }
 
-        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip)
+        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip, 3D)
         glab.pixeleditor.effect.EffectPipeline.applyEffectTransforms(canvas, this);
 
         float left = -width / 2f;
@@ -154,6 +157,8 @@ public class PhotoLayer extends CanvasLayer {
         copy.setRotation(rotation);
         copy.setScaleX(scaleX);
         copy.setScaleY(scaleY);
+        copy.setSkewX(skewX);
+        copy.setSkewY(skewY);
         copy.setOpacity(opacity);
         copy.setBrightness(brightness);
         copy.setContrast(contrast);

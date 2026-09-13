@@ -102,6 +102,58 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
+            <!-- Left-Side Floating Canvas Tools (Undo, Redo) -->
+            <LinearLayout
+                android:id="@+id/layoutLeftCanvasTools"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="12dp"
+                android:layout_marginBottom="280dp"
+                android:orientation="vertical">
+
+                <!-- Undo -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnLeftUndo"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginBottom="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#D9161D2D"
+                    app:cardCornerRadius="12dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_undo"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Redo -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnLeftRedo"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#D9161D2D"
+                    app:cardCornerRadius="12dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_redo"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
             <!-- Right-Side Vertical Canva Tool Rail (Image 1 reference) -->
             <LinearLayout
                 android:id="@+id/layoutRightCanvasTools"
@@ -198,7 +250,29 @@
                         app:tint="@color/pe_text_primary" />
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- 5. Zoom Control Widget (+ / 100% / -) -->
+                <!-- 5. Pan / Hand Navigation Tool Toggle -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnRightPanToggle"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#CC161D2D"
+                    app:cardCornerRadius="10dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:id="@+id/ivPanIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_tool_pan"
+                        app:tint="@color/pe_text_secondary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 6. Zoom Control Widget (+ / 100% / -) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardZoomWidget"
                     style="@style/Widget.PixelEditor.Card"
@@ -261,201 +335,110 @@
                 </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
-        </FrameLayout>
 
-        <!-- 3. Bottom Controls Container (mid toolbar, active layer bar, flipperBottomPanels) -->
-        <LinearLayout
-            android:id="@+id/layoutBottomContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/pe_surface_panel"
-            android:orientation="vertical">
-
-            <!-- Mid Transport & Layer Controls Toolbar -->
+            <!-- 3. Floating Bottom Controls Container Overlaid Over Canvas -->
             <LinearLayout
-                android:id="@+id/midToolbar"
+                android:id="@+id/layoutBottomContainer"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:background="@color/pe_surface_panel"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@drawable/bg_panel_floating_top_rounded"
+                android:elevation="12dp"
+                android:orientation="vertical">
 
-                <!-- Undo -->
-                <ImageButton
-                    android:id="@+id/btnMidUndo"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_undo"
-                    app:tint="@color/pe_text_primary" />
-
-                <!-- Redo -->
-                <ImageButton
-                    android:id="@+id/btnMidRedo"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="8dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_redo"
-                    app:tint="@color/pe_text_primary" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <!-- Add Element Button (+ glowing mint button) -->
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/btnFabAddElement"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:backgroundTint="@color/pe_accent_mint"
-                    app:elevation="2dp"
-                    app:fabCustomSize="38dp"
-                    app:maxImageSize="20dp"
-                    app:srcCompat="@drawable/ic_pe_add"
-                    app:tint="@color/pe_bg_canvas_workspace" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <!-- Before / After Compare -->
-                <ImageButton
-                    android:id="@+id/btnMidCompare"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_visible"
-                    app:tint="@color/pe_text_primary" />
-
-                <!-- Fit Canvas -->
-                <ImageButton
-                    android:id="@+id/btnMidFit"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="8dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_fit"
-                    app:tint="@color/pe_text_primary" />
-            </LinearLayout>
-
-            <!-- 4. Active Layer Indicator Bar -->
-            <LinearLayout
-                android:id="@+id/activeLayerBar"
-                android:layout_width="match_parent"
-                android:layout_height="38dp"
-                android:background="@color/pe_surface_panel_elevated"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
-
-                <!-- Visibility Eye -->
-                <ImageButton
-                    android:id="@+id/btnLayerVisibility"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_visible"
-                    app:tint="@color/pe_text_primary" />
-
-                <!-- Layer Color / Thumbnail Chip -->
-                <View
-                    android:id="@+id/viewLayerColorChip"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_pill_accent"
-                    android:backgroundTint="#FF7A4B58" />
-
-                <!-- Layer Name Chip Container -->
+                <!-- Mid Floating Transport & Element Toolbar -->
                 <LinearLayout
-                    android:id="@+id/chipActiveLayerContainer"
-                    android:layout_width="0dp"
-                    android:layout_height="28dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_pill_accent"
-                    android:backgroundTint="#4000E5BC"
+                    android:id="@+id/midToolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
                     android:gravity="center_vertical"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp">
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
 
-                    <TextView
-                        android:id="@+id/tvActiveLayerName"
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <!-- Floating Add Element Button (+ glowing mint button) -->
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/btnFabAddElement"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="Rounded Rectangle 1"
-                        android:textColor="@color/pe_accent_mint"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                        app:backgroundTint="@color/pe_accent_mint"
+                        app:elevation="4dp"
+                        app:fabCustomSize="42dp"
+                        app:maxImageSize="22dp"
+                        app:srcCompat="@drawable/ic_pe_add"
+                        app:tint="@color/pe_bg_canvas_workspace" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <!-- Before / After Compare Preview -->
+                    <ImageButton
+                        android:id="@+id/btnMidCompare"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pe_visible"
+                        app:tint="@color/pe_text_primary" />
+
+                    <!-- Fit Canvas Viewport -->
+                    <ImageButton
+                        android:id="@+id/btnMidFit"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pe_fit"
+                        app:tint="@color/pe_text_primary" />
                 </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/btnLayerBarDuplicate"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_duplicate"
-                    app:tint="@color/pe_text_secondary" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/pe_border" />
 
-                <ImageButton
-                    android:id="@+id/btnLayerBarDelete"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginStart="6dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pe_delete"
-                    app:tint="@color/pe_accent_danger" />
+                <!-- 4. Dynamic Bottom Panel Container (ViewFlipper) -->
+                <ViewFlipper
+                    android:id="@+id/flipperBottomPanels"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <!-- 0: Layer Menu -->
+                    <include layout="@layout/panel_layer_menu" />
+
+                    <!-- 1: Edit Shape -->
+                    <include layout="@layout/panel_edit_shape" />
+
+                    <!-- 2: Border & Shadow -->
+                    <include layout="@layout/panel_border_shadow" />
+
+                    <!-- 3: Color & Fill -->
+                    <include layout="@layout/panel_color_fill" />
+
+                    <!-- 4: Photo Adjust -->
+                    <include layout="@layout/panel_photo_adjust" />
+
+                    <!-- 5: Add Elements Sheet -->
+                    <include layout="@layout/sheet_add_element" />
+
+                    <!-- 6: Dynamic Effect Controls Panel -->
+                    <include layout="@layout/panel_effect_controls" />
+
+                    <!-- 7: Move & Transform Panel -->
+                    <include layout="@layout/panel_move_transform" />
+
+                    <!-- 8: Layers Overview Panel (Shown when no layer is selected) -->
+                    <include layout="@layout/panel_layers_overview" />
+
+                </ViewFlipper>
             </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/pe_border" />
-
-            <!-- 5. Dynamic Bottom Panel Container (ViewFlipper) -->
-            <ViewFlipper
-                android:id="@+id/flipperBottomPanels"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <!-- 0: Layer Menu -->
-                <include layout="@layout/panel_layer_menu" />
-
-                <!-- 1: Edit Shape -->
-                <include layout="@layout/panel_edit_shape" />
-
-                <!-- 2: Border & Shadow -->
-                <include layout="@layout/panel_border_shadow" />
-
-                <!-- 3: Color & Fill -->
-                <include layout="@layout/panel_color_fill" />
-
-                <!-- 4: Photo Adjust -->
-                <include layout="@layout/panel_photo_adjust" />
-
-                <!-- 5: Add Elements Sheet -->
-                <include layout="@layout/sheet_add_element" />
-
-                <!-- 6: Dynamic Effect Controls Panel -->
-                <include layout="@layout/panel_effect_controls" />
-
-                <!-- 7: Move & Transform Panel -->
-                <include layout="@layout/panel_move_transform" />
-
-                <!-- 8: Layers Overview Panel (Shown when no layer is selected) -->
-                <include layout="@layout/panel_layers_overview" />
-
-            </ViewFlipper>
-        </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 
     <!-- Fullscreen Overlay for Effect Browser (Image 4) -->

@@ -1,41 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.PixelEditor.Card"
-    android:layout_width="110dp"
-    android:layout_height="match_parent"
-    android:layout_marginEnd="8dp"
-    android:clickable="true"
-    android:focusable="true"
-    app:cardBackgroundColor="@color/pe_surface_panel_elevated"
-    app:cardCornerRadius="10dp"
-    app:strokeColor="@color/pe_border">
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:layout_marginBottom="6dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="6dp">
+    <!-- Visibility Toggle Eye (Alight Motion timeline left rail) -->
+    <ImageButton
+        android:id="@+id/btnOverviewLayerVisibility"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_pe_visible"
+        app:tint="@color/pe_text_secondary" />
 
-        <ImageView
-            android:id="@+id/ivOverviewChipIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_tool_shape"
-            app:tint="@color/pe_accent_mint" />
+    <!-- Layer Card (Colored timeline bar) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardOverviewLayerRow"
+        style="@style/Widget.PixelEditor.Card"
+        android:layout_width="0dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="6dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:focusable="true"
+        app:cardBackgroundColor="#2A3854"
+        app:cardCornerRadius="8dp"
+        app:strokeColor="@color/pe_border">
 
-        <TextView
-            android:id="@+id/tvOverviewChipName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="Rectangle"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="12dp">
+
+            <ImageView
+                android:id="@+id/ivOverviewChipIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_tool_shape"
+                app:tint="@color/pe_accent_mint" />
+
+            <TextView
+                android:id="@+id/tvOverviewChipName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Rounded Rectangle 1"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- Grab Handle (Screenshot 1 Alight Motion style) -->
+            <ImageView
+                android:id="@+id/ivOverviewReorder"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_pe_menu"
+                app:tint="@color/pe_text_secondary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

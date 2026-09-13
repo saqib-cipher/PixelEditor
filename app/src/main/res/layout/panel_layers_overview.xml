@@ -57,19 +57,18 @@
         android:layout_marginBottom="8dp"
         android:background="@color/pe_border" />
 
-    <!-- Horizontal scrollable layer cards -->
-    <HorizontalScrollView
+    <!-- Vertical scrollable layer cards (Alight Motion timeline stack style) -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="175dp"
         android:fillViewport="true"
-        android:scrollbars="none">
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:id="@+id/containerOverviewLayerCards"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

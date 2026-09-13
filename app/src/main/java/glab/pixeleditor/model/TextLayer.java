@@ -28,6 +28,10 @@ public class TextLayer extends CanvasLayer {
     public void recalculateBounds() {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(textSize);
+        float letterSpacing = getEffectiveLetterSpacing();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            paint.setLetterSpacing(letterSpacing);
+        }
         int style = Typeface.NORMAL;
         if (isBold && isItalic) style = Typeface.BOLD_ITALIC;
         else if (isBold) style = Typeface.BOLD;
@@ -36,8 +40,24 @@ public class TextLayer extends CanvasLayer {
 
         Rect bounds = new Rect();
         paint.getTextBounds(text, 0, text.length(), bounds);
-        this.width = Math.max(80f, bounds.width() + 40f);
-        this.height = Math.max(40f, bounds.height() + 30f);
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        this.width = Math.max(60f, bounds.width() + 30f);
+        this.height = Math.max(30f, (fm.bottom - fm.top) + 20f);
+    }
+
+    private float getEffectiveLetterSpacing() {
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String name = eff.getName().toLowerCase();
+            if (id.contains("textspacing") || name.contains("spacing")) {
+                glab.pixeleditor.effect.EffectParam ls = eff.getParam("letterspacing");
+                if (ls != null) {
+                    return ls.getFloatValue();
+                }
+            }
+        }
+        return 0f;
     }
 
     @Override
@@ -48,14 +68,22 @@ public class TextLayer extends CanvasLayer {
         canvas.translate(x, y);
         canvas.rotate(rotation);
         canvas.scale(scaleX, scaleY);
+        if (skewX != 0f || skewY != 0f) {
+            canvas.skew((float) Math.tan(Math.toRadians(skewX)), (float) Math.tan(Math.toRadians(skewY)));
+        }
 
-        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip)
+        // Apply Effect Geometric Transforms (e.g. Stretch Axis, Flip, 3D Camera)
         glab.pixeleditor.effect.EffectPipeline.applyEffectTransforms(canvas, this);
 
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(textSize);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setAlpha(opacity);
+
+        float effectiveLetterSpacing = getEffectiveLetterSpacing();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            paint.setLetterSpacing(effectiveLetterSpacing);
+        }
 
         int style = Typeface.NORMAL;
         if (isBold && isItalic) style = Typeface.BOLD_ITALIC;
@@ -77,7 +105,105 @@ public class TextLayer extends CanvasLayer {
         // Fill Paint
         Paint fillPaint = new Paint(paint);
         fillPaint.setStyle(Paint.Style.FILL);
-        fillPaint.setColor(textColor);
+        int effectiveTextColor = textColor;
+
+        // Check Text Effects for transforms, styling, and text content changes
+        String displayText = text;
+        float textEffOffsetX = 0f;
+        float textEffOffsetY = 0f;
+        float textEffAngle = 0f;
+        float textEffScale = 1.0f;
+        float textEffAlpha = 1.0f;
+
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String name = eff.getName().toLowerCase();
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+
+            // 1. Text Transform effect
+            if (id.contains("texttransform") || name.contains("text transform") || fn.contains("text-transform")) {
+                glab.pixeleditor.effect.EffectParam useFill = eff.getParam("useFillColor");
+                glab.pixeleditor.effect.EffectParam fillCol = eff.getParam("fillColor");
+                if (fillCol != null && (useFill == null || useFill.getBooleanValue())) {
+                    effectiveTextColor = fillCol.getColorValue();
+                }
+
+                glab.pixeleditor.effect.EffectParam pStart = eff.getParam("start");
+                glab.pixeleditor.effect.EffectParam pEnd = eff.getParam("end");
+                if (pStart != null || pEnd != null) {
+                    float s = pStart != null ? Math.max(0f, pStart.getFloatValue()) : 0f;
+                    float e = pEnd != null ? Math.min(1f, pEnd.getFloatValue()) : 1f;
+                    int startIdx = Math.max(0, Math.min(displayText.length(), (int) (displayText.length() * s)));
+                    int endIdx = Math.max(startIdx, Math.min(displayText.length(), (int) Math.ceil(displayText.length() * e)));
+                    displayText = displayText.substring(startIdx, endIdx);
+                }
+
+                glab.pixeleditor.effect.EffectParam pOffX = eff.getParam("offset_x");
+                glab.pixeleditor.effect.EffectParam pOffY = eff.getParam("offset_y");
+                if (pOffX != null) textEffOffsetX += pOffX.getFloatValue();
+                if (pOffY != null) textEffOffsetY += pOffY.getFloatValue();
+
+                glab.pixeleditor.effect.EffectParam pAngle = eff.getParam("angle");
+                if (pAngle != null) textEffAngle += pAngle.getFloatValue();
+
+                glab.pixeleditor.effect.EffectParam pScale = eff.getParam("scale");
+                if (pScale != null && pScale.getFloatValue() != 0f) {
+                    textEffScale *= (1.0f + pScale.getFloatValue());
+                }
+
+                glab.pixeleditor.effect.EffectParam pAlpha = eff.getParam("alpha");
+                if (pAlpha != null) {
+                    textEffAlpha *= Math.max(0f, Math.min(1f, 1f + pAlpha.getFloatValue()));
+                }
+
+            // 2. Text Progress effect
+            } else if (id.contains("textprogress") || name.contains("text progress") || fn.contains("textprogress")) {
+                glab.pixeleditor.effect.EffectParam pStart = eff.getParam("start");
+                glab.pixeleditor.effect.EffectParam pEnd = eff.getParam("end");
+                if (pEnd == null) pEnd = eff.getParam("progress");
+
+                float s = pStart != null ? Math.max(0f, Math.min(1f, pStart.getFloatValue())) : 0f;
+                float e = pEnd != null ? Math.max(s, Math.min(1f, pEnd.getFloatValue())) : 1f;
+                int startIdx = Math.max(0, Math.min(displayText.length(), (int) (displayText.length() * s)));
+                int endIdx = Math.max(startIdx, Math.min(displayText.length(), (int) Math.ceil(displayText.length() * e)));
+                displayText = displayText.substring(startIdx, endIdx);
+
+            // 3. Text Randomize effect
+            } else if (id.contains("textrand") || name.contains("randomize") || fn.contains("textrand")) {
+                glab.pixeleditor.effect.EffectParam pAmount = eff.getParam("amount");
+                float amt = pAmount != null ? Math.max(0f, Math.min(1f, pAmount.getFloatValue())) : 0f;
+                if (amt > 0f && !displayText.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    String charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+                    for (int i = 0; i < displayText.length(); i++) {
+                        if (Math.random() < amt && displayText.charAt(i) != ' ') {
+                            int rIdx = (int) (Math.random() * charset.length());
+                            sb.append(charset.charAt(rIdx));
+                        } else {
+                            sb.append(displayText.charAt(i));
+                        }
+                    }
+                    displayText = sb.toString();
+                }
+            }
+        }
+
+        if (textEffOffsetX != 0f || textEffOffsetY != 0f) {
+            canvas.translate(textEffOffsetX, textEffOffsetY);
+        }
+        if (textEffAngle != 0f) {
+            canvas.rotate(textEffAngle);
+        }
+        if (textEffScale != 1.0f && textEffScale > 0f) {
+            canvas.scale(textEffScale, textEffScale);
+        }
+
+        fillPaint.setColor(effectiveTextColor);
+        if (textEffAlpha < 1.0f) {
+            fillPaint.setAlpha((int) (paint.getAlpha() * textEffAlpha));
+            paint.setAlpha((int) (paint.getAlpha() * textEffAlpha));
+        }
 
         // Stroke Paint
         Paint strokePaint = null;
@@ -99,12 +225,14 @@ public class TextLayer extends CanvasLayer {
         glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, bounds, fillPaint, strokePaint);
 
         // Draw Stroke
-        if (strokePaint != null) {
-            canvas.drawText(text, 0, baseline, strokePaint);
+        if (strokePaint != null && !displayText.isEmpty()) {
+            canvas.drawText(displayText, 0, baseline, strokePaint);
         }
 
         // Draw Fill
-        canvas.drawText(text, 0, baseline, fillPaint);
+        if (!displayText.isEmpty()) {
+            canvas.drawText(displayText, 0, baseline, fillPaint);
+        }
 
         // Post-draw vignette
         glab.pixeleditor.effect.EffectPipeline.applyPostDraw(canvas, this, bounds);
@@ -118,6 +246,8 @@ public class TextLayer extends CanvasLayer {
         copy.setRotation(rotation);
         copy.setScaleX(scaleX);
         copy.setScaleY(scaleY);
+        copy.setSkewX(skewX);
+        copy.setSkewY(skewY);
         copy.setOpacity(opacity);
         copy.setTextColor(textColor);
         copy.setTextSize(textSize);
@@ -161,24 +291,23 @@ public class TextLayer extends CanvasLayer {
     public void setStrokeColor(int strokeColor) { this.strokeColor = strokeColor; }
     public float getStrokeWidth() { return strokeWidth; }
     public void setStrokeWidth(float strokeWidth) { this.strokeWidth = strokeWidth; }
+
     @Override
     public void setWidth(float width) {
+        if (width <= 0) return;
         float oldW = Math.max(10f, this.width);
-        super.setWidth(width);
-        if (oldW > 0 && this.width > 0) {
-            float ratio = this.width / oldW;
-            this.textSize = Math.max(8f, this.textSize * ratio);
-        }
+        float ratio = width / oldW;
+        this.textSize = Math.max(10f, this.textSize * ratio);
+        recalculateBounds();
     }
 
     @Override
     public void setHeight(float height) {
+        if (height <= 0) return;
         float oldH = Math.max(10f, this.height);
-        super.setHeight(height);
-        if (oldH > 0 && this.height > 0) {
-            float ratio = this.height / oldH;
-            this.textSize = Math.max(8f, this.textSize * ratio);
-        }
+        float ratio = height / oldH;
+        this.textSize = Math.max(10f, this.textSize * ratio);
+        recalculateBounds();
     }
 
     public boolean isHasStroke() { return hasStroke; }
