@@ -102,127 +102,164 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <!-- Zoom & Pan Reset Button (floating top-left as in Alight Motion) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardZoomReset"
-                style="@style/Widget.PixelEditor.Card"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_margin="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#CC161D2D"
-                app:cardCornerRadius="10dp"
-                app:strokeColor="@color/pe_border">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_pe_zoom"
-                    app:tint="@color/pe_text_primary" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Right-Side Layers Panel Overlay -->
+            <!-- Right-Side Vertical Canva Tool Rail (Image 1 reference) -->
             <LinearLayout
-                android:id="@+id/layoutRightLayersPanel"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_gravity="end"
-                android:orientation="horizontal"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp"
-                android:paddingEnd="8dp">
+                android:id="@+id/layoutRightCanvasTools"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end|top"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-                <!-- Toggle Button to Expand / Collapse Layers Panel -->
+                <!-- 1. Selection / Shape Tool -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnToggleRightLayers"
+                    android:id="@+id/btnRightShapeAspect"
                     style="@style/Widget.PixelEditor.Card"
-                    android:layout_width="32dp"
-                    android:layout_height="38dp"
-                    android:layout_gravity="center_vertical"
-                    android:layout_marginEnd="-4dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="#E6161D2D"
-                    app:cardCornerRadius="8dp"
+                    app:cardBackgroundColor="#CC161D2D"
+                    app:cardCornerRadius="10dp"
                     app:strokeColor="@color/pe_border">
 
                     <ImageView
-                        android:id="@+id/ivToggleLayersChevron"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_shape_rounded_rect"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 2. Grid Lines Toggle -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnRightGridToggle"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#CC161D2D"
+                    app:cardCornerRadius="10dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:id="@+id/ivGridIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_grid"
+                        app:tint="@color/pe_text_secondary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 3. Layers Quick Sheet Toggle -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnRightLayersToggle"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#CC161D2D"
+                    app:cardCornerRadius="10dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_pe_layers"
                         app:tint="@color/pe_accent_mint" />
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Layers List Container Card -->
+                <!-- 4. Fit Canvas / Viewport -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardRightLayersContainer"
+                    android:id="@+id/btnRightFitCanvas"
                     style="@style/Widget.PixelEditor.Card"
-                    android:layout_width="150dp"
-                    android:layout_height="match_parent"
-                    app:cardBackgroundColor="#F0161D2D"
-                    app:cardCornerRadius="14dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#CC161D2D"
+                    app:cardCornerRadius="10dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_fit"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 5. Zoom Control Widget (+ / 100% / -) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardZoomWidget"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="42dp"
+                    android:layout_height="116dp"
+                    app:cardBackgroundColor="#E6161D2D"
+                    app:cardCornerRadius="12dp"
                     app:strokeColor="@color/pe_border">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:padding="6dp">
+                        android:gravity="center"
+                        android:orientation="vertical">
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="4dp"
-                            android:paddingTop="2dp"
-                            android:paddingBottom="6dp">
-
-                            <ImageView
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:src="@drawable/ic_pe_layers"
-                                app:tint="@color/pe_accent_mint" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:layout_weight="1"
-                                android:text="Layers"
-                                android:textColor="@color/pe_text_primary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvRightLayersCount"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:textColor="@color/pe_accent_mint"
-                                android:textSize="10sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginBottom="4dp"
-                            android:background="@color/pe_border" />
-
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rvRightLayers"
+                        <!-- Zoom In (+) -->
+                        <TextView
+                            android:id="@+id/btnZoomIn"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_weight="1"
-                            android:scrollbars="vertical" />
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:text="+"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <!-- Zoom Percent / Reset (100%) -->
+                        <TextView
+                            android:id="@+id/tvZoomPercent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:text="100%"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <!-- Zoom Out (-) -->
+                        <TextView
+                            android:id="@+id/btnZoomOut"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:text="−"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
         </FrameLayout>
 

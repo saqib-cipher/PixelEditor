@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         setupEffectBrowser();
         setupEffectControlsPanel();
         setupMoveTransformPanel();
-        setupRightLayersSidebar();
+        setupRightCanvasTools();
 
         // Load all XML effects asynchronously from assets/effects
         loadEffectsAsync();
@@ -352,12 +352,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         // Export
         binding.btnTopExport.setOnClickListener(v -> showExportDialog());
-
-        // Canvas Zoom Reset
-        binding.cardZoomReset.setOnClickListener(v -> {
-            binding.canvasView.resetViewport();
-            Toast.makeText(this, "Viewport reset", Toast.LENGTH_SHORT).show();
-        });
     }
 
     private void showProjectRenameDialog() {
@@ -471,6 +465,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         });
 
         binding.btnFabAddElement.setOnClickListener(v -> {
+            binding.flipperBottomPanels.setVisibility(View.VISIBLE);
             binding.flipperBottomPanels.setDisplayedChild(SHEET_ADD_ELEMENT);
         });
 
@@ -1271,10 +1266,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private void updateUIForActiveLayer(@Nullable CanvasLayer layer) {
         if (layer == null) {
             binding.activeLayerBar.setVisibility(View.GONE);
+            binding.flipperBottomPanels.setVisibility(View.GONE);
             return;
         }
 
         binding.activeLayerBar.setVisibility(View.VISIBLE);
+        binding.flipperBottomPanels.setVisibility(View.VISIBLE);
         binding.tvActiveLayerName.setText(layer.getName());
 
         // Update Visibility Icon
@@ -1306,75 +1303,125 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             binding.viewLayerColorChip.setVisibility(View.GONE);
         }
 
-        updateRightLayersSidebar();
         updateTransformCoordinatesUI();
     }
 
     // -------------------------------------------------------------
-    // 9. RIGHT-SIDE LAYERS PANEL STACK
+    // 9. RIGHT-SIDE CANVA TOOLS (Zoom, Grid, Layers, Fit)
     // -------------------------------------------------------------
-    private void setupRightLayersSidebar() {
-        RecyclerView rv = binding.getRoot().findViewById(R.id.rvRightLayers);
-        if (rv == null) return;
+    private void setupRightCanvasTools() {
+        // 1. Shape / Aspect ratio
+        View btnShape = findViewById(R.id.btnRightShapeAspect);
+        if (btnShape != null) {
+            btnShape.setOnClickListener(v -> binding.chipAspectRatio.performClick());
+        }
 
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        sidebarAdapter = new glab.pixeleditor.ui.CanvasLayerSidebarAdapter(this, new glab.pixeleditor.ui.CanvasLayerSidebarAdapter.OnLayerSidebarListener() {
-            @Override
-            public void onLayerSelected(int index) {
-                project.setSelectedIndex(index);
-                binding.canvasView.invalidate();
-                updateUIForActiveLayer(project.getSelectedLayer());
-            }
-
-            @Override
-            public void onLayerVisibilityToggle(int index) {
-                if (index >= 0 && index < project.getLayers().size()) {
-                    CanvasLayer l = project.getLayers().get(index);
-                    l.setVisible(!l.isVisible());
-                    binding.canvasView.invalidate();
-                    updateRightLayersSidebar();
-                    if (index == project.getSelectedIndex()) {
-                        updateUIForActiveLayer(l);
-                    }
+        // 2. Grid Toggle
+        View btnGrid = findViewById(R.id.btnRightGridToggle);
+        ImageView ivGrid = findViewById(R.id.ivGridIcon);
+        if (btnGrid != null) {
+            btnGrid.setOnClickListener(v -> {
+                binding.canvasView.toggleGridLines();
+                boolean on = binding.canvasView.isGridLinesEnabled();
+                if (ivGrid != null) {
+                    ivGrid.setColorFilter(on ? 0xFF00E5BC : 0xFF94A3B8);
                 }
-            }
-        });
-        rv.setAdapter(sidebarAdapter);
-
-        // Expand / Collapse Sidebar Toggle
-        View btnToggle = binding.getRoot().findViewById(R.id.btnToggleRightLayers);
-        View containerCard = binding.getRoot().findViewById(R.id.cardRightLayersContainer);
-        ImageView ivChevron = binding.getRoot().findViewById(R.id.ivToggleLayersChevron);
-
-        if (btnToggle != null && containerCard != null) {
-            btnToggle.setOnClickListener(v -> {
-                if (containerCard.getVisibility() == View.VISIBLE) {
-                    containerCard.setVisibility(View.GONE);
-                    if (ivChevron != null) ivChevron.setAlpha(0.6f);
-                } else {
-                    containerCard.setVisibility(View.VISIBLE);
-                    if (ivChevron != null) ivChevron.setAlpha(1.0f);
-                    updateRightLayersSidebar();
-                }
+                Toast.makeText(this, on ? "Grid overlay enabled" : "Grid overlay disabled", Toast.LENGTH_SHORT).show();
             });
         }
 
-        updateRightLayersSidebar();
-    }
+        // 3. Layers Quick Sheet Toggle
+        View btnLayers = findViewById(R.id.btnRightLayersToggle);
+        if (btnLayers != null) {
+            btnLayers.setOnClickListener(v -> showLayersListBottomSheet());
+        }
 
-    private void updateRightLayersSidebar() {
-        if (sidebarAdapter != null && project != null) {
-            sidebarAdapter.setLayers(project.getLayers(), project.getSelectedIndex());
-            TextView tvCount = binding.getRoot().findViewById(R.id.tvRightLayersCount);
-            if (tvCount != null) {
-                tvCount.setText(String.valueOf(project.getLayers().size()));
-            }
+        // 4. Fit Canvas
+        View btnFit = findViewById(R.id.btnRightFitCanvas);
+        if (btnFit != null) {
+            btnFit.setOnClickListener(v -> {
+                binding.canvasView.resetViewport();
+                TextView tvZoom = findViewById(R.id.tvZoomPercent);
+                if (tvZoom != null) tvZoom.setText("100%");
+                Toast.makeText(this, "Fit to Canvas", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // 5. Zoom Widget (+ / 100% / -)
+        View btnZoomIn = findViewById(R.id.btnZoomIn);
+        View btnZoomOut = findViewById(R.id.btnZoomOut);
+        TextView tvZoom = findViewById(R.id.tvZoomPercent);
+
+        if (btnZoomIn != null) {
+            btnZoomIn.setOnClickListener(v -> {
+                binding.canvasView.zoomIn();
+                if (tvZoom != null) tvZoom.setText(binding.canvasView.getZoomPercent() + "%");
+            });
+        }
+
+        if (btnZoomOut != null) {
+            btnZoomOut.setOnClickListener(v -> {
+                binding.canvasView.zoomOut();
+                if (tvZoom != null) tvZoom.setText(binding.canvasView.getZoomPercent() + "%");
+            });
+        }
+
+        if (tvZoom != null) {
+            tvZoom.setOnClickListener(v -> {
+                binding.canvasView.resetViewport();
+                tvZoom.setText("100%");
+                Toast.makeText(this, "Zoom reset (100%)", Toast.LENGTH_SHORT).show();
+            });
         }
     }
 
+    private void showLayersListBottomSheet() {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_layers_stack);
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        RecyclerView rv = dialog.findViewById(R.id.rvDialogLayers);
+        TextView tvCount = dialog.findViewById(R.id.tvDialogLayersCount);
+        ImageButton btnClose = dialog.findViewById(R.id.btnCloseLayersDialog);
+
+        if (tvCount != null) tvCount.setText(project.getLayers().size() + " Layers");
+        if (btnClose != null) btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        if (rv != null) {
+            rv.setLayoutManager(new LinearLayoutManager(this));
+            glab.pixeleditor.ui.CanvasLayerSidebarAdapter adapter = new glab.pixeleditor.ui.CanvasLayerSidebarAdapter(this, new glab.pixeleditor.ui.CanvasLayerSidebarAdapter.OnLayerSidebarListener() {
+                @Override
+                public void onLayerSelected(int index) {
+                    project.setSelectedIndex(index);
+                    binding.canvasView.invalidate();
+                    updateUIForActiveLayer(project.getSelectedLayer());
+                    dialog.dismiss();
+                }
+
+                @Override
+                public void onLayerVisibilityToggle(int index) {
+                    if (index >= 0 && index < project.getLayers().size()) {
+                        CanvasLayer l = project.getLayers().get(index);
+                        l.setVisible(!l.isVisible());
+                        binding.canvasView.invalidate();
+                        if (index == project.getSelectedIndex()) {
+                            updateUIForActiveLayer(l);
+                        }
+                    }
+                }
+            });
+            adapter.setLayers(project.getLayers(), project.getSelectedIndex());
+            rv.setAdapter(adapter);
+        }
+
+        dialog.show();
+    }
+
     // -------------------------------------------------------------
-    // 10. MOVE & TRANSFORM CONTROL PANEL (Alight Motion inspired)
+    // 10. MOVE & TRANSFORM CONTROL PANEL (With Circular Dial, Scrub Ruler, Z-Order)
     // -------------------------------------------------------------
+    private boolean isScaleAspectLinked = true;
+
     private void setupMoveTransformPanel() {
         View panel = binding.flipperBottomPanels.getChildAt(PANEL_MOVE_TRANSFORM);
         if (panel == null) return;
@@ -1399,7 +1446,34 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ImageView[] modeIcons = {ivPos, ivRot, ivScale, ivSkew};
         TransformMode[] modes = {TransformMode.POSITION, TransformMode.ROTATE, TransformMode.SCALE, TransformMode.SKEW};
 
-        TextView tvHint = panel.findViewById(R.id.tvTransformHint);
+        // Container Views for each mode
+        View containerPos = panel.findViewById(R.id.containerModePosition);
+        View containerRot = panel.findViewById(R.id.containerModeRotation);
+        View containerScale = panel.findViewById(R.id.containerModeScale);
+        View containerSkew = panel.findViewById(R.id.containerModeSkew);
+
+        glab.pixeleditor.view.CircularDialView circularDial = panel.findViewById(R.id.circularDialRotation);
+        glab.pixeleditor.view.ScrubRulerView rulerScale = panel.findViewById(R.id.rulerScale);
+        glab.pixeleditor.view.ScrubRulerView rulerSkew = panel.findViewById(R.id.rulerSkew);
+
+        // Link Aspect Ratio Toggle
+        MaterialCardView btnLinkAspect = panel.findViewById(R.id.btnToggleLinkAspect);
+        ImageView ivLinkIcon = panel.findViewById(R.id.ivLinkAspectIcon);
+        if (btnLinkAspect != null) {
+            btnLinkAspect.setOnClickListener(v -> {
+                isScaleAspectLinked = !isScaleAspectLinked;
+                if (ivLinkIcon != null) {
+                    ivLinkIcon.setColorFilter(isScaleAspectLinked ? 0xFF00E5BC : 0xFF64748B);
+                }
+                Toast.makeText(this, isScaleAspectLinked ? "Aspect ratio locked" : "Freeform scaling", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Z-Index Order Pill Click
+        View pillZ = panel.findViewById(R.id.layoutPillZ);
+        if (pillZ != null) {
+            pillZ.setOnClickListener(v -> showZOrderSelectionDialog());
+        }
 
         Runnable updateModeSelectorUI = () -> {
             for (int i = 0; i < modeCards.length; i++) {
@@ -1414,14 +1488,16 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 }
             }
 
-            if (currentTransformMode == TransformMode.POSITION) {
-                tvHint.setText("Swipe here to move layer");
-            } else if (currentTransformMode == TransformMode.ROTATE) {
-                tvHint.setText("Swipe here to rotate layer");
-            } else if (currentTransformMode == TransformMode.SCALE) {
-                tvHint.setText("Swipe here to resize layer");
-            } else if (currentTransformMode == TransformMode.SKEW) {
-                tvHint.setText("Swipe here to skew layer");
+            if (containerPos != null) containerPos.setVisibility(currentTransformMode == TransformMode.POSITION ? View.VISIBLE : View.GONE);
+            if (containerRot != null) containerRot.setVisibility(currentTransformMode == TransformMode.ROTATE ? View.VISIBLE : View.GONE);
+            if (containerScale != null) containerScale.setVisibility(currentTransformMode == TransformMode.SCALE ? View.VISIBLE : View.GONE);
+            if (containerSkew != null) containerSkew.setVisibility(currentTransformMode == TransformMode.SKEW ? View.VISIBLE : View.GONE);
+
+            CanvasLayer layer = project.getSelectedLayer();
+            if (layer != null) {
+                if (circularDial != null) {
+                    circularDial.setAngle(layer.getRotation());
+                }
             }
 
             updateTransformCoordinatesUI();
@@ -1432,6 +1508,50 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             modeCards[i].setOnClickListener(v -> {
                 currentTransformMode = modes[idx];
                 updateModeSelectorUI.run();
+            });
+        }
+
+        // Mode 2: Rotation Circular Dial listener
+        if (circularDial != null) {
+            circularDial.setOnAngleChangeListener(angle -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    layer.setRotation(angle);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
+            });
+        }
+
+        // Mode 3: Scale Scrub Ruler listener
+        if (rulerScale != null) {
+            rulerScale.setOnScrubListener(delta -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    float factor = 1.0f + (delta * 0.005f);
+                    float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                    float newH = isScaleAspectLinked
+                            ? Math.max(20f, Math.min(3000f, layer.getHeight() * factor))
+                            : layer.getHeight();
+                    layer.setWidth(newW);
+                    layer.setHeight(newH);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
+            });
+        }
+
+        // Mode 4: Skew Scrub Ruler listener
+        if (rulerSkew != null) {
+            rulerSkew.setOnScrubListener(delta -> {
+                CanvasLayer layer = project.getSelectedLayer();
+                if (layer != null) {
+                    float deg = (layer.getRotation() + (delta * 0.4f)) % 360f;
+                    if (deg < 0) deg += 360f;
+                    layer.setRotation(deg);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
             });
         }
 
@@ -1446,66 +1566,89 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         panel.findViewById(R.id.btnTransformMore).setOnClickListener(v -> showTransformMoreDialog());
 
-        // Large Interactive Touchpad Surface
+        // Mode 1: Large Interactive Touchpad Surface
         View pad = panel.findViewById(R.id.viewTransformPad);
-        pad.setOnTouchListener(new View.OnTouchListener() {
-            private float lastTouchX, lastTouchY;
+        if (pad != null) {
+            pad.setOnTouchListener(new View.OnTouchListener() {
+                private float lastTouchX, lastTouchY;
 
-            @Override
-            public boolean onTouch(View v, android.view.MotionEvent event) {
-                CanvasLayer layer = project.getSelectedLayer();
-                if (layer == null) return false;
+                @Override
+                public boolean onTouch(View v, android.view.MotionEvent event) {
+                    CanvasLayer layer = project.getSelectedLayer();
+                    if (layer == null) return false;
 
-                switch (event.getActionMasked()) {
-                    case android.view.MotionEvent.ACTION_DOWN:
-                        lastTouchX = event.getX();
-                        lastTouchY = event.getY();
-                        v.getParent().requestDisallowInterceptTouchEvent(true);
-                        return true;
+                    switch (event.getActionMasked()) {
+                        case android.view.MotionEvent.ACTION_DOWN:
+                            lastTouchX = event.getX();
+                            lastTouchY = event.getY();
+                            v.getParent().requestDisallowInterceptTouchEvent(true);
+                            return true;
 
-                    case android.view.MotionEvent.ACTION_MOVE:
-                        float dx = event.getX() - lastTouchX;
-                        float dy = event.getY() - lastTouchY;
-                        lastTouchX = event.getX();
-                        lastTouchY = event.getY();
+                        case android.view.MotionEvent.ACTION_MOVE:
+                            float dx = event.getX() - lastTouchX;
+                            float dy = event.getY() - lastTouchY;
+                            lastTouchX = event.getX();
+                            lastTouchY = event.getY();
 
-                        if (currentTransformMode == TransformMode.POSITION) {
                             layer.setX(layer.getX() + dx);
                             layer.setY(layer.getY() + dy);
-                        } else if (currentTransformMode == TransformMode.ROTATE) {
-                            float deg = (dx * 0.5f) + (dy * 0.2f);
-                            float newRot = (layer.getRotation() + deg) % 360f;
-                            if (newRot < 0) newRot += 360f;
-                            layer.setRotation(newRot);
-                        } else if (currentTransformMode == TransformMode.SCALE) {
-                            float scaleFactor = 1.0f + (dx * 0.005f) - (dy * 0.005f);
-                            float newW = Math.max(20f, Math.min(2500f, layer.getWidth() * scaleFactor));
-                            float newH = Math.max(20f, Math.min(2500f, layer.getHeight() * scaleFactor));
-                            layer.setWidth(newW);
-                            layer.setHeight(newH);
-                        } else if (currentTransformMode == TransformMode.SKEW) {
-                            float deg = (dx * 0.3f);
-                            layer.setRotation((layer.getRotation() + deg) % 360f);
-                        }
 
-                        binding.canvasView.invalidate();
-                        updateTransformCoordinatesUI();
-                        return true;
+                            binding.canvasView.invalidate();
+                            updateTransformCoordinatesUI();
+                            return true;
 
-                    case android.view.MotionEvent.ACTION_UP:
-                    case android.view.MotionEvent.ACTION_CANCEL:
-                        v.getParent().requestDisallowInterceptTouchEvent(false);
-                        return true;
+                        case android.view.MotionEvent.ACTION_UP:
+                        case android.view.MotionEvent.ACTION_CANCEL:
+                            v.getParent().requestDisallowInterceptTouchEvent(false);
+                            return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
-        });
+            });
+        }
 
         updateModeSelectorUI.run();
     }
 
+    private void showZOrderSelectionDialog() {
+        CanvasLayer layer = project.getSelectedLayer();
+        if (layer == null) return;
+
+        String[] zOptions = {
+                "Bring Forward (Z + 1)",
+                "Send Backward (Z - 1)",
+                "Bring to Top (Front)",
+                "Send to Bottom (Back)"
+        };
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Layer Depth (Z-Order)")
+                .setItems(zOptions, (dialog, which) -> {
+                    int idx = project.getSelectedIndex();
+                    if (which == 0) {
+                        project.moveLayerUp(idx);
+                    } else if (which == 1) {
+                        project.moveLayerDown(idx);
+                    } else if (which == 2) {
+                        while (project.getSelectedIndex() < project.getLayers().size() - 1) {
+                            project.moveLayerUp(project.getSelectedIndex());
+                        }
+                    } else if (which == 3) {
+                        while (project.getSelectedIndex() > 0) {
+                            project.moveLayerDown(project.getSelectedIndex());
+                        }
+                    }
+
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                    Toast.makeText(this, zOptions[which], Toast.LENGTH_SHORT).show();
+                })
+                .show();
+    }
+
     private void openMoveTransformPanel() {
         binding.flipperBottomPanels.setDisplayedChild(PANEL_MOVE_TRANSFORM);
+        setupMoveTransformPanel();
         updateTransformCoordinatesUI();
     }
 
@@ -1513,52 +1656,35 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         View panel = binding.flipperBottomPanels.getChildAt(PANEL_MOVE_TRANSFORM);
         if (panel == null) return;
 
-        TextView tvLabel1 = panel.findViewById(R.id.tvCoordLabel1);
         TextView tvVal1 = panel.findViewById(R.id.tvCoordVal1);
-        TextView tvLabel2 = panel.findViewById(R.id.tvCoordLabel2);
         TextView tvVal2 = panel.findViewById(R.id.tvCoordVal2);
-        TextView tvLabel3 = panel.findViewById(R.id.tvCoordLabel3);
         TextView tvVal3 = panel.findViewById(R.id.tvCoordVal3);
 
-        if (tvVal1 == null || tvVal2 == null || tvVal3 == null) return;
+        TextView tvScaleW = panel.findViewById(R.id.tvScaleWidthVal);
+        TextView tvScaleH = panel.findViewById(R.id.tvScaleHeightVal);
+        TextView tvSkewX = panel.findViewById(R.id.tvSkewXVal);
+        TextView tvSkewY = panel.findViewById(R.id.tvSkewYVal);
 
         CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
         if (layer == null) {
-            tvVal1.setText("0.00");
-            tvVal2.setText("0.00");
-            tvVal3.setText("0.00");
+            if (tvVal1 != null) tvVal1.setText("0.00");
+            if (tvVal2 != null) tvVal2.setText("0.00");
+            if (tvVal3 != null) tvVal3.setText("0.00");
             return;
         }
 
-        if (currentTransformMode == TransformMode.POSITION) {
-            tvLabel1.setText("X: ");
-            tvVal1.setText(String.format(java.util.Locale.US, "%.2f", layer.getX()));
-            tvLabel2.setText("Y: ");
-            tvVal2.setText(String.format(java.util.Locale.US, "%.2f", layer.getY()));
-            tvLabel3.setText("Z: ");
-            tvVal3.setText("0.00");
-        } else if (currentTransformMode == TransformMode.ROTATE) {
-            tvLabel1.setText("Angle: ");
-            tvVal1.setText(String.format(java.util.Locale.US, "%.1f°", layer.getRotation()));
-            tvLabel2.setText("Pivot: ");
-            tvVal2.setText("Center");
-            tvLabel3.setText("Z: ");
-            tvVal3.setText("0.00");
-        } else if (currentTransformMode == TransformMode.SCALE) {
-            tvLabel1.setText("W: ");
-            tvVal1.setText(String.format(java.util.Locale.US, "%.0f", layer.getWidth()));
-            tvLabel2.setText("H: ");
-            tvVal2.setText(String.format(java.util.Locale.US, "%.0f", layer.getHeight()));
-            tvLabel3.setText("Scale: ");
-            tvVal3.setText("100%");
-        } else if (currentTransformMode == TransformMode.SKEW) {
-            tvLabel1.setText("Skew X: ");
-            tvVal1.setText("0.0°");
-            tvLabel2.setText("Skew Y: ");
-            tvVal2.setText("0.0°");
-            tvLabel3.setText("Z: ");
-            tvVal3.setText("0.00");
-        }
+        // Position coordinates
+        if (tvVal1 != null) tvVal1.setText(String.format(java.util.Locale.US, "%.2f", layer.getX()));
+        if (tvVal2 != null) tvVal2.setText(String.format(java.util.Locale.US, "%.2f", layer.getY()));
+        if (tvVal3 != null) tvVal3.setText(String.format(java.util.Locale.US, "Z:%d", project.getSelectedIndex() + 1));
+
+        // Scale coordinates
+        if (tvScaleW != null) tvScaleW.setText(String.format(java.util.Locale.US, "%.1f", layer.getWidth()));
+        if (tvScaleH != null) tvScaleH.setText(String.format(java.util.Locale.US, "%.1f", layer.getHeight()));
+
+        // Skew coordinates
+        if (tvSkewX != null) tvSkewX.setText(String.format(java.util.Locale.US, "%.1f°", layer.getRotation()));
+        if (tvSkewY != null) tvSkewY.setText("0.0°");
     }
 
     private void showTransformMoreDialog() {

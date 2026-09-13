@@ -47,6 +47,10 @@ public class PixelCanvasView extends View {
     private final Paint snapDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private boolean wasSnapped = false;
 
+    // Grid lines
+    private boolean showGridLines = false;
+    private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     // Handles & Selection Drawing
     private final Paint artboardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -120,6 +124,10 @@ public class PixelCanvasView extends View {
         snapDotPaint.setStyle(Paint.Style.FILL);
         snapDotPaint.setColor(0xFF00D2FF);
 
+        gridPaint.setStyle(Paint.Style.STROKE);
+        gridPaint.setColor(0x33888888);
+        gridPaint.setStrokeWidth(1.5f);
+
         scaleGestureDetector = new ScaleGestureDetector(getContext(), new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
@@ -164,6 +172,39 @@ public class PixelCanvasView extends View {
         resetViewport();
     }
 
+    public boolean isGridLinesEnabled() {
+        return showGridLines;
+    }
+
+    public void setGridLinesEnabled(boolean enabled) {
+        this.showGridLines = enabled;
+        invalidate();
+    }
+
+    public void toggleGridLines() {
+        setGridLinesEnabled(!showGridLines);
+    }
+
+    public void zoomIn() {
+        viewportScale = Math.min(6.0f, viewportScale * 1.25f);
+        updateViewportMatrix();
+        invalidate();
+    }
+
+    public void zoomOut() {
+        viewportScale = Math.max(0.2f, viewportScale / 1.25f);
+        updateViewportMatrix();
+        invalidate();
+    }
+
+    public float getViewportScale() {
+        return viewportScale;
+    }
+
+    public int getZoomPercent() {
+        return Math.round(viewportScale * 100);
+    }
+
     public void resetViewport() {
         if (project == null || getWidth() <= 0 || getHeight() <= 0) return;
 
@@ -204,6 +245,17 @@ public class PixelCanvasView extends View {
         // Artboard Background
         artboardBgPaint.setColor(project.getBackgroundColor());
         canvas.drawRect(0, 0, artW, artH, artboardBgPaint);
+
+        // Draw Grid Lines if enabled
+        if (showGridLines) {
+            float gridSpacing = 80f;
+            for (float gx = 0; gx <= artW; gx += gridSpacing) {
+                canvas.drawLine(gx, 0, gx, artH, gridPaint);
+            }
+            for (float gy = 0; gy <= artH; gy += gridSpacing) {
+                canvas.drawLine(0, gy, artW, gy, gridPaint);
+            }
+        }
 
         // Clip to Artboard
         canvas.clipRect(0, 0, artW, artH);

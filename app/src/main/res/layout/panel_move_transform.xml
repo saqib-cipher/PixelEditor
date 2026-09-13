@@ -43,10 +43,10 @@
         android:layout_marginBottom="6dp"
         android:background="@color/pe_border" />
 
-    <!-- Control Area: Left Rail + Center Touchpad + Right Mode Rail -->
+    <!-- Control Area: Left Rail + Dynamic Center Area + Right Mode Rail -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="190dp"
+        android:layout_height="200dp"
         android:orientation="horizontal">
 
         <!-- 1. Left Vertical Sub-Rail -->
@@ -92,145 +92,380 @@
                 app:tint="@color/pe_text_secondary" />
         </LinearLayout>
 
-        <!-- 2. Center Touchpad Area -->
-        <LinearLayout
+        <!-- 2. Center Dynamic Control Area -->
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:layout_marginStart="4dp"
-            android:layout_marginEnd="8dp"
-            android:orientation="vertical">
+            android:layout_marginEnd="6dp">
 
-            <!-- Coordinate Pills Row: X | Y | Z / Value -->
+            <!-- MODE 1: POSITION (Touchpad & Coordinate Pills X/Y/Z) -->
             <LinearLayout
+                android:id="@+id/containerModePosition"
                 android:layout_width="match_parent"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_pill_accent"
-                android:backgroundTint="@color/pe_surface_input"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp">
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <TextView
-                    android:id="@+id/tvCoordLabel1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="X: "
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
+                <!-- Coordinate Pills Row: X | Y | Z -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/tvCoordVal1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    <!-- X Pill -->
+                    <LinearLayout
+                        android:id="@+id/layoutPillX"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCoordVal1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="540.00"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="X"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <!-- Y Pill -->
+                    <LinearLayout
+                        android:id="@+id/layoutPillY"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCoordVal2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="960.00"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Y"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <!-- Z Pill (Interactive Layer Order Reorder) -->
+                    <LinearLayout
+                        android:id="@+id/layoutPillZ"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCoordVal3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.00"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Z (Tap: Up/Down)"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="9sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Large Interactive Touchpad Surface -->
+                <FrameLayout
+                    android:id="@+id/viewTransformPad"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:text="540.00"
-                    android:textColor="@color/pe_accent_mint"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_transform_pad"
+                    android:clickable="true"
+                    android:focusable="true">
 
-                <TextView
-                    android:id="@+id/tvCoordLabel2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="Y: "
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|start"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:text="┌"
+                        android:textColor="#5500E5BC"
+                        android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/tvCoordVal2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="960.00"
-                    android:textColor="@color/pe_accent_mint"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|end"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginTop="4dp"
+                        android:text="┐"
+                        android:textColor="#5500E5BC"
+                        android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/tvCoordLabel3"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="R: "
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|start"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="4dp"
+                        android:text="└"
+                        android:textColor="#5500E5BC"
+                        android:textSize="16sp" />
 
-                <TextView
-                    android:id="@+id/tvCoordVal3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="0.0°"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="12sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="4dp"
+                        android:text="┘"
+                        android:textColor="#5500E5BC"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/tvTransformHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="Swipe here to move layer"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="13sp" />
+                </FrameLayout>
             </LinearLayout>
 
-            <!-- Large Interactive Touchpad Surface -->
-            <FrameLayout
-                android:id="@+id/viewTransformPad"
+            <!-- MODE 2: ROTATION (Circular Dial / Wheel Slider) -->
+            <LinearLayout
+                android:id="@+id/containerModeRotation"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_transform_pad"
-                android:clickable="true"
-                android:focusable="true">
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <!-- Corner Bracket Visual Hints -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top|start"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="4dp"
-                    android:text="┌"
-                    android:textColor="#5500E5BC"
-                    android:textSize="16sp" />
+                <glab.pixeleditor.view.CircularDialView
+                    android:id="@+id/circularDialRotation"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top|end"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginTop="4dp"
-                    android:text="┐"
-                    android:textColor="#5500E5BC"
-                    android:textSize="16sp" />
+            <!-- MODE 3: SCALE / RESIZE (Image 2: Width / Link / Height + Scrub Ruler) -->
+            <LinearLayout
+                android:id="@+id/containerModeScale"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|start"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="└"
-                    android:textColor="#5500E5BC"
-                    android:textSize="16sp" />
+                <!-- Header: [ Width Pill ] [ 🔗 Link Aspect ] [ Height Pill ] -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="┘"
-                    android:textColor="#5500E5BC"
-                    android:textSize="16sp" />
+                    <!-- Width -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
 
-                <!-- Center Prompt -->
-                <TextView
-                    android:id="@+id/tvTransformHint"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="Swipe here to move layer"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="13sp" />
-            </FrameLayout>
-        </LinearLayout>
+                        <TextView
+                            android:id="@+id/tvScaleWidthVal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1080.0"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Width"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <!-- Link Aspect Button -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnToggleLinkAspect"
+                        android:layout_width="38dp"
+                        android:layout_height="34dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+                        app:cardCornerRadius="8dp"
+                        app:strokeColor="@color/pe_border">
+
+                        <ImageView
+                            android:id="@+id/ivLinkAspectIcon"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_pe_link"
+                            app:tint="@color/pe_accent_mint" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Height -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvScaleHeightVal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1080.0"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Height"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Precision Scrub Ruler -->
+                <glab.pixeleditor.view.ScrubRulerView
+                    android:id="@+id/rulerScale"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_transform_pad" />
+            </LinearLayout>
+
+            <!-- MODE 4: SKEW (Image 3: X Skew / Y Skew + Scrub Ruler) -->
+            <LinearLayout
+                android:id="@+id/containerModeSkew"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Header: [ X Skew ] [ Y Skew ] -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <!-- X Skew -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvSkewXVal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.0°"
+                            android:textColor="@color/pe_accent_mint"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="X SKEW"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <!-- Y Skew -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_surface_panel_elevated"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvSkewYVal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.0°"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Y SKEW"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Precision Scrub Ruler for Skew -->
+                <glab.pixeleditor.view.ScrubRulerView
+                    android:id="@+id/rulerSkew"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_transform_pad" />
+            </LinearLayout>
+
+        </FrameLayout>
 
         <!-- 3. Right Vertical Mode Selector Rail -->
         <LinearLayout
@@ -264,7 +499,7 @@
                 android:id="@+id/cardModeRotate"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:layout_marginTop="5dp"
+                android:layout_marginTop="6dp"
                 app:cardBackgroundColor="@color/pe_surface_panel_elevated"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp"
@@ -285,7 +520,7 @@
                 android:id="@+id/cardModeScale"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:layout_marginTop="5dp"
+                android:layout_marginTop="6dp"
                 app:cardBackgroundColor="@color/pe_surface_panel_elevated"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp"
@@ -306,7 +541,7 @@
                 android:id="@+id/cardModeSkew"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:layout_marginTop="5dp"
+                android:layout_marginTop="6dp"
                 app:cardBackgroundColor="@color/pe_surface_panel_elevated"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp"
