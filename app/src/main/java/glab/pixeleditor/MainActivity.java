@@ -50,6 +50,7 @@ import glab.pixeleditor.effect.EffectParam;
 import glab.pixeleditor.model.CanvasLayer;
 import glab.pixeleditor.model.EditorProject;
 import glab.pixeleditor.model.PhotoLayer;
+import glab.pixeleditor.model.ProjectStorageManager;
 import glab.pixeleditor.model.ShapeLayer;
 import glab.pixeleditor.model.TextLayer;
 import glab.pixeleditor.view.PixelCanvasView;
@@ -101,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         // 2. Fix Window Insets for immersive edge-to-edge layout
         setupWindowInsets();
+        setupBackNavigation();
 
         initProject();
         initPhotoPicker();
@@ -173,20 +175,98 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         });
     }
 
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleSmartBack();
+            }
+        });
+    }
+
+    public void handleSmartBack() {
+        // 1. If Effect Browser is open, close it
+        if (binding.containerEffectBrowser.getVisibility() == View.VISIBLE) {
+            binding.containerEffectBrowser.setVisibility(View.GONE);
+            return;
+        }
+
+        // 2. If inside a subpanel or add element sheet, return to layer menu
+        int currentPanel = binding.flipperBottomPanels.getDisplayedChild();
+        if (currentPanel != PANEL_LAYER_MENU) {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            return;
+        }
+
+        // 3. If a layer is selected, deselect it
+        if (project != null && project.getSelectedLayer() != null) {
+            project.setSelectedIndex(-1);
+            updateUIForActiveLayer(null);
+            binding.canvasView.invalidate();
+            return;
+        }
+
+        // 4. Save and return to Home screen gracefully
+        saveCurrentProjectState();
+        finish();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        saveCurrentProjectState();
+    }
+
+    private void saveCurrentProjectState() {
+        if (project == null || binding == null || binding.canvasView == null) return;
+        try {
+            Intent intent = getIntent();
+            String projectId = intent != null ? intent.getStringExtra("EXTRA_PROJECT_ID") : null;
+            if (projectId == null || projectId.isEmpty()) {
+                projectId = java.util.UUID.randomUUID().toString();
+                if (intent != null) intent.putExtra("EXTRA_PROJECT_ID", projectId);
+            }
+
+            // Capture and save updated thumbnail
+            Bitmap thumb = binding.canvasView.exportArtboardBitmap();
+            String thumbName = "thumb_" + projectId + ".png";
+            if (thumb != null) {
+                Bitmap scaled = Bitmap.createScaledBitmap(thumb, 240, 240, true);
+                ProjectStorageManager.saveThumbnail(this, thumbName, scaled);
+            }
+
+            String aspect = binding.chipAspectRatio != null ? binding.chipAspectRatio.getText().toString() : "9:16";
+            ProjectStorageManager.ProjectItem item = new ProjectStorageManager.ProjectItem(
+                    projectId,
+                    project.getTitle(),
+                    aspect,
+                    project.getCanvasWidth(),
+                    project.getCanvasHeight(),
+                    30,
+                    project.getBackgroundColor(),
+                    Math.max(1024, project.getLayers().size() * 512L),
+                    System.currentTimeMillis(),
+                    thumbName,
+                    false
+            );
+            ProjectStorageManager.addOrUpdateProject(this, item);
+        } catch (Exception ignored) {}
+    }
+
     private void initProject() {
+        Intent intent = getIntent();
+        String title = intent != null ? intent.getStringExtra("EXTRA_PROJECT_TITLE") : null;
+        int width = intent != null ? intent.getIntExtra("EXTRA_PROJECT_WIDTH", 1080) : 1080;
+        int height = intent != null ? intent.getIntExtra("EXTRA_PROJECT_HEIGHT", 1920) : 1920;
+        int bg = intent != null ? intent.getIntExtra("EXTRA_PROJECT_BG", 0xFFD8DCE3) : 0xFFD8DCE3;
+
         project = new EditorProject();
-        project.setTitle("New Project 1");
-        project.setCanvasWidth(1080);
-        project.setCanvasHeight(1350);
-        project.setBackgroundColor(0xFFD8DCE3);
+        project.setTitle(title != null && !title.isEmpty() ? title : "New Project 1");
+        project.setCanvasWidth(width);
+        project.setCanvasHeight(height);
+        project.setBackgroundColor(bg);
 
-        // Initial default layer inspired by screenshot: Rounded Rectangle
-        ShapeLayer defaultShape = new ShapeLayer("Rounded Rectangle 1", 540f, 675f, 320f, 320f);
-        defaultShape.setFillColor(0xFF7A4B58);
-        defaultShape.setCornerRadius(30f);
-        defaultShape.setHasStroke(false);
-        project.addLayer(defaultShape);
-
+        // DO NOT add default shape: canvas starts clean as requested
         binding.canvasView.setProject(project);
         binding.canvasView.setOnLayerSelectedListener(this);
     }
@@ -236,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     // 1. TOP BAR SETUP
     // -------------------------------------------------------------
     private void setupTopBar() {
-        binding.btnTopBack.setOnClickListener(v -> showProjectRenameDialog());
+        binding.btnTopBack.setOnClickListener(v -> handleSmartBack());
         binding.tvProjectTitle.setOnClickListener(v -> showProjectRenameDialog());
 
         // Aspect Ratio Switcher

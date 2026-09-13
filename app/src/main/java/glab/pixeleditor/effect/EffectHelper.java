@@ -185,33 +185,181 @@ public class EffectHelper {
         }
     }
 
+    // In-memory LRU Bitmap Cache (up to 4MB or ~60 thumbnails)
+    private static final android.util.LruCache<String, Bitmap> sThumbnailCache =
+            new android.util.LruCache<String, Bitmap>(60) {
+                @Override
+                protected int sizeOf(String key, Bitmap bitmap) {
+                    return 1;
+                }
+            };
+
+    // Index of available asset thumbnail filenames in effects/thumb/
+    private static Map<String, String> sThumbIndex = null;
+
+    private static synchronized void ensureThumbIndex(Context context) {
+        if (sThumbIndex != null) return;
+        sThumbIndex = new java.util.HashMap<>();
+        try {
+            AssetManager am = context.getAssets();
+            String[] list = am.list(EFFECTS_DIR + "/thumb");
+            if (list != null) {
+                for (String filename : list) {
+                    if (filename.endsWith(".webp") || filename.endsWith(".png") || filename.endsWith(".jpg")) {
+                        String fullPath = EFFECTS_DIR + "/thumb/" + filename;
+                        // Store exact filename
+                        sThumbIndex.put(filename.toLowerCase(java.util.Locale.US), fullPath);
+                        // Store base name without extension
+                        String base = filename.substring(0, filename.lastIndexOf('.')).toLowerCase(java.util.Locale.US);
+                        sThumbIndex.put(base, fullPath);
+                        // Store stripped name without underscores and dashes
+                        String stripped = base.replaceAll("[_\\-0-9]", "");
+                        if (!stripped.isEmpty() && !sThumbIndex.containsKey(stripped)) {
+                            sThumbIndex.put(stripped, fullPath);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Failed building thumbnail index: " + e.getMessage());
+        }
+    }
+
     /**
-     * Loads thumbnail image bitmap from assets
+     * Loads thumbnail image bitmap from assets with fuzzy matching and LRU caching.
      */
     public static Bitmap loadThumbnail(Context context, EffectDefinition effect) {
-        if (effect == null || effect.getThumbPath() == null || effect.getThumbPath().isEmpty()) {
+        if (effect == null || context == null) {
             return null;
         }
 
-        String path = effect.getThumbPath();
-        if (!path.startsWith(EFFECTS_DIR + "/")) {
-            path = EFFECTS_DIR + "/" + path;
+        String cacheKey = effect.getId();
+        Bitmap cached = sThumbnailCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
         }
 
-        String[] possiblePaths = new String[]{
-                path,
-                path.replace(".jpg", ".webp").replace(".png", ".webp"),
-                EFFECTS_DIR + "/thumb/" + effect.getFileName().replace(".xml", ".webp").replace("-", "_")
-        };
-
+        ensureThumbIndex(context);
         AssetManager am = context.getAssets();
-        for (String p : possiblePaths) {
-            try (InputStream is = am.open(p)) {
+
+        // 1. Candidate lookup strings
+        List<String> candidates = new ArrayList<>();
+
+        // Add explicit thumbPath
+        String thumbPath = effect.getThumbPath();
+        if (thumbPath != null && !thumbPath.isEmpty()) {
+            String clean = thumbPath.replace("\\", "/");
+            if (clean.contains("/")) {
+                clean = clean.substring(clean.lastIndexOf('/') + 1);
+            }
+            candidates.add(clean.toLowerCase(java.util.Locale.US));
+            if (clean.contains(".")) {
+                candidates.add(clean.substring(0, clean.lastIndexOf('.')).toLowerCase(java.util.Locale.US));
+            }
+        }
+
+        // Add filename base
+        String fileBase = effect.getFileName().replace(".xml", "").toLowerCase(java.util.Locale.US);
+        candidates.add(fileBase);
+        candidates.add(fileBase.replace("-", "_"));
+        candidates.add(fileBase.replaceAll("[_\\-0-9]", ""));
+
+        // Add ID suffix
+        String id = effect.getId();
+        if (id.contains(".")) {
+            String idSuffix = id.substring(id.lastIndexOf('.') + 1).toLowerCase(java.util.Locale.US);
+            candidates.add(idSuffix);
+            candidates.add(idSuffix.replace("-", "_"));
+            candidates.add(idSuffix.replaceAll("[_\\-0-9]", ""));
+        }
+
+        // Known aliases mapping
+        Map<String, String> aliases = getCommonAliases();
+        for (String c : new ArrayList<>(candidates)) {
+            if (aliases.containsKey(c)) {
+                candidates.add(aliases.get(c));
+            }
+        }
+
+        // 2. Try resolving path from candidates in the index
+        String resolvedAssetPath = null;
+        for (String cand : candidates) {
+            if (sThumbIndex.containsKey(cand)) {
+                resolvedAssetPath = sThumbIndex.get(cand);
+                break;
+            }
+            // Try with .webp extension
+            if (!cand.endsWith(".webp") && sThumbIndex.containsKey(cand + ".webp")) {
+                resolvedAssetPath = sThumbIndex.get(cand + ".webp");
+                break;
+            }
+        }
+
+        // 3. If still not found, search substring match in index
+        if (resolvedAssetPath == null) {
+            for (String cand : candidates) {
+                if (cand.length() < 3) continue;
+                for (Map.Entry<String, String> entry : sThumbIndex.entrySet()) {
+                    if (entry.getKey().contains(cand) || cand.contains(entry.getKey())) {
+                        resolvedAssetPath = entry.getValue();
+                        break;
+                    }
+                }
+                if (resolvedAssetPath != null) break;
+            }
+        }
+
+        // 4. Try opening the direct asset path if available
+        if (resolvedAssetPath != null) {
+            try (InputStream is = am.open(resolvedAssetPath)) {
                 Bitmap bmp = BitmapFactory.decodeStream(is);
-                if (bmp != null) return bmp;
+                if (bmp != null) {
+                    sThumbnailCache.put(cacheKey, bmp);
+                    return bmp;
+                }
             } catch (Exception ignored) {}
         }
+
+        // Direct path attempt
+        if (thumbPath != null && !thumbPath.isEmpty()) {
+            String directPath = thumbPath;
+            if (!directPath.startsWith(EFFECTS_DIR + "/")) {
+                directPath = EFFECTS_DIR + "/" + directPath;
+            }
+            try (InputStream is = am.open(directPath)) {
+                Bitmap bmp = BitmapFactory.decodeStream(is);
+                if (bmp != null) {
+                    sThumbnailCache.put(cacheKey, bmp);
+                    return bmp;
+                }
+            } catch (Exception ignored) {}
+        }
+
         return null;
+    }
+
+    private static Map<String, String> getCommonAliases() {
+        Map<String, String> map = new java.util.HashMap<>();
+        map.put("glowscan", "glow_scan");
+        map.put("maskblur", "mask_blur");
+        map.put("mblur", "motion_blur");
+        map.put("palmap", "palette_map");
+        map.put("pinchbulge", "pinch_bulge");
+        map.put("mattechoke", "matte_choker");
+        map.put("simplestars", "simple_starfield");
+        map.put("repeatlinear", "linear_repeat");
+        map.put("repeatscatter", "scatter_repeat");
+        map.put("repeatradial", "radial_repeat");
+        map.put("directionalblur", "directional_blur");
+        map.put("turbdisplace", "turbulent_displace");
+        map.put("radialrays", "radial_rays");
+        map.put("chromakey", "chroma_key");
+        map.put("brightnesscontrast", "brightness_contrast");
+        map.put("colortemp", "color_temperature");
+        map.put("colortune", "color_tune");
+        map.put("fastblur", "box_blur");
+        map.put("unsharpmask", "unsharp_mask");
+        return map;
     }
 
     /**

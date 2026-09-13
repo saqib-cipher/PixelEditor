@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/splashRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pe_bg_canvas_workspace"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <!-- Center Logo Container with Mint Glow Ring -->
+    <FrameLayout
+        android:id="@+id/layoutSplashLogo"
+        android:layout_width="120dp"
+        android:layout_height="120dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_pill_accent"
+            android:backgroundTint="#1A00E5BC" />
+
+        <ImageView
+            android:layout_width="68dp"
+            android:layout_height="68dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_tool_effects"
+            app:tint="@color/pe_accent_mint" />
+    </FrameLayout>
+
+    <!-- App Title -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.04"
+            android:text="Pixel"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.04"
+            android:text="Editor"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:letterSpacing="0.06"
+        android:text="CREATIVE GRAPHIC &amp; PHOTO STUDIO"
+        android:textColor="@color/pe_text_secondary"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <!-- Indeterminate Mint Progress Bar -->
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:layout_width="120dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="48dp"
+        android:indeterminate="true"
+        app:indicatorColor="@color/pe_accent_mint"
+        app:trackColor="#24304A"
+        app:trackCornerRadius="2dp" />
+
+</LinearLayout>

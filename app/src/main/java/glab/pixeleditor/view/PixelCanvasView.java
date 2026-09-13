@@ -16,6 +16,8 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import java.util.List;
+
 import glab.pixeleditor.model.CanvasLayer;
 import glab.pixeleditor.model.EditorProject;
 import glab.pixeleditor.model.ShapeLayer;
@@ -36,6 +38,14 @@ public class PixelCanvasView extends View {
     private float viewportScale = 1f;
     private float viewportTransX = 0f;
     private float viewportTransY = 0f;
+
+    // Viewport lock & Magnetic Snapping
+    private boolean isViewportLocked = true;
+    private final List<Float> activeSnapLinesX = new java.util.ArrayList<>();
+    private final List<Float> activeSnapLinesY = new java.util.ArrayList<>();
+    private final Paint snapGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint snapDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean wasSnapped = false;
 
     // Handles & Selection Drawing
     private final Paint artboardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -101,10 +111,19 @@ public class PixelCanvasView extends View {
         rotationHandlePaint.setStyle(Paint.Style.FILL);
         rotationHandlePaint.setColor(0xFF00E5BC);
 
+        // Magnetic guideline styling: High contrast dashed Mint/Cyan
+        snapGuidePaint.setStyle(Paint.Style.STROKE);
+        snapGuidePaint.setColor(0xFF00E5BC);
+        snapGuidePaint.setStrokeWidth(2.5f);
+        snapGuidePaint.setPathEffect(new DashPathEffect(new float[]{14, 10}, 0));
+
+        snapDotPaint.setStyle(Paint.Style.FILL);
+        snapDotPaint.setColor(0xFF00D2FF);
+
         scaleGestureDetector = new ScaleGestureDetector(getContext(), new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
-                if (currentTouchMode == TouchMode.PAN_VIEWPORT || currentTouchMode == TouchMode.NONE) {
+                if (!isViewportLocked && (currentTouchMode == TouchMode.PAN_VIEWPORT || currentTouchMode == TouchMode.NONE)) {
                     float factor = detector.getScaleFactor();
                     viewportScale *= factor;
                     viewportScale = Math.max(0.2f, Math.min(viewportScale, 6f));
@@ -115,6 +134,14 @@ public class PixelCanvasView extends View {
                 return false;
             }
         });
+    }
+
+    public boolean isViewportLocked() {
+        return isViewportLocked;
+    }
+
+    public void setViewportLocked(boolean locked) {
+        this.isViewportLocked = locked;
     }
 
     public void setProject(EditorProject project) {
@@ -185,6 +212,18 @@ public class PixelCanvasView extends View {
         for (CanvasLayer layer : project.getLayers()) {
             if (layer.isVisible()) {
                 layer.draw(canvas, baseLayerPaint);
+            }
+        }
+
+        // Draw Magnetic Guidelines inside artboard coordinate system
+        if (!activeSnapLinesX.isEmpty() || !activeSnapLinesY.isEmpty()) {
+            for (float sx : activeSnapLinesX) {
+                canvas.drawLine(sx, 0, sx, artH, snapGuidePaint);
+                canvas.drawCircle(sx, artH / 2f, 5f, snapDotPaint);
+            }
+            for (float sy : activeSnapLinesY) {
+                canvas.drawLine(0, sy, artW, sy, snapGuidePaint);
+                canvas.drawCircle(artW / 2f, sy, 5f, snapDotPaint);
             }
         }
 
@@ -328,7 +367,18 @@ public class PixelCanvasView extends View {
                     return true;
                 } else {
                     // Clicked empty area on canvas or backdrop
-                    currentTouchMode = TouchMode.PAN_VIEWPORT;
+                    if (isViewportLocked) {
+                        currentTouchMode = TouchMode.NONE;
+                        if (project != null && project.getSelectedLayer() != null) {
+                            project.setSelectedIndex(-1);
+                            if (layerSelectedListener != null) {
+                                layerSelectedListener.onLayerSelected(null, -1);
+                            }
+                            invalidate();
+                        }
+                    } else {
+                        currentTouchMode = TouchMode.PAN_VIEWPORT;
+                    }
                 }
                 break;
 
@@ -341,8 +391,11 @@ public class PixelCanvasView extends View {
                 CanvasLayer activeLayer = project != null ? project.getSelectedLayer() : null;
 
                 if (currentTouchMode == TouchMode.DRAG_LAYER && activeLayer != null && !activeLayer.isLocked()) {
-                    activeLayer.setX(activeLayer.getX() + canvasDx);
-                    activeLayer.setY(activeLayer.getY() + canvasDy);
+                    float rawX = activeLayer.getX() + canvasDx;
+                    float rawY = activeLayer.getY() + canvasDy;
+                    PointF snapped = applyMagneticSnapping(activeLayer, rawX, rawY);
+                    activeLayer.setX(snapped.x);
+                    activeLayer.setY(snapped.y);
                     if (layerSelectedListener != null) {
                         layerSelectedListener.onLayerModified(activeLayer);
                     }
@@ -363,10 +416,12 @@ public class PixelCanvasView extends View {
                     }
                     invalidate();
                 } else if (currentTouchMode == TouchMode.PAN_VIEWPORT) {
-                    viewportTransX += dx;
-                    viewportTransY += dy;
-                    updateViewportMatrix();
-                    invalidate();
+                    if (!isViewportLocked) {
+                        viewportTransX += dx;
+                        viewportTransY += dy;
+                        updateViewportMatrix();
+                        invalidate();
+                    }
                 }
 
                 lastTouchX = vx;
@@ -377,10 +432,119 @@ public class PixelCanvasView extends View {
             case MotionEvent.ACTION_CANCEL:
                 currentTouchMode = TouchMode.NONE;
                 activeHandleIndex = -1;
+                activeSnapLinesX.clear();
+                activeSnapLinesY.clear();
+                wasSnapped = false;
+                invalidate();
                 break;
         }
 
         return true;
+    }
+
+    private PointF applyMagneticSnapping(CanvasLayer activeLayer, float targetX, float targetY) {
+        if (project == null) return new PointF(targetX, targetY);
+
+        float snapThreshold = 18f / viewportScale; // ~18dp magnetic snap distance
+        float artW = project.getCanvasWidth();
+        float artH = project.getCanvasHeight();
+
+        float halfW = (activeLayer.getWidth() * Math.abs(activeLayer.getScaleX())) / 2f;
+        float halfH = (activeLayer.getHeight() * Math.abs(activeLayer.getScaleY())) / 2f;
+
+        float snappedX = targetX;
+        float snappedY = targetY;
+
+        activeSnapLinesX.clear();
+        activeSnapLinesY.clear();
+
+        // 1. Magnetic Snap to Parent Artboard (Horizontal X)
+        if (Math.abs(targetX - artW / 2f) <= snapThreshold) {
+            snappedX = artW / 2f;
+            activeSnapLinesX.add(artW / 2f);
+        } else if (Math.abs((targetX - halfW) - 0f) <= snapThreshold) {
+            snappedX = halfW;
+            activeSnapLinesX.add(0f);
+        } else if (Math.abs((targetX + halfW) - artW) <= snapThreshold) {
+            snappedX = artW - halfW;
+            activeSnapLinesX.add(artW);
+        }
+
+        // 2. Magnetic Snap to Parent Artboard (Vertical Y)
+        if (Math.abs(targetY - artH / 2f) <= snapThreshold) {
+            snappedY = artH / 2f;
+            activeSnapLinesY.add(artH / 2f);
+        } else if (Math.abs((targetY - halfH) - 0f) <= snapThreshold) {
+            snappedY = halfH;
+            activeSnapLinesY.add(0f);
+        } else if (Math.abs((targetY + halfH) - artH) <= snapThreshold) {
+            snappedY = artH - halfH;
+            activeSnapLinesY.add(artH);
+        }
+
+        // 3. Magnetic Snap to Sibling Elements
+        for (CanvasLayer sib : project.getLayers()) {
+            if (sib == activeLayer || !sib.isVisible()) continue;
+
+            float sibX = sib.getX();
+            float sibY = sib.getY();
+            float sibHw = (sib.getWidth() * Math.abs(sib.getScaleX())) / 2f;
+            float sibHh = (sib.getHeight() * Math.abs(sib.getScaleY())) / 2f;
+            float sibLeft = sibX - sibHw;
+            float sibRight = sibX + sibHw;
+            float sibTop = sibY - sibHh;
+            float sibBottom = sibY + sibHh;
+
+            // X-axis alignment
+            if (activeSnapLinesX.isEmpty()) {
+                if (Math.abs(targetX - sibX) <= snapThreshold) {
+                    snappedX = sibX;
+                    activeSnapLinesX.add(sibX);
+                } else if (Math.abs((targetX - halfW) - sibLeft) <= snapThreshold) {
+                    snappedX = sibLeft + halfW;
+                    activeSnapLinesX.add(sibLeft);
+                } else if (Math.abs((targetX + halfW) - sibRight) <= snapThreshold) {
+                    snappedX = sibRight - halfW;
+                    activeSnapLinesX.add(sibRight);
+                } else if (Math.abs((targetX - halfW) - sibRight) <= snapThreshold) {
+                    snappedX = sibRight + halfW;
+                    activeSnapLinesX.add(sibRight);
+                } else if (Math.abs((targetX + halfW) - sibLeft) <= snapThreshold) {
+                    snappedX = sibLeft - halfW;
+                    activeSnapLinesX.add(sibLeft);
+                }
+            }
+
+            // Y-axis alignment
+            if (activeSnapLinesY.isEmpty()) {
+                if (Math.abs(targetY - sibY) <= snapThreshold) {
+                    snappedY = sibY;
+                    activeSnapLinesY.add(sibY);
+                } else if (Math.abs((targetY - halfH) - sibTop) <= snapThreshold) {
+                    snappedY = sibTop + halfH;
+                    activeSnapLinesY.add(sibTop);
+                } else if (Math.abs((targetY + halfH) - sibBottom) <= snapThreshold) {
+                    snappedY = sibBottom - halfH;
+                    activeSnapLinesY.add(sibBottom);
+                } else if (Math.abs((targetY - halfH) - sibBottom) <= snapThreshold) {
+                    snappedY = sibBottom + halfH;
+                    activeSnapLinesY.add(sibBottom);
+                } else if (Math.abs((targetY + halfH) - sibTop) <= snapThreshold) {
+                    snappedY = sibTop - halfH;
+                    activeSnapLinesY.add(sibTop);
+                }
+            }
+        }
+
+        boolean nowSnapped = !activeSnapLinesX.isEmpty() || !activeSnapLinesY.isEmpty();
+        if (nowSnapped && !wasSnapped) {
+            try {
+                performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            } catch (Exception ignored) {}
+        }
+        wasSnapped = nowSnapped;
+
+        return new PointF(snappedX, snappedY);
     }
 
     private void handleResize(CanvasLayer layer, float cdx, float cdy) {
