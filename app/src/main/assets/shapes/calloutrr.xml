@@ -1,10 +1,10 @@
-<shape id="com.alightcreative.shapes.callout.roundrect" name="@am:string/shape_callout">
+<shape id="glab.pixeleditor.shapes.callout.roundrect" name="@string/shape_callout">
 
     <params>
-        <point id="size" label="@am:string/effect_param_size" default="100,100" min="1,1" type="size" />
-        <point id="tail" label="@am:string/effect_param_tail" default="-50,150" type="offset" />
-        <spinner id="cornerRadius" min="0" max="2000" default="25" step="1" label="@am:string/effect_param_radius"  />
-        <spinner id="tailWidth" min="0" max="2000" default="40" step="1" label="@am:string/effect_param_tail_width" />
+        <point id="size" label="@string/effect_param_size" default="100,100" min="1,1" type="size" />
+        <point id="tail" label="@string/effect_param_tail" default="-50,150" type="offset" />
+        <spinner id="cornerRadius" min="0" max="2000" default="25" step="1" label="@string/effect_param_radius"  />
+        <spinner id="tailWidth" min="0" max="2000" default="40" step="1" label="@string/effect_param_tail_width" />
     </params>
 
     <handle id="r" param="cornerRadius" type="x" style="square" icon="grip" />

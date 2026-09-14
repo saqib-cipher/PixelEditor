@@ -1,8 +1,8 @@
-<shape id="com.alightcreative.shapes.moon"  name="@am:string/shape_moon">
+<shape id="glab.pixeleditor.shapes.moon"  name="@string/shape_moon">
 
     <params>
-        <spinner id="radius" min="0" max="2000" default="100" step="1" label="@am:string/effect_param_radius"  />
-        <spinner id="offset" min="0" max="1000" default="250" step="1" label="@am:string/effect_param_offset" />
+        <spinner id="radius" min="0" max="2000" default="100" step="1" label="@string/effect_param_radius"  />
+        <spinner id="offset" min="0" max="1000" default="250" step="1" label="@string/effect_param_offset" />
     </params>
 
     <handle id="r" param="radius" type="radius" icon="grip" />

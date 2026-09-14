@@ -98,4 +98,99 @@ public class EffectHelperTest {
             assertEquals(EffectParam.ParamType.SWITCH, punchout.getType());
         }
     }
+
+    @Test
+    public void testParseVortexBlurWithShaderAndParams() throws Exception {
+        File file = new File(getEffectsDir(), "vortexblur.xml");
+        assertTrue("vortexblur.xml should exist", file.exists());
+
+        try (InputStream is = new FileInputStream(file)) {
+            EffectDefinition effect = EffectHelper.parseEffectFromXml(is, file.getName());
+            assertNotNull("Vortex blur should be parsed", effect);
+            assertEquals("com.alightcreative.effects.vortexblur", effect.getId());
+
+            // Verify shader CDATA is extracted
+            String shader = effect.getShaderSource();
+            assertNotNull("Shader source should exist", shader);
+            assertTrue("Shader must contain main function", shader.contains("void main()"));
+            assertTrue("Shader must contain vortex formula", shader.contains("acScreenNorm") && shader.contains("centerPoint"));
+
+            // Verify uniforms mapping
+            assertEquals("vec2", effect.getUniformTypes().get("centerPoint"));
+            assertEquals("float", effect.getUniformTypes().get("strength"));
+            assertEquals("float", effect.getUniformTypes().get("radius"));
+
+            // Verify parameters available
+            assertNotNull(effect.getParam("centerPoint_x"));
+            assertNotNull(effect.getParam("centerPoint_y"));
+            assertNotNull(effect.getParam("strength"));
+            assertNotNull(effect.getParam("radius"));
+        }
+    }
+
+    @Test
+    public void testParseBoxBlurMultiPass() throws Exception {
+        File file = new File(getEffectsDir(), "boxblur3.xml");
+        assertTrue("boxblur3.xml should exist", file.exists());
+
+        try (InputStream is = new FileInputStream(file)) {
+            EffectDefinition effect = EffectHelper.parseEffectFromXml(is, file.getName());
+            assertNotNull("Box blur should be parsed", effect);
+
+            // Verify passes
+            assertEquals(3, effect.getPassTargets().size());
+            assertEquals("ds1", effect.getPassTargets().get(0));
+            assertEquals("hblur", effect.getPassTargets().get(1));
+            assertNull(effect.getPassTargets().get(2)); // Final screen pass
+
+            // Verify downsamples
+            assertEquals(Integer.valueOf(2), effect.getTextureDownsamples().get("ds1"));
+            assertEquals(Integer.valueOf(2), effect.getTextureDownsamples().get("hblur"));
+
+            // Verify CDATA contains multi-pass shader
+            assertTrue(effect.getShaderSource().contains("acPass==0"));
+            assertTrue(effect.getShaderSource().contains("acPass==1"));
+        }
+    }
+
+    @Test
+    public void testParseChromaKeyPrimaryShader() throws Exception {
+        File file = new File(getEffectsDir(), "chromakey.xml");
+        assertTrue("chromakey.xml should exist", file.exists());
+
+        try (InputStream is = new FileInputStream(file)) {
+            EffectDefinition effect = EffectHelper.parseEffectFromXml(is, file.getName());
+            assertNotNull("Chroma Key should be parsed", effect);
+
+            // Should select group 0 (the actual chromakey algorithm, not group 1 eyedropper passthrough)
+            assertTrue("Shader must contain rgb2yuv matrix", effect.getShaderSource().contains("rgb2yuv"));
+            assertTrue("Shader must compute keyYUV distance", effect.getShaderSource().contains("keyYUV"));
+
+            // Uniform types
+            assertEquals("vec4", effect.getUniformTypes().get("keyColor"));
+            assertEquals("float", effect.getUniformTypes().get("threshold"));
+            assertEquals("float", effect.getUniformTypes().get("feather"));
+            assertEquals("bool", effect.getUniformTypes().get("defringe"));
+            assertEquals("bool", effect.getUniformTypes().get("invert"));
+        }
+    }
+
+    @Test
+    public void testEffectDefinitionCopyPreservesGLMetadata() throws Exception {
+        File file = new File(getEffectsDir(), "boxblur3.xml");
+        EffectDefinition original;
+        try (InputStream is = new FileInputStream(file)) {
+            original = EffectHelper.parseEffectFromXml(is, file.getName());
+        }
+
+        assertNotNull(original);
+        EffectDefinition copy = original.copy();
+
+        assertNotNull(copy);
+        assertEquals(original.getId(), copy.getId());
+        assertEquals(original.getPassTargets().size(), copy.getPassTargets().size());
+        assertEquals(original.getPassTargets().get(0), copy.getPassTargets().get(0));
+        assertEquals(original.getUniformTypes().get("strength"), copy.getUniformTypes().get("strength"));
+        assertTrue(copy.getShaderSource().contains("acPass"));
+    }
 }

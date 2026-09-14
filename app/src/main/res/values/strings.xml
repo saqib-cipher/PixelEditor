@@ -69,6 +69,64 @@
     <string name="cat_text">Text</string>
     <string name="cat_other">Other</string>
 
+    <!-- Shape Names -->
+    <string name="shape_star">Star</string>
+    <string name="shape_arrow">Arrow</string>
+    <string name="shape_roundrect">Rounded Rectangle</string>
+    <string name="shape_circle">Circle</string>
+    <string name="shape_rect">Rectangle</string>
+    <string name="shape_pie">Pie / Wedge</string>
+    <string name="shape_arc">Arc</string>
+    <string name="shape_poly">Polygon</string>
+    <string name="shape_plus">Cross / Plus</string>
+    <string name="shape_moon">Crescent Moon</string>
+    <string name="shape_callout">Speech Bubble</string>
+    <string name="shape_multifoil">Multifoil Petals</string>
+    <string name="shape_penta">Pentagon</string>
+    <string name="shape_stamp">Stamp Badge</string>
+    <string name="shape_teardrop">Teardrop</string>
+    <string name="shape_triangle">Triangle</string>
+    <string name="shape_wideline">Wide Line</string>
+    <string name="shape_line">Line</string>
+    <string name="shape_quad">Quadrilateral</string>
+    <string name="shape_heart">Heart</string>
+    <string name="shape_shield">Shield</string>
+    <string name="shape_drop">Drop</string>
+    <string name="shape_lightning">Lightning</string>
+    <string name="shape_cloud">Cloud</string>
+    <string name="shape_diamond">Diamond</string>
+
+    <!-- Shape Parameter Labels -->
+    <string name="effect_param_num_points">Points</string>
+    <string name="effect_param_num_sides">Sides</string>
+    <string name="effect_param_radius_out">Outer Radius</string>
+    <string name="effect_param_radius_in">Inner Radius</string>
+    <string name="effect_param_radius">Radius</string>
+    <string name="effect_param_angle">Angle</string>
+    <string name="effect_param_start">Start Angle</string>
+    <string name="effect_param_end">End Angle</string>
+    <string name="effect_param_size">Size</string>
+    <string name="effect_param_tail_width">Tail Width</string>
+    <string name="effect_param_head_width">Head Width</string>
+    <string name="effect_param_head_length">Head Length</string>
+    <string name="effect_param_width">Width</string>
+    <string name="effect_param_height">Height</string>
+    <string name="effect_param_thickness">Thickness</string>
+    <string name="effect_param_depth">Depth</string>
+    <string name="effect_param_teeth">Teeth</string>
+    <string name="effect_param_petals">Petals</string>
+    <string name="effect_param_closed">Closed</string>
+    <string name="effect_param_tail">Tail</string>
+    <string name="effect_param_squeeze">Squeeze</string>
+    <string name="effect_param_perfsize">Perforation Size</string>
+    <string name="effect_param_spacing">Spacing</string>
+    <string name="effect_param_stem">Stem Size</string>
+    <string name="effect_param_point_1">Point 1</string>
+    <string name="effect_param_point_2">Point 2</string>
+    <string name="effect_param_point_3">Point 3</string>
+    <string name="effect_param_point_4">Point 4</string>
+    <string name="effect_param_point_5">Point 5</string>
+
     <!-- Export Dialog -->
     <string name="export_dialog_title">Export Image</string>
     <string name="export_format_png">PNG (Lossless High Quality)</string>

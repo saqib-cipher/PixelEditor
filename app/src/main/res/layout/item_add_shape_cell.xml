@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardShapeCell"
+        style="@style/Widget.PixelEditor.Card"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:cardBackgroundColor="@color/pe_surface_panel_elevated"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/pe_border"
+        app:strokeWidth="1dp">
+
+        <ImageView
+            android:id="@+id/ivShapeIcon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_tool_shape"
+            app:tint="@color/pe_text_primary" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tvShapeName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="Shape"
+        android:textColor="@color/pe_text_secondary"
+        android:textSize="9sp" />
+</LinearLayout>

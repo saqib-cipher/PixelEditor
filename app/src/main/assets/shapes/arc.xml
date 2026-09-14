@@ -1,10 +1,10 @@
-<shape id="com.alightcreative.shapes.arc" name="@am:string/shape_arc">
+<shape id="glab.pixeleditor.shapes.arc" name="@string/shape_arc">
 
     <params>
-        <spinner id="startAngle" min="-3600" max="3600" default="0" step="1" label="@am:string/effect_param_start" ticks="0,45,90,135,180,225,270,315,360" type="angle" />
-        <spinner id="endAngle" min="-3600" max="3600" default="90" step="1" label="@am:string/effect_param_end" ticks="0,45,90,135,180,225,270,315,360" type="angle" />
-        <spinner id="radius" min="0" max="2000" default="100" step="1" label="@am:string/effect_param_radius"  />
-        <switch id="closed" default="false" label="@am:string/effect_param_closed" />
+        <spinner id="startAngle" min="-3600" max="3600" default="0" step="1" label="@string/effect_param_start" ticks="0,45,90,135,180,225,270,315,360" type="angle" />
+        <spinner id="endAngle" min="-3600" max="3600" default="90" step="1" label="@string/effect_param_end" ticks="0,45,90,135,180,225,270,315,360" type="angle" />
+        <spinner id="radius" min="0" max="2000" default="100" step="1" label="@string/effect_param_radius"  />
+        <switch id="closed" default="false" label="@string/effect_param_closed" />
     </params>
 
     <handle id="r" param="radius" type="radius" icon="grip"  />

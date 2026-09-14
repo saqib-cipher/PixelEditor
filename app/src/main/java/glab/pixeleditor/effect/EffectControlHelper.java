@@ -372,21 +372,21 @@ public class EffectControlHelper {
         cd.setStroke(2, 0xFFFFFFFF);
         colorSwatch.setBackground(cd);
 
-        int[] colors = {0xFF00FF00, 0xFF0000FF, 0xFFFF0000, 0xFFFFFFFF, 0xFF000000, 0xFF00E5BC, 0xFF7A4B58, 0xFFFFD166};
         colorSwatch.setOnClickListener(v -> {
-            int nextColor = colors[0];
-            for (int i = 0; i < colors.length; i++) {
-                if (colors[i] == param.getColorValue()) {
-                    nextColor = colors[(i + 1) % colors.length];
-                    break;
-                }
-            }
-            param.setColorValue(nextColor);
-            cd.setColor(nextColor);
-            colorSwatch.setBackground(cd);
-            if (listener != null) {
-                listener.onParamChanged(effect, param);
-            }
+            glab.pixeleditor.ui.AlightColorPickerDialog.show(
+                    context,
+                    param.getLabel(),
+                    param.getColorValue(),
+                    selectedColor -> {
+                        param.setColorValue(selectedColor);
+                        cd.setColor(selectedColor);
+                        colorSwatch.setBackground(cd);
+                        if (listener != null) {
+                            listener.onParamChanged(effect, param);
+                        }
+                    },
+                    null
+            );
         });
         row.addView(colorSwatch);
 

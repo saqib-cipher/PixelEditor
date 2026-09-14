@@ -27,6 +27,9 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.Collections;
 import java.util.List;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import android.net.Uri;
 
 import glab.pixeleditor.MainActivity;
 import glab.pixeleditor.R;
@@ -90,10 +93,19 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
                     | WindowInsetsCompat.Type.displayCutout()
             );
 
-            // Pad top bar
+            // Pad top bar — add status-bar top inset, keep horizontal padding clean
             View topBar = findViewById(R.id.homeTopBar);
             if (topBar != null) {
-                topBar.setPadding(insets.left + 16, insets.top, insets.right + 16, 0);
+                // 16dp horizontal padding + inset offset for cutout
+                int padH = (int) (16 * getResources().getDisplayMetrics().density);
+                topBar.setPadding(insets.left + padH, insets.top, insets.right + padH, 0);
+                // Set explicit height so top bar takes exactly statusBar + 56dp
+                int targetH = (int) (56 * getResources().getDisplayMetrics().density) + insets.top;
+                ViewGroup.LayoutParams lp = topBar.getLayoutParams();
+                if (lp != null && lp.height != targetH) {
+                    lp.height = targetH;
+                    topBar.setLayoutParams(lp);
+                }
             }
 
             // Pad bottom fab for navigation bar
@@ -108,6 +120,7 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
             return windowInsets;
         });
     }
+
 
     private void bindViews() {
         tabProjects = findViewById(R.id.tabHomeProjects);
@@ -127,9 +140,78 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
         ImageButton btnMenu = findViewById(R.id.btnHomeMenu);
         btnMenu.setOnClickListener(v -> showWorkspaceInfoDialog());
 
+        // Restore / Import Project Backup Button
+        ImageButton btnRestore = findViewById(R.id.btnHomeRestore);
+        if (btnRestore != null) {
+            btnRestore.setOnClickListener(v -> {
+                importProjectLauncher.launch("*/*");
+            });
+        }
+
         // Profile Button
         ImageButton btnProfile = findViewById(R.id.btnHomeProfile);
         btnProfile.setOnClickListener(v -> Toast.makeText(this, "PixelEditor Studio Pro Active", Toast.LENGTH_SHORT).show());
+    }
+
+    private final ActivityResultLauncher<String> importProjectLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    importProjectFromUri(uri);
+                }
+            }
+    );
+
+    private void importProjectFromUri(Uri uri) {
+        try {
+            java.io.InputStream is = getContentResolver().openInputStream(uri);
+            if (is == null) return;
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+            is.close();
+
+            String jsonStr = sb.toString();
+            org.json.JSONObject obj = new org.json.JSONObject(jsonStr);
+            String title = obj.optString("title", "Imported Project");
+            int w = obj.optInt("canvasWidth", 1080);
+            int h = obj.optInt("canvasHeight", 1350);
+
+            String newId = java.util.UUID.randomUUID().toString();
+            String thumbName = "thumb_" + newId + ".png";
+
+            String aspect = (w == h) ? "1:1" : (w > h ? "16:9" : "9:16");
+            ProjectStorageManager.ProjectItem newItem = new ProjectStorageManager.ProjectItem(
+                    newId,
+                    title,
+                    aspect,
+                    w,
+                    h,
+                    30,
+                    0xFFD8DCE3,
+                    jsonStr.length(),
+                    System.currentTimeMillis(),
+                    thumbName,
+                    false
+            );
+
+            // Save project file in storage
+            java.io.File projectsDir = ProjectStorageManager.getProjectsDir(this);
+            java.io.File projectFile = new java.io.File(projectsDir, "project_" + newId + ".json");
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(projectFile)) {
+                fos.write(jsonStr.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+
+            ProjectStorageManager.addOrUpdateProject(this, newItem);
+            loadProjects();
+            Toast.makeText(this, "Restored project: " + title, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to restore project: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void setupTabs() {

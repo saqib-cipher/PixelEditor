@@ -1,8 +1,8 @@
-<shape id="com.alightcreative.shapes.plus" name="@am:string/shape_plus">
+<shape id="glab.pixeleditor.shapes.plus" name="@string/shape_plus">
 
     <params>
-        <point id="size" label="@am:string/effect_param_size" default="100,100" type="size" />
-        <spinner id="stemSize" min="0" max="2000" default="50" step="1" label="@am:string/effect_param_width"  />
+        <point id="size" label="@string/effect_param_size" default="100,100" type="size" />
+        <spinner id="stemSize" min="0" max="2000" default="50" step="1" label="@string/effect_param_width"  />
     </params>
 
     <handle id="e" param="size" type="x" />

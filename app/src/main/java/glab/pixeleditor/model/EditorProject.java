@@ -22,7 +22,7 @@ public class EditorProject {
     public void saveSnapshot() {
         List<CanvasLayer> snapshot = new ArrayList<>();
         for (CanvasLayer layer : layers) {
-            snapshot.add(layer.copy());
+            snapshot.add(layer.cloneLayer());
         }
         undoStack.push(snapshot);
         redoStack.clear();
@@ -42,19 +42,31 @@ public class EditorProject {
 
     public void undo() {
         if (!canUndo()) return;
-        // Save current to redo
+        // Save current state to redo
         List<CanvasLayer> current = new ArrayList<>();
         for (CanvasLayer layer : layers) {
-            current.add(layer.copy());
+            current.add(layer.cloneLayer());
         }
         redoStack.push(current);
+
+        String prevSelectedId = (selectedIndex >= 0 && selectedIndex < layers.size()) ? layers.get(selectedIndex).getId() : null;
 
         List<CanvasLayer> previous = undoStack.pop();
         layers.clear();
         for (CanvasLayer layer : previous) {
-            layers.add(layer.copy());
+            layers.add(layer.cloneLayer());
         }
-        if (selectedIndex >= layers.size()) {
+
+        selectedIndex = -1;
+        if (prevSelectedId != null) {
+            for (int i = 0; i < layers.size(); i++) {
+                if (layers.get(i).getId().equals(prevSelectedId)) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        if (selectedIndex == -1 && !layers.isEmpty()) {
             selectedIndex = layers.size() - 1;
         }
     }
@@ -63,16 +75,28 @@ public class EditorProject {
         if (!canRedo()) return;
         List<CanvasLayer> current = new ArrayList<>();
         for (CanvasLayer layer : layers) {
-            current.add(layer.copy());
+            current.add(layer.cloneLayer());
         }
         undoStack.push(current);
+
+        String prevSelectedId = (selectedIndex >= 0 && selectedIndex < layers.size()) ? layers.get(selectedIndex).getId() : null;
 
         List<CanvasLayer> next = redoStack.pop();
         layers.clear();
         for (CanvasLayer layer : next) {
-            layers.add(layer.copy());
+            layers.add(layer.cloneLayer());
         }
-        if (selectedIndex >= layers.size()) {
+
+        selectedIndex = -1;
+        if (prevSelectedId != null) {
+            for (int i = 0; i < layers.size(); i++) {
+                if (layers.get(i).getId().equals(prevSelectedId)) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        if (selectedIndex == -1 && !layers.isEmpty()) {
             selectedIndex = layers.size() - 1;
         }
     }
@@ -127,6 +151,8 @@ public class EditorProject {
         return null;
     }
 
+    private String aspectRatio = "9:16";
+
     // Getters and Setters
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -134,6 +160,11 @@ public class EditorProject {
     public void setCanvasWidth(int canvasWidth) { this.canvasWidth = canvasWidth; }
     public int getCanvasHeight() { return canvasHeight; }
     public void setCanvasHeight(int canvasHeight) { this.canvasHeight = canvasHeight; }
+    public String getAspectRatio() {
+        if (aspectRatio != null && !aspectRatio.isEmpty()) return aspectRatio;
+        return glab.pixeleditor.ui.CreateProjectBottomSheet.calculateAspectRatio(canvasWidth, canvasHeight);
+    }
+    public void setAspectRatio(String aspectRatio) { this.aspectRatio = aspectRatio; }
     public int getBackgroundColor() { return backgroundColor; }
     public void setBackgroundColor(int backgroundColor) { this.backgroundColor = backgroundColor; }
     public List<CanvasLayer> getLayers() { return layers; }
@@ -146,6 +177,7 @@ public class EditorProject {
             json.put("title", title);
             json.put("canvasWidth", canvasWidth);
             json.put("canvasHeight", canvasHeight);
+            json.put("aspectRatio", getAspectRatio());
             json.put("backgroundColor", backgroundColor);
             json.put("selectedIndex", selectedIndex);
 
@@ -164,6 +196,7 @@ public class EditorProject {
         project.title = json.optString("title", "Untitled");
         project.canvasWidth = json.optInt("canvasWidth", 1080);
         project.canvasHeight = json.optInt("canvasHeight", 1920);
+        project.aspectRatio = json.optString("aspectRatio", "9:16");
         project.backgroundColor = json.optInt("backgroundColor", 0xFFD8DCE3);
 
         org.json.JSONArray layersArray = json.optJSONArray("layers");

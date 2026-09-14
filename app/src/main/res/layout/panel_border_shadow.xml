@@ -6,15 +6,15 @@
     android:layout_height="wrap_content"
     android:background="@color/pe_surface_panel"
     android:orientation="vertical"
-    android:paddingStart="12dp"
-    android:paddingTop="6dp"
-    android:paddingEnd="12dp"
-    android:paddingBottom="12dp">
+    android:paddingStart="10dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="4dp">
 
-    <!-- Header -->
+    <!-- Sub-panel Top Header -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="38dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -27,86 +27,389 @@
             app:tint="@color/pe_text_primary" />
 
         <TextView
+            android:id="@+id/tvBorderShadowTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:text="@string/tool_border_shadow"
             android:textColor="@color/pe_text_primary"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/switchStrokeToggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="true" />
+        <!-- Quick Reset Defaults -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetBorderShadow"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="Reset"
+            app:backgroundTint="@color/pe_surface_card"
+            app:cornerRadius="8dp"
+            app:icon="@drawable/ic_pe_undo"
+            app:iconTint="@color/pe_text_secondary" />
     </LinearLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="4dp"
         android:background="@color/pe_border" />
 
-    <!-- Stroke Width & Color Row -->
+    <!-- Main Container: Content on Left + Alight Motion Vertical Tab Rail on Right -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
+        android:layout_height="165dp"
         android:orientation="horizontal">
 
-        <!-- Color Swatch -->
-        <View
-            android:id="@+id/viewStrokeColorSwatch"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:background="@drawable/bg_pill_accent"
-            android:backgroundTint="@color/pe_accent_mint" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/prop_stroke"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderStrokeWidth"
-            style="@style/Widget.PixelEditor.Slider"
+        <!-- Left Content Area (ViewFlipper for Stroke, Add Border, Shadow) -->
+        <ViewFlipper
+            android:id="@+id/flipperBorderShadowSubpanels"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:valueFrom="0"
-            android:valueTo="30"
-            android:value="4" />
+            android:layout_height="match_parent"
+            android:layout_weight="1">
 
-        <TextView
-            android:id="@+id/tvStrokeVal"
-            android:layout_width="50dp"
-            android:layout_height="30dp"
-            android:background="@drawable/bg_input_box"
-            android:gravity="center"
-            android:text="4.0"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+            <!-- 0: Stroke / Primary Border -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
 
-    <!-- Preset Color Swatches for Stroke -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:scrollbars="none">
+                <!-- Header Row: Color Swatch + Title + Switch Toggle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
+                    <View
+                        android:id="@+id/viewStrokeColorSwatch"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="@color/pe_accent_mint" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Stroke"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchStrokeToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+                </LinearLayout>
+
+                <!-- Stroke Width Slider -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <glab.pixeleditor.view.ClampedSliderView
+                        android:id="@+id/sliderStrokeWidth"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/tvStrokeVal"
+                        android:layout_width="44dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_input_box"
+                        android:gravity="center"
+                        android:text="4.0"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Alignment Selector: Inside, Center, Outside -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAlignInside"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="Inside"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp"
+                        app:cornerRadius="6dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAlignCenter"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="Center"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="6dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAlignOutside"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="Outside"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp"
+                        app:cornerRadius="6dp" />
+                </LinearLayout>
+
+                <!-- Cap & Join Options -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnJoinRound"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:text="Round"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="10sp"
+                        app:cornerRadius="6dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnJoinMiter"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:text="Miter"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp"
+                        app:cornerRadius="6dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnJoinBevel"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="Bevel"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp"
+                        app:cornerRadius="6dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 1: Add Multiple Borders Panel -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvBordersCount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Borders (0)"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddBorderItem"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="28dp"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="+ Add Border"
+                        android:textColor="@color/pe_bg_canvas_workspace"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/pe_accent_mint"
+                        app:cornerRadius="6dp" />
+                </LinearLayout>
+
+                <!-- Scrollable list of added border cards -->
+                <androidx.core.widget.NestedScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true"
+                    android:scrollbars="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/containerBordersList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </androidx.core.widget.NestedScrollView>
+            </LinearLayout>
+
+            <!-- 2: Shadows Panel (Shadow controls + Add multiple shadows) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvShadowsCount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Shadows (0)"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddShadowItem"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="28dp"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="+ Add Shadow"
+                        android:textColor="@color/pe_bg_canvas_workspace"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/pe_accent_mint"
+                        app:cornerRadius="6dp" />
+                </LinearLayout>
+
+                <!-- Scrollable list of added shadow cards -->
+                <androidx.core.widget.NestedScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true"
+                    android:scrollbars="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/containerShadowsList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </androidx.core.widget.NestedScrollView>
+            </LinearLayout>
+        </ViewFlipper>
+
+        <!-- Right Side Vertical Tab Rail (Screenshot Alight Motion style) -->
         <LinearLayout
-            android:id="@+id/layoutStrokeColorPresets"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
+            android:layout_width="44dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- Tab 0: Primary Stroke -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/tabRailStroke"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginBottom="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#243048"
+                app:cardCornerRadius="8dp"
+                app:strokeColor="@color/pe_accent_mint"
+                app:strokeWidth="2dp">
+
+                <ImageView
+                    android:id="@+id/ivRailStroke"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_tool_border"
+                    app:tint="@color/pe_accent_mint" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Tab 1: Multi-Border List -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/tabRailAddBorder"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginBottom="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#1A2234"
+                app:cardCornerRadius="8dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/ivRailAddBorder"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_pe_duplicate"
+                    app:tint="@color/pe_text_secondary" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Tab 2: Shadows -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/tabRailShadow"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#1A2234"
+                app:cardCornerRadius="8dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/ivRailShadow"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_pe_diamond"
+                    app:tint="@color/pe_text_secondary" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

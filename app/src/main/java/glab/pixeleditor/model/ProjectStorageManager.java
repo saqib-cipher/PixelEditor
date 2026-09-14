@@ -241,6 +241,17 @@ public class ProjectStorageManager {
         }
     }
 
+    public static ProjectItem getProjectById(Context context, String projectId) {
+        if (projectId == null) return null;
+        List<ProjectItem> all = loadAllRaw(context);
+        for (ProjectItem item : all) {
+            if (projectId.equals(item.getId())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
     public static void addOrUpdateProject(Context context, ProjectItem item) {
         List<ProjectItem> all = loadAllRaw(context);
         boolean found = false;

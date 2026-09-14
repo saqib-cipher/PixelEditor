@@ -33,41 +33,59 @@
                 app:tint="@color/pe_text_primary" />
 
             <LinearLayout
+                android:id="@+id/layoutBreadcrumbs"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:orientation="vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/tvProjectTitle"
+                <LinearLayout
+                    android:id="@+id/layoutTitleBlock"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="New Project 1"
-                    android:textColor="@color/pe_text_primary"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvProjectTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="New Project 1"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvProjectDimensions"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/project_size_desc"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivBreadcrumbArrow"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:src="@drawable/ic_pe_chevron_right"
+                    android:visibility="gone"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:id="@+id/tvBreadcrumbGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Group 1"
+                    android:textColor="@color/pe_accent_mint"
                     android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvProjectDimensions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/project_size_desc"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Aspect Ratio Switcher Chip -->
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipAspectRatio"
-                style="@style/Widget.Material3.Chip.Assist"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:layout_marginEnd="6dp"
-                android:text="4:5"
-                android:textColor="@color/pe_accent_mint"
-                app:chipBackgroundColor="@color/pe_surface_card"
-                app:chipStrokeColor="@color/pe_border" />
 
             <ImageButton
                 android:id="@+id/btnTopSettings"
@@ -102,7 +120,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <!-- Left-Side Floating Canvas Tools (Undo, Redo) -->
+            <!-- Left-Side Floating Canvas Tools (Copy, Delete, Undo, Redo) -->
             <LinearLayout
                 android:id="@+id/layoutLeftCanvasTools"
                 android:layout_width="wrap_content"
@@ -112,13 +130,55 @@
                 android:layout_marginBottom="16dp"
                 android:orientation="vertical">
 
+                <!-- Copy / Duplicate Layer -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnLeftCopy"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#D9161D2D"
+                    app:cardCornerRadius="12dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_duplicate"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Delete Layer -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnLeftDelete"
+                    style="@style/Widget.PixelEditor.Card"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#D9161D2D"
+                    app:cardCornerRadius="12dp"
+                    app:strokeColor="@color/pe_border">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pe_delete"
+                        app:tint="@color/pe_text_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- Undo -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnLeftUndo"
                     style="@style/Widget.PixelEditor.Card"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginBottom="8dp"
                     android:clickable="true"
                     android:focusable="true"
                     app:cardBackgroundColor="#D9161D2D"
@@ -350,13 +410,14 @@
             <!-- Sleek Top Pill Handle Indicator -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="14dp"
+                android:layout_height="8dp"
+                android:layout_marginTop="2dp"
                 android:gravity="center"
                 android:orientation="horizontal">
 
                 <View
                     android:layout_width="38dp"
-                    android:layout_height="4dp"
+                    android:layout_height="3dp"
                     android:background="@drawable/bg_pill_indicator" />
             </LinearLayout>
 
@@ -364,7 +425,7 @@
             <ViewFlipper
                 android:id="@+id/flipperBottomPanels"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="match_parent">
 
                 <!-- 0: Layer Menu -->
                 <include layout="@layout/panel_layer_menu" />
@@ -393,6 +454,9 @@
                 <!-- 8: Layers Overview Panel (Shown when no layer is selected) -->
                 <include layout="@layout/panel_layers_overview" />
 
+                <!-- 9: Blending & Opacity Panel (Screenshot 2) -->
+                <include layout="@layout/panel_blending_opacity" />
+
             </ViewFlipper>
         </LinearLayout>
     </LinearLayout>
@@ -402,6 +466,7 @@
         android:id="@+id/containerEffectBrowser"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
         android:visibility="gone">
 
         <include layout="@layout/sheet_effect_browser" />

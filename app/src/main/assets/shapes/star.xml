@@ -1,10 +1,10 @@
-<shape id="com.alightcreative.shapes.star" name="@am:string/shape_star">
+<shape id="glab.pixeleditor.shapes.star" name="@string/shape_star">
 
     <params>
-        <slider id="pointCount" default="5" min="3" max="32" label="@am:string/effect_param_num_points" step="1" type="integer" ticks="3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32" />
-        <spinner id="outerRadius" min="0" max="2000" default="100" step="1" label="@am:string/effect_param_radius_out"  />
-        <spinner id="innerRadius" min="0" max="2000" default="50" step="1" label="@am:string/effect_param_radius_in"  />
-        <spinner id="offsetAngle" min="-3600" max="3600" default="0" step="1" label="@am:string/effect_param_angle" ticks="45,90,135,180,225,270" type="angle" />
+        <slider id="pointCount" default="5" min="3" max="32" label="@string/effect_param_num_points" step="1" type="integer" ticks="3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32" />
+        <spinner id="outerRadius" min="0" max="2000" default="100" step="1" label="@string/effect_param_radius_out"  />
+        <spinner id="innerRadius" min="0" max="2000" default="50" step="1" label="@string/effect_param_radius_in"  />
+        <spinner id="offsetAngle" min="-3600" max="3600" default="0" step="1" label="@string/effect_param_angle" ticks="45,90,135,180,225,270" type="angle" />
     </params>
 
     <handle id="in" param="innerRadius" type="radius" icon="grip" />

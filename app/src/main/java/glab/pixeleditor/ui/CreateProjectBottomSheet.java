@@ -4,11 +4,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,7 +40,8 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
     private String selectedAspect = "9:16";
     private int canvasWidth = 1080;
     private int canvasHeight = 1920;
-    private int selectedFps = 30;
+    private int customWidth = 1080;
+    private int customHeight = 1920;
     private int selectedBgColor = 0xFFD8DCE3; // Light Grey
     private String selectedResolutionLabel = "1080p (FHD)";
     private String selectedBgLabel = "Light Grey";
@@ -104,7 +109,7 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
                 allTexts[activeIndex].setTextColor(0xFF00382B);
             }
 
-            tvCompSize.setText("Composition Size\n" + canvasWidth + " × " + canvasHeight);
+            tvCompSize.setText("Composition Size\n" + canvasWidth + " × " + canvasHeight + " • " + selectedAspect);
         };
 
         // Click listeners for aspect ratio cards
@@ -145,8 +150,7 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
 
         cardCustom.setOnClickListener(v -> {
             selectedAspect = "Custom";
-            canvasWidth = 1200;
-            canvasHeight = 1200;
+            showDimensionsDialog(tvCompSize);
             updateAspectUI.run();
         });
 
@@ -201,9 +205,9 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
                     selectedAspect,
                     canvasWidth,
                     canvasHeight,
-                    selectedFps,
+                    30,
                     selectedBgColor,
-                    1024,
+                    1024L,
                     System.currentTimeMillis(),
                     thumb,
                     false
@@ -227,5 +231,177 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
 
             dismiss();
         });
+    }
+
+        private void showDimensionsDialog (TextView tvCompSize) {
+            if (getContext() == null) return;
+
+            LinearLayout root = new LinearLayout(getContext());
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(40, 30, 40, 20);
+
+            HorizontalScrollView chipScroll = new HorizontalScrollView(getContext());
+            chipScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout.LayoutParams lpScroll = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            lpScroll.bottomMargin = 24;
+            chipScroll.setLayoutParams(lpScroll);
+
+            com.google.android.material.chip.ChipGroup chipGroup = new com.google.android.material.chip.ChipGroup(getContext());
+            chipGroup.setSingleSelection(true);
+            chipGroup.setSelectionRequired(true);
+            chipGroup.setSingleLine(true);
+
+            final String[] presetLabels = {"Yt Thumb FHD", "Yt Thumb SD", "Yt Banner", "LinkedIn Post", "X Header", "PLayStore FG", "Email Banner", "Custom"};
+            final int[][] presetValues = {{1920, 1080}, {1280, 720}, {2560, 1440}, {1200, 627}, {1500, 500}, {1024, 500}, {1200, 400}};
+
+            final com.google.android.material.textfield.TextInputLayout tilW = new com.google.android.material.textfield.TextInputLayout(getContext());
+            tilW.setHint("Width (px)");
+            tilW.setBoxBackgroundMode(2);
+            LinearLayout.LayoutParams lpW = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            lpW.setMarginEnd(16);
+            tilW.setLayoutParams(lpW);
+
+            final com.google.android.material.textfield.TextInputEditText etW = new com.google.android.material.textfield.TextInputEditText(tilW.getContext());
+            etW.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            etW.setText(String.valueOf(customWidth));
+            tilW.addView(etW);
+
+            final com.google.android.material.textfield.TextInputLayout tilH = new com.google.android.material.textfield.TextInputLayout(getContext());
+            tilH.setHint("Height (px)");
+            tilH.setBoxBackgroundMode(2);
+            LinearLayout.LayoutParams lpH = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            tilH.setLayoutParams(lpH);
+
+            final com.google.android.material.textfield.TextInputEditText etH = new com.google.android.material.textfield.TextInputEditText(tilH.getContext());
+            etH.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            etH.setText(String.valueOf(customHeight));
+            tilH.addView(etH);
+
+            final boolean[] isProgrammatic = {false};
+            int matchedChipId = -1;
+            final int customChipId = View.generateViewId();
+
+            for (int i = 0; i < presetLabels.length; i++) {
+                com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(getContext());
+                int chipId = (i < presetValues.length) ? View.generateViewId() : customChipId;
+                chip.setId(chipId);
+                chip.setText(presetLabels[i]);
+                chip.setCheckable(true);
+
+                if (i < presetValues.length) {
+                    int wVal = presetValues[i][0];
+                    int hVal = presetValues[i][1];
+                    if (customWidth == wVal && customHeight == hVal) {
+                        matchedChipId = chipId;
+                    }
+                    chip.setOnClickListener(v -> {
+                        isProgrammatic[0] = true;
+                        etW.setText(String.valueOf(wVal));
+                        etH.setText(String.valueOf(hVal));
+                        isProgrammatic[0] = false;
+                    });
+                } else {
+                    if (matchedChipId == -1) {
+                        matchedChipId = customChipId;
+                    }
+                }
+                chipGroup.addView(chip);
+            }
+
+            if (matchedChipId != -1) {
+                chipGroup.check(matchedChipId);
+            }
+
+            TextWatcher editWatcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (!isProgrammatic[0]) {
+                        chipGroup.check(customChipId);
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                }
+            };
+
+            etW.addTextChangedListener(editWatcher);
+            etH.addTextChangedListener(editWatcher);
+
+            chipScroll.addView(chipGroup);
+            root.addView(chipScroll);
+
+            LinearLayout inputsRow = new LinearLayout(getContext());
+            inputsRow.setOrientation(LinearLayout.HORIZONTAL);
+            inputsRow.addView(tilW);
+            inputsRow.addView(tilH);
+            root.addView(inputsRow);
+
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Set Custom Dimensions")
+                    .setView(root)
+                    .setPositiveButton("Apply", (dialog, which) -> {
+                        try {
+                            int w = Integer.parseInt(etW.getText().toString().trim());
+                            int h = Integer.parseInt(etH.getText().toString().trim());
+                            if (w > 0 && h > 0) {
+                                customWidth = w;
+                                customHeight = h;
+                                canvasWidth = w;
+                                canvasHeight = h;
+                                selectedAspect = calculateAspectRatio(w, h);
+                                if (tvCompSize != null) {
+                                    tvCompSize.setText("Composition Size\n" + customWidth + " × " + customHeight + " • " + selectedAspect);
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        }
+
+    public static String calculateAspectRatio(int width, int height) {
+        if (width <= 0 || height <= 0) return "1:1";
+        int gcdVal = gcd(width, height);
+        int num = width / gcdVal;
+        int den = height / gcdVal;
+
+        if (num == 9 && den == 16) return "9:16";
+        if (num == 16 && den == 9) return "16:9";
+        if (num == 4 && den == 5) return "4:5";
+        if (num == 5 && den == 4) return "5:4";
+        if (num == 1 && den == 1) return "1:1";
+        if (num == 4 && den == 3) return "4:3";
+        if (num == 3 && den == 4) return "3:4";
+        if (num == 3 && den == 2) return "3:2";
+        if (num == 2 && den == 3) return "2:3";
+        if (num == 21 && den == 9) return "21:9";
+        if (num == 16 && den == 10) return "16:10";
+
+        float ratio = (float) width / (float) height;
+        if (Math.abs(ratio - (9f / 16f)) < 0.02f) return "9:16";
+        if (Math.abs(ratio - (16f / 9f)) < 0.02f) return "16:9";
+        if (Math.abs(ratio - (4f / 5f)) < 0.02f) return "4:5";
+        if (Math.abs(ratio - (1f)) < 0.02f) return "1:1";
+        if (Math.abs(ratio - (4f / 3f)) < 0.02f) return "4:3";
+
+        return num + ":" + den;
+    }
+
+    private static int gcd(int a, int b) {
+        while (b != 0) {
+            int t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
     }
 }

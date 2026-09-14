@@ -1,0 +1,1115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/panelBlendingOpacity"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/pe_surface_panel"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="6dp">
+
+    <!-- Sub-panel Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btnBackFromBlendingOpacity"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_back"
+            app:tint="@color/pe_text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="Blending &amp; Opacity"
+            android:textColor="@color/pe_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="4dp"
+        android:background="@color/pe_border" />
+
+    <!-- 1. Opacity Slider Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/ivOpacityHatchedIcon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_pe_opacity"
+            app:tint="@color/pe_text_secondary" />
+
+        <glab.pixeleditor.view.ClampedSliderView
+            android:id="@+id/sliderLayerOpacity"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            app:thumbColor="@color/pe_accent_mint"
+            app:trackColorActive="@color/pe_accent_mint"
+            app:trackColorInactive="@color/pe_border" />
+
+        <!-- Percentage Value Box -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.PixelEditor.Card"
+            android:layout_width="56dp"
+            android:layout_height="30dp"
+            app:cardBackgroundColor="@color/pe_surface_elevated"
+            app:cardCornerRadius="6dp"
+            app:strokeColor="@color/pe_border"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:id="@+id/tvLayerOpacityVal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="100%"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="175dp"
+        android:layout_marginTop="2dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Normal Mode (always visible at top) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="4dp"
+                android:paddingBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardBlendNormal"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_card"
+                        app:cardCornerRadius="8dp"
+                        app:strokeColor="@color/pe_accent_mint"
+                        app:strokeWidth="1.5dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="N"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+                    </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:id="@+id/tvLabelNormal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Normal"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="2dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 1: Darken (Expanded by default) -->
+            <LinearLayout
+                android:id="@+id/headerBlendDarken"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendDarken"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:rotation="90"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Darken"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/containerBlendDarken"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Multiply -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendMultiply"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_darken" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelMultiply"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Multiply"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Darken -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendDarken"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_darken" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelDarken"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Darken"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Color Burn -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendColorBurn"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_darken" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelColorBurn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Color Burn"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Linear Burn -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendLinearBurn"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_darken" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelLinearBurn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Linear Burn"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 2: Lighten -->
+            <LinearLayout
+                android:id="@+id/headerBlendLighten"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendLighten"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Lighten"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/containerBlendLighten"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Screen -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendScreen"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_lighten" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelScreen"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Screen"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Lighten -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendLighten"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_lighten" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelLighten"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Lighten"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Color Dodge -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendColorDodge"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_lighten" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelColorDodge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Color Dodge"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Linear Dodge -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendLinearDodge"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_lighten" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelLinearDodge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Linear Dodge"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 3: Contrast -->
+            <LinearLayout
+                android:id="@+id/headerBlendContrast"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendContrast"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Contrast"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/containerBlendContrast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Overlay -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendOverlay"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_contrast" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelOverlay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Overlay"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Soft Light -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendSoftLight"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_contrast" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelSoftLight"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Soft Light"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Hard Light -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendHardLight"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_contrast" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelHardLight"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Hard Light"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 4: Difference -->
+            <LinearLayout
+                android:id="@+id/headerBlendDiff"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendDiff"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Difference"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/containerBlendDiff"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Difference -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendDifference"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_diff" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelDifference"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Difference"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Exclusion -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendExclusion"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_diff" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelExclusion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Exclusion"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 5: Color -->
+            <LinearLayout
+                android:id="@+id/headerBlendColor"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendColor"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Color"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/containerBlendColor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Hue -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendHue"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_color" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelHue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Hue"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Saturation -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendSat"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_color" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelSat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Saturation"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Color -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendColorMode"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_color" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelColorMode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Color"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Luminosity -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardBlendLum"
+                            style="@style/Widget.PixelEditor.Card"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="8dp"
+                            app:strokeColor="@color/pe_border"
+                            app:strokeWidth="1.5dp">
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_blend_color" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tvLabelLum"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Luminosity"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/pe_border" />
+
+            <!-- Category 6: Mask -->
+            <LinearLayout
+                android:id="@+id/headerBlendMask"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/ivToggleBlendMask"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_expand_arrow"
+                    app:tint="@color/pe_text_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Mask"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/containerBlendMask"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
+
+                <!-- 1. Mask Card -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardBlendMask"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_elevated"
+                        app:cardCornerRadius="8dp"
+                        app:strokeColor="@color/pe_border"
+                        app:strokeWidth="1.5dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_mask_circle_card" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tvLabelMask"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Mask"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- 2. Exclude Card -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardBlendExclude"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_elevated"
+                        app:cardCornerRadius="8dp"
+                        app:strokeColor="@color/pe_border"
+                        app:strokeWidth="1.5dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_exclude_circle_card" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tvLabelExclude"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Exclude"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

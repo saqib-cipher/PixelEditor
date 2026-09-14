@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#1E283C"
+        android:pathData="M0,0h64v64h-64z" />
+    <path
+        android:fillColor="#5A2E4C"
+        android:pathData="M0,0h64v42h-64z" />
+    <path
+        android:fillColor="#8C3A62"
+        android:pathData="M0,16h64v26h-64z" />
+    <!-- City silhouette -->
+    <path
+        android:fillColor="#151A28"
+        android:pathData="M8,42h8v-16h8v10h12v-18h10v14h10v10h-48z" />
+    <path
+        android:fillColor="#0D111A"
+        android:pathData="M0,42h64v22h-64z" />
+</vector>

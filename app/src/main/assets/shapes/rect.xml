@@ -1,7 +1,7 @@
-<shape id="com.alightcreative.shapes.rect" name="@am:string/shape_rect">
+<shape id="glab.pixeleditor.shapes.rect" name="@string/shape_rect">
 
     <params>
-        <point id="size" label="@am:string/effect_param_size" default="100,100" type="size" />
+        <point id="size" label="@string/effect_param_size" default="100,100" type="size" />
     </params>
 
     <handle id="e" param="size" type="x" />

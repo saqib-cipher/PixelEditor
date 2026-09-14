@@ -168,7 +168,7 @@
     <!-- Center Grid + Right Action Rail (matching Image 1) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="210dp"
+        android:layout_height="185dp"
         android:orientation="horizontal">
 
         <!-- Grid Container for Shapes / Elements -->
@@ -177,17 +177,15 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:padding="8dp">
+            android:padding="6dp">
 
-            <!-- Shapes Grid -->
-            <GridLayout
-                android:id="@+id/gridShapes"
+            <!-- Shapes RecyclerView (loads all shapes from assets/shapes/*.xml) -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvAddShapesGrid"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:columnCount="6"
-                android:rowCount="3"
-                android:alignmentMode="alignMargins"
-                android:rowOrderPreserved="false" />
+                android:clipToPadding="false"
+                android:scrollbars="vertical" />
         </FrameLayout>
 
         <!-- Vertical Divider -->
@@ -203,8 +201,8 @@
             android:background="@color/pe_surface_panel_elevated"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp">
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
 
             <!-- Freehand -->
             <LinearLayout
@@ -281,44 +279,15 @@
                     android:textSize="9sp" />
             </LinearLayout>
 
-            <!-- Close 'X' -->
+            <!-- Close 'X' (Returns to Layers Panel) -->
             <ImageButton
                 android:id="@+id/btnCloseAddSheet"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_pe_close"
                 app:tint="@color/pe_text_primary" />
         </LinearLayout>
-    </LinearLayout>
-
-    <!-- Page Indicator Dots -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="16dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingBottom="6dp">
-
-        <View
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:layout_margin="3dp"
-            android:background="@drawable/bg_pill_accent" />
-
-        <View
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:layout_margin="3dp"
-            android:background="@drawable/bg_pill_accent"
-            android:alpha="0.4" />
-
-        <View
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:layout_margin="3dp"
-            android:background="@drawable/bg_pill_accent"
-            android:alpha="0.4" />
     </LinearLayout>
 </LinearLayout>

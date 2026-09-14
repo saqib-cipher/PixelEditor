@@ -1,9 +1,9 @@
-<shape id="com.alightcreative.shapes.wideline" name="@am:string/shape_wideline">
+<shape id="glab.pixeleditor.shapes.wideline" name="@string/shape_wideline">
 
     <params>
-        <point id="start" label="@am:string/effect_param_start" default="0,0" />
-        <point id="end" label="@am:string/effect_param_end" default="250,-250" />
-        <spinner id="lineWidth" min="0" max="2000" default="40" step="1" label="@am:string/effect_param_width"  />
+        <point id="start" label="@string/effect_param_start" default="0,0" />
+        <point id="end" label="@string/effect_param_end" default="250,-250" />
+        <spinner id="lineWidth" min="0" max="2000" default="40" step="1" label="@string/effect_param_width"  />
 </params>
 
     <handle id="s" param="start" type="xy" icon="dot" />

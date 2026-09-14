@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Main Content Area with Right Sidebar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Left / Center Main Content -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Hex & Alpha Header Bar with [+] Save Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_panel_card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp">
+
+                <!-- Color Swatch Indicator -->
+                <View
+                    android:id="@+id/viewHeaderColorSwatch"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:background="@drawable/bg_pill_accent" />
+
+                <!-- Custom Hex Input Field -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input_box"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="#"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/etHeaderHex"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="2dp"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:digits="0123456789ABCDEFabcdef"
+                        android:fontFamily="monospace"
+                        android:hint="7F7F7F"
+                        android:imeOptions="actionDone"
+                        android:inputType="textCapCharacters|textNoSuggestions"
+                        android:maxLength="8"
+                        android:textColor="@color/pe_text_primary"
+                        android:textColorHint="@color/pe_text_secondary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvHeaderOpacityBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="100%"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- Add to Custom Swatches (+) Button -->
+                <ImageButton
+                    android:id="@+id/btnSaveCustomSwatch"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_add"
+                    app:tint="@color/pe_text_secondary" />
+            </LinearLayout>
+
+            <!-- Mode Flipper: Swatches, Sliders, Spectrum -->
+            <ViewFlipper
+                android:id="@+id/flipperColorModes"
+                android:layout_width="match_parent"
+                android:layout_height="145dp"
+                android:layout_marginTop="8dp">
+
+                <!-- 0: Swatches View (2 Rows of 7 Colors + Custom Swatches) -->
+                <LinearLayout
+                    android:id="@+id/layoutSwatchesMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <!-- Row 1: 7 Vivid Colors -->
+                    <LinearLayout
+                        android:id="@+id/rowSwatches1"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal" />
+
+                    <!-- Row 2: 7 Neutral/Tonal Colors -->
+                    <LinearLayout
+                        android:id="@+id/rowSwatches2"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal" />
+
+                    <!-- Custom / Saved Swatches Horizontal Scroll -->
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="38dp"
+                        android:layout_marginTop="6dp"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/layoutCustomSwatches"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
+                </LinearLayout>
+
+                <!-- 1: Precision RGB & Alpha Sliders View -->
+                <LinearLayout
+                    android:id="@+id/layoutSlidersMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Red Slider Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="20dp"
+                            android:layout_height="wrap_content"
+                            android:text="R"
+                            android:textColor="#EF4444"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <glab.pixeleditor.view.ClampedSliderView
+                            android:id="@+id/sliderRed"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tvValRed"
+                            android:layout_width="38dp"
+                            android:layout_height="24dp"
+                            android:background="@drawable/bg_input_box"
+                            android:gravity="center"
+                            android:text="127"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Green Slider Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="20dp"
+                            android:layout_height="wrap_content"
+                            android:text="G"
+                            android:textColor="#10B981"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <glab.pixeleditor.view.ClampedSliderView
+                            android:id="@+id/sliderGreen"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tvValGreen"
+                            android:layout_width="38dp"
+                            android:layout_height="24dp"
+                            android:background="@drawable/bg_input_box"
+                            android:gravity="center"
+                            android:text="127"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Blue Slider Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="20dp"
+                            android:layout_height="wrap_content"
+                            android:text="B"
+                            android:textColor="#3B82F6"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <glab.pixeleditor.view.ClampedSliderView
+                            android:id="@+id/sliderBlue"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tvValBlue"
+                            android:layout_width="38dp"
+                            android:layout_height="24dp"
+                            android:background="@drawable/bg_input_box"
+                            android:gravity="center"
+                            android:text="127"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Alpha / Opacity Slider Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="20dp"
+                            android:layout_height="wrap_content"
+                            android:text="A"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <glab.pixeleditor.view.ClampedSliderView
+                            android:id="@+id/sliderAlpha"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tvValAlpha"
+                            android:layout_width="38dp"
+                            android:layout_height="24dp"
+                            android:background="@drawable/bg_input_box"
+                            android:gravity="center"
+                            android:text="100%"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- 2: Spectrum / Palette View (2D Hue/Sat + Value Slider) -->
+                <LinearLayout
+                    android:id="@+id/layoutPaletteMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <FrameLayout
+                        android:id="@+id/containerSpectrumPlane"
+                        android:layout_width="match_parent"
+                        android:layout_height="105dp" />
+
+                    <!-- Value / Brightness Slider -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="32dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="24dp"
+                            android:layout_height="wrap_content"
+                            android:text="Val"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="11sp" />
+
+                        <glab.pixeleditor.view.ClampedSliderView
+                            android:id="@+id/sliderSpectrumValue"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1" />
+                    </LinearLayout>
+                </LinearLayout>
+
+            </ViewFlipper>
+        </LinearLayout>
+
+        <!-- Right Action Sidebar (3 vertically stacked tools) -->
+        <LinearLayout
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- 1. Eyedropper Tool -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnToolEyedropper"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="10dp"
+                app:strokeColor="@color/pe_border">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_eyedropper"
+                    app:tint="@color/pe_text_primary" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. Sliders Tool -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnToolSlidersMode"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginTop="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="10dp"
+                app:strokeColor="@color/pe_border">
+
+                <ImageView
+                    android:id="@+id/ivSlidersModeIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_alight_sliders"
+                    app:tint="@color/pe_text_secondary" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 3. Palette / Swatches Tool -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnToolPaletteMode"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginTop="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="10dp"
+                app:strokeColor="@color/pe_border">
+
+                <ImageView
+                    android:id="@+id/ivPaletteModeIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_alight_palette"
+                    app:tint="@color/pe_text_secondary" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

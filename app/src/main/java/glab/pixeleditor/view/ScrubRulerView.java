@@ -21,6 +21,31 @@ public class ScrubRulerView extends View {
     private float lastTouchX = 0f;
     private float tickSpacing = 16f; // pixels between ticks
 
+    private boolean hasBounds = false;
+    private float minValue = -Float.MAX_VALUE;
+    private float maxValue = Float.MAX_VALUE;
+    private float currentValue = 0f;
+    private float valuePerPixel = 0.05f;
+
+    public void setBounds(float min, float max) {
+        this.hasBounds = true;
+        this.minValue = Math.min(min, max);
+        this.maxValue = Math.max(min, max);
+        this.currentValue = Math.max(this.minValue, Math.min(this.maxValue, this.currentValue));
+    }
+
+    public void setBounds(float min, float max, float current, float valuePerPixel) {
+        this.hasBounds = true;
+        this.minValue = Math.min(min, max);
+        this.maxValue = Math.max(min, max);
+        this.currentValue = Math.max(this.minValue, Math.min(this.maxValue, current));
+        this.valuePerPixel = valuePerPixel > 0 ? valuePerPixel : 0.05f;
+    }
+
+    public void setCurrentValue(float val) {
+        this.currentValue = Math.max(minValue, Math.min(maxValue, val));
+    }
+
     private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint majorTickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint centerLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -107,6 +132,24 @@ public class ScrubRulerView extends View {
                 float currentX = event.getX();
                 float dx = currentX - lastTouchX;
                 lastTouchX = currentX;
+
+                if (hasBounds) {
+                    float testVal = currentValue + dx * valuePerPixel;
+                    if (testVal > maxValue) {
+                        dx = (maxValue - currentValue) / valuePerPixel;
+                        currentValue = maxValue;
+                    } else if (testVal < minValue) {
+                        dx = (minValue - currentValue) / valuePerPixel;
+                        currentValue = minValue;
+                    } else {
+                        currentValue = testVal;
+                    }
+
+                    if (Math.abs(dx) < 0.0001f) {
+                        // Max or min reached - cannot scroll further
+                        return true;
+                    }
+                }
 
                 offset += dx;
                 invalidate();

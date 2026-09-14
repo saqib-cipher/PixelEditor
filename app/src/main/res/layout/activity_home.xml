@@ -59,6 +59,15 @@
             </LinearLayout>
 
             <ImageButton
+                android:id="@+id/btnHomeRestore"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_pe_restore"
+                app:tint="@color/pe_accent_mint" />
+
+            <ImageButton
                 android:id="@+id/btnHomeProfile"
                 android:layout_width="40dp"
                 android:layout_height="40dp"

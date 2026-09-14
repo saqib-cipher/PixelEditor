@@ -14,6 +14,7 @@ import org.w3c.dom.NodeList;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +26,72 @@ public class EffectHelper {
 
     private static final String EFFECTS_DIR = "effects";
     private static List<EffectDefinition> cachedEffects = null;
+    // Video and animation-only effects excluded from image/photo editor
+    private static final java.util.Set<String> VIDEO_ANIMATION_EFFECTS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "blink.xml", "blink2.xml",
+            "flicker.xml", "flicker2.xml",
+            "oscillate.xml", "oscillate2.xml", "oscillate3.xml",
+            "pulsate.xml", "pulsate2.xml",
+            "pulse-opacity.xml", "pulse_opacity2.xml",
+            "shake.xml", "shake2.xml", "shake-parts.xml",
+            "spin.xml",
+            "swing.xml", "swing2.xml",
+            "timecode.xml",
+            "timequant.xml",
+            "drawing-progress.xml",
+            "textprogress.xml",
+            "textrand.xml",
+            "echo-keyframe.xml",
+            "parenthelper.xml",
+            "scaleassist.xml",
+            "counter.xml",
+            "checkerdissolve.xml", "checkerdissolve2.xml",
+            "fade.xml",
+            "wipe.xml", "wipe2.xml", "radialwipe.xml",
+            "dissolve.xml",
+            "motionblur.xml", "motionblur2.xml", "motionblur3.xml", "motionblur4.xml",
+            "move-along-path.xml", "move-along-path2.xml", "move-along-path3.xml",
+            "grow-parts.xml",
+            "facemotion.xml"
+    ));
+
+    public static boolean isVideoAnimationOnlyEffect(String fileName) {
+        if (fileName == null) return false;
+        return VIDEO_ANIMATION_EFFECTS.contains(fileName.toLowerCase(java.util.Locale.US));
+    }
+
+    public static EffectDefinition getEffectById(Context context, String effectId) {
+        if (effectId == null || context == null) return null;
+        List<EffectDefinition> all = getAllEffects(context);
+        for (EffectDefinition def : all) {
+            if (effectId.equalsIgnoreCase(def.getId()) || effectId.equalsIgnoreCase(def.getFileName())) {
+                return def.copy();
+            }
+        }
+        // Direct asset fallback
+        try {
+            String cleanName = effectId;
+            if (cleanName.contains(".")) {
+                cleanName = cleanName.substring(cleanName.lastIndexOf('.') + 1);
+            }
+            if (!cleanName.endsWith(".xml")) {
+                cleanName = cleanName + ".xml";
+            }
+            AssetManager am = context.getAssets();
+            try (InputStream is = am.open(EFFECTS_DIR + "/" + cleanName)) {
+                return parseEffectFromXml(is, cleanName);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /** Clear the in-memory effect cache (call after filtering rules change at runtime). */
+    public static synchronized void clearCache() {
+        cachedEffects = null;
+    }
 
     /**
-     * Loads and caches all effects from assets/effects/*.xml
+     * Loads and caches all effects from assets/effects/*.xml (excluding video/animation-only effects).
      */
     public static synchronized List<EffectDefinition> getAllEffects(Context context) {
         if (cachedEffects != null && !cachedEffects.isEmpty()) {
@@ -42,6 +106,15 @@ public class EffectHelper {
             if (files != null) {
                 for (String file : files) {
                     if (file.endsWith(".xml")) {
+                        // Skip effects made purely for video / temporal animation
+                        if (isVideoAnimationOnlyEffect(file)) {
+                            continue;
+                        }
+                        // Skip blend-*.xml — these power the Blending panel, not the Effects browser
+                        if (file.startsWith("blend-") || file.startsWith("blend_")) {
+                            continue;
+                        }
+
                         try (InputStream is = am.open(EFFECTS_DIR + "/" + file)) {
                             EffectDefinition effect = parseEffectFromXml(is, file);
                             if (effect != null) {
@@ -119,7 +192,16 @@ public class EffectHelper {
                     Element el = (Element) child;
                     String tagName = el.getTagName();
 
-                    if ("spinner".equalsIgnoreCase(tagName) || "slider".equalsIgnoreCase(tagName)) {
+                    if ("texture".equalsIgnoreCase(tagName)) {
+                        String paramId = el.getAttribute("id");
+                        effect.getTextureIds().add(paramId);
+                        String ds = el.getAttribute("downsample");
+                        if (!ds.isEmpty()) {
+                            try {
+                                effect.getTextureDownsamples().put(paramId, Integer.parseInt(ds.trim()));
+                            } catch (Exception ignored) {}
+                        }
+                    } else if ("spinner".equalsIgnoreCase(tagName) || "slider".equalsIgnoreCase(tagName) || "float".equalsIgnoreCase(tagName)) {
                         String paramId = el.getAttribute("id");
                         String label = el.getAttribute("label");
                         String defVal = el.getAttribute("default");
@@ -143,6 +225,32 @@ public class EffectHelper {
                                 type
                         );
                         effect.addParam(param);
+                        effect.getUniformTypes().put(paramId, "float");
+
+                    } else if ("hue-disc".equalsIgnoreCase(tagName)) {
+                        String paramId = el.getAttribute("id");
+                        String label = el.getAttribute("label");
+                        String cleanLabel = humanizeLabel(label, paramId);
+                        String defVal = el.getAttribute("default");
+                        float defHue = 0f;
+                        float defSat = 0.5f;
+                        if (!defVal.isEmpty()) {
+                            String[] parts = defVal.split(",");
+                            if (parts.length >= 1) defHue = parseSafeFloat(parts[0].trim(), 0f);
+                            if (parts.length >= 2) defSat = parseSafeFloat(parts[1].trim(), 0.5f);
+                        }
+                        effect.addParam(new EffectParam(paramId + "_hue", EffectParam.ParamType.SLIDER, cleanLabel + " Hue", defHue, 0f, 360f, 1f, "angle"));
+                        effect.addParam(new EffectParam(paramId + "_strength", EffectParam.ParamType.SLIDER, cleanLabel + " Strength", defSat, 0f, 1f, 0.01f, "percent"));
+                        effect.getUniformTypes().put(paramId, "vec2");
+
+                    } else if ("selector".equalsIgnoreCase(tagName)) {
+                        String paramId = el.getAttribute("id");
+                        String label = el.getAttribute("label");
+                        String cleanLabel = humanizeLabel(label, paramId);
+                        String defVal = el.getAttribute("default");
+                        float def = parseSafeFloat(defVal, 0f);
+                        effect.addParam(new EffectParam(paramId, EffectParam.ParamType.SLIDER, cleanLabel, def, 0f, 10f, 1f, "integer"));
+                        effect.getUniformTypes().put(paramId, "int");
 
                     } else if ("switch".equalsIgnoreCase(tagName) || "toggle".equalsIgnoreCase(tagName)) {
                         String paramId = el.getAttribute("id");
@@ -152,6 +260,7 @@ public class EffectHelper {
 
                         String cleanLabel = humanizeLabel(label, paramId);
                         effect.addParam(new EffectParam(paramId, cleanLabel, def));
+                        effect.getUniformTypes().put(paramId, "bool");
 
                     } else if ("color".equalsIgnoreCase(tagName)) {
                         String paramId = el.getAttribute("id");
@@ -167,6 +276,7 @@ public class EffectHelper {
 
                         String cleanLabel = humanizeLabel(label, paramId);
                         effect.addParam(new EffectParam(paramId, cleanLabel, col));
+                        effect.getUniformTypes().put(paramId, "vec4");
 
                     } else if ("xyz".equalsIgnoreCase(tagName) || "orient".equalsIgnoreCase(tagName)) {
                         String paramId = el.getAttribute("id");
@@ -183,6 +293,7 @@ public class EffectHelper {
                         effect.addParam(new EffectParam(paramId + "_x", EffectParam.ParamType.SLIDER, cleanLabel + " X", defX, -360f, 360f, 1f, "angle"));
                         effect.addParam(new EffectParam(paramId + "_y", EffectParam.ParamType.SLIDER, cleanLabel + " Y", defY, -360f, 360f, 1f, "angle"));
                         effect.addParam(new EffectParam(paramId + "_z", EffectParam.ParamType.SLIDER, cleanLabel + " Z", defZ, -360f, 360f, 1f, "angle"));
+                        effect.getUniformTypes().put(paramId, "vec3");
 
                     } else if ("point".equalsIgnoreCase(tagName)) {
                         String paramId = el.getAttribute("id");
@@ -197,13 +308,46 @@ public class EffectHelper {
                         }
                         effect.addParam(new EffectParam(paramId + "_x", EffectParam.ParamType.SLIDER, cleanLabel + " X", defX, -1000f, 1000f, 1f, "distance"));
                         effect.addParam(new EffectParam(paramId + "_y", EffectParam.ParamType.SLIDER, cleanLabel + " Y", defY, -1000f, 1000f, 1f, "distance"));
+                        effect.getUniformTypes().put(paramId, "vec2");
                     }
                 }
             }
 
-            // Parse Shader content
+            // Parse Passes (multi-pass ping-pong buffers)
+            NodeList passNodes = root.getElementsByTagName("pass");
+            for (int p = 0; p < passNodes.getLength(); p++) {
+                Node passNode = passNodes.item(p);
+                if (passNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element passEl = (Element) passNode;
+                    String target = passEl.getAttribute("target");
+                    effect.getPassTargets().add(target != null && !target.trim().isEmpty() ? target.trim() : null);
+                    String passEff = passEl.getAttribute("effect");
+                    effect.getPassEffects().add(passEff != null && !passEff.trim().isEmpty() ? passEff.trim() : null);
+                }
+            }
+
+            // Parse Shader content (prefer primary group="0" or default fragment shader)
             NodeList shaderNodes = root.getElementsByTagName("shader");
-            if (shaderNodes.getLength() > 0) {
+            Element selectedShader = null;
+            for (int s = 0; s < shaderNodes.getLength(); s++) {
+                Node sNode = shaderNodes.item(s);
+                if (sNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element sEl = (Element) sNode;
+                    String type = sEl.getAttribute("type");
+                    if ("fragment".equalsIgnoreCase(type)) {
+                        String group = sEl.getAttribute("group");
+                        if ("0".equals(group) || group.isEmpty()) {
+                            selectedShader = sEl;
+                            break;
+                        } else if (selectedShader == null) {
+                            selectedShader = sEl;
+                        }
+                    }
+                }
+            }
+            if (selectedShader != null) {
+                effect.setShaderSource(selectedShader.getTextContent());
+            } else if (shaderNodes.getLength() > 0) {
                 effect.setShaderSource(shaderNodes.item(0).getTextContent());
             }
 
@@ -256,23 +400,14 @@ public class EffectHelper {
     }
 
     /**
-     * Loads thumbnail image bitmap from assets with fuzzy matching and LRU caching.
+     * Resolves the relative asset path in effects/thumb/ for an effect.
      */
-    public static Bitmap loadThumbnail(Context context, EffectDefinition effect) {
+    public static String resolveThumbnailAssetPath(Context context, EffectDefinition effect) {
         if (effect == null || context == null) {
             return null;
         }
-
-        String cacheKey = effect.getId();
-        Bitmap cached = sThumbnailCache.get(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-
         ensureThumbIndex(context);
-        AssetManager am = context.getAssets();
 
-        // 1. Candidate lookup strings
         List<String> candidates = new ArrayList<>();
 
         // Add explicit thumbPath
@@ -311,52 +446,85 @@ public class EffectHelper {
             }
         }
 
-        // 2. Try resolving path from candidates in the index
-        String resolvedAssetPath = null;
+        // 1. Direct index match
         for (String cand : candidates) {
             if (sThumbIndex.containsKey(cand)) {
-                resolvedAssetPath = sThumbIndex.get(cand);
-                break;
+                return sThumbIndex.get(cand);
             }
-            // Try with .webp extension
             if (!cand.endsWith(".webp") && sThumbIndex.containsKey(cand + ".webp")) {
-                resolvedAssetPath = sThumbIndex.get(cand + ".webp");
-                break;
+                return sThumbIndex.get(cand + ".webp");
             }
         }
 
-        // 3. If still not found, search substring match in index
-        if (resolvedAssetPath == null) {
-            for (String cand : candidates) {
-                if (cand.length() < 3) continue;
-                for (Map.Entry<String, String> entry : sThumbIndex.entrySet()) {
-                    if (entry.getKey().contains(cand) || cand.contains(entry.getKey())) {
-                        resolvedAssetPath = entry.getValue();
-                        break;
-                    }
+        // 2. Substring match
+        for (String cand : candidates) {
+            if (cand.length() < 3) continue;
+            for (Map.Entry<String, String> entry : sThumbIndex.entrySet()) {
+                if (entry.getKey().contains(cand) || cand.contains(entry.getKey())) {
+                    return entry.getValue();
                 }
-                if (resolvedAssetPath != null) break;
             }
         }
 
-        // 4. Try opening the direct asset path if available
-        if (resolvedAssetPath != null) {
-            try (InputStream is = am.open(resolvedAssetPath)) {
-                Bitmap bmp = BitmapFactory.decodeStream(is);
-                if (bmp != null) {
-                    sThumbnailCache.put(cacheKey, bmp);
-                    return bmp;
-                }
-            } catch (Exception ignored) {}
-        }
-
-        // Direct path attempt
+        // 3. Fallback direct path
         if (thumbPath != null && !thumbPath.isEmpty()) {
             String directPath = thumbPath;
             if (!directPath.startsWith(EFFECTS_DIR + "/")) {
                 directPath = EFFECTS_DIR + "/" + directPath;
             }
-            try (InputStream is = am.open(directPath)) {
+            return directPath;
+        }
+
+        return null;
+    }
+
+    /**
+     * Loads thumbnail drawable supporting animated WebP playback on Android 9+ (API 28+).
+     */
+    public static android.graphics.drawable.Drawable loadThumbnailDrawable(Context context, EffectDefinition effect) {
+        if (effect == null || context == null) return null;
+        String assetPath = resolveThumbnailAssetPath(context, effect);
+        if (assetPath == null) return null;
+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                android.graphics.ImageDecoder.Source src =
+                        android.graphics.ImageDecoder.createSource(context.getAssets(), assetPath);
+                android.graphics.drawable.Drawable drawable =
+                        android.graphics.ImageDecoder.decodeDrawable(src);
+                if (drawable instanceof android.graphics.drawable.Animatable) {
+                    ((android.graphics.drawable.Animatable) drawable).start();
+                }
+                return drawable;
+            } else {
+                try (InputStream is = context.getAssets().open(assetPath)) {
+                    Bitmap bmp = BitmapFactory.decodeStream(is);
+                    if (bmp != null) {
+                        return new android.graphics.drawable.BitmapDrawable(context.getResources(), bmp);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /**
+     * Loads thumbnail image bitmap from assets with fuzzy matching and LRU caching.
+     */
+    public static Bitmap loadThumbnail(Context context, EffectDefinition effect) {
+        if (effect == null || context == null) {
+            return null;
+        }
+
+        String cacheKey = effect.getId();
+        Bitmap cached = sThumbnailCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        String assetPath = resolveThumbnailAssetPath(context, effect);
+        if (assetPath != null) {
+            try (InputStream is = context.getAssets().open(assetPath)) {
                 Bitmap bmp = BitmapFactory.decodeStream(is);
                 if (bmp != null) {
                     sThumbnailCache.put(cacheKey, bmp);
@@ -468,18 +636,98 @@ public class EffectHelper {
         }
     }
 
+    private static final Map<String, String> KNOWN_NAMES = new HashMap<>();
+    static {
+        KNOWN_NAMES.put("boxblur", "Box Blur");
+        KNOWN_NAMES.put("chromaticzoomblur", "Chromatic Zoom Blur");
+        KNOWN_NAMES.put("directionalblur", "Directional Blur");
+        KNOWN_NAMES.put("gaussianblur", "Gaussian Blur");
+        KNOWN_NAMES.put("innerblur", "Inner Blur");
+        KNOWN_NAMES.put("lensblur", "Lens Blur");
+        KNOWN_NAMES.put("linearstreaks", "Linear Streaks");
+        KNOWN_NAMES.put("maskblur", "Mask Blur");
+        KNOWN_NAMES.put("mosaic", "Mosaic");
+        KNOWN_NAMES.put("motionblur", "Motion Blur");
+        KNOWN_NAMES.put("mblur", "Motion Blur");
+        KNOWN_NAMES.put("sharpen", "Sharpen");
+        KNOWN_NAMES.put("spinblur", "Spin Blur");
+        KNOWN_NAMES.put("spinstreaks", "Spin Streaks");
+        KNOWN_NAMES.put("streakstrips", "Streak Strips");
+        KNOWN_NAMES.put("unsharpmask", "Unsharp Mask");
+        KNOWN_NAMES.put("warpblur", "Warp Blur");
+        KNOWN_NAMES.put("zoomblur", "Zoom Blur");
+        KNOWN_NAMES.put("zoomstreaks", "Zoom Streaks");
+        KNOWN_NAMES.put("brightnesscontrast", "Brightness / Contrast");
+        KNOWN_NAMES.put("colortemperature", "Color Temperature");
+        KNOWN_NAMES.put("colortune", "Color Tune");
+        KNOWN_NAMES.put("exposuregamma", "Exposure / Gamma");
+        KNOWN_NAMES.put("gradientoverlay", "Gradient Overlay");
+        KNOWN_NAMES.put("gradientmap", "Gradient Map");
+        KNOWN_NAMES.put("fourcolorgradient", "4-Color Gradient");
+        KNOWN_NAMES.put("hotcolors", "Hot Colors");
+        KNOWN_NAMES.put("hueshift", "Hue Shift");
+        KNOWN_NAMES.put("monochrome", "Monochrome");
+        KNOWN_NAMES.put("palettemap", "Palette Map");
+        KNOWN_NAMES.put("rgbcolorsplit", "RGB Color Split");
+        KNOWN_NAMES.put("saturationvibrance", "Saturation / Vibrance");
+        KNOWN_NAMES.put("solidcolor", "Solid Color");
+        KNOWN_NAMES.put("threshold", "Threshold");
+        KNOWN_NAMES.put("vignette", "Vignette");
+        KNOWN_NAMES.put("chromakey", "Chroma Key");
+        KNOWN_NAMES.put("advancedchromakey", "Advanced Chroma Key");
+        KNOWN_NAMES.put("lumakey", "Luma Key");
+        KNOWN_NAMES.put("luma_key", "Luma Key");
+        KNOWN_NAMES.put("mattechoker", "Matte Choker");
+        KNOWN_NAMES.put("autoshake", "Auto Shake");
+        KNOWN_NAMES.put("bend", "Bend");
+        KNOWN_NAMES.put("pinchbulge", "Pinch / Bulge");
+        KNOWN_NAMES.put("polarcoordinates", "Polar Coordinates");
+        KNOWN_NAMES.put("radialrays", "Radial Rays");
+        KNOWN_NAMES.put("ripple", "Ripple");
+        KNOWN_NAMES.put("simplestarfield", "Simple Starfield");
+        KNOWN_NAMES.put("stars", "Stars");
+        KNOWN_NAMES.put("swirl", "Swirl");
+        KNOWN_NAMES.put("turbulentdisplace", "Turbulent Displace");
+        KNOWN_NAMES.put("wavewarp", "Wave Warp");
+        KNOWN_NAMES.put("circularripple", "Circular Ripple");
+        KNOWN_NAMES.put("cube", "Cube 3D");
+        KNOWN_NAMES.put("cylinder", "Cylinder 3D");
+        KNOWN_NAMES.put("flip_layer", "Flip Layer");
+        KNOWN_NAMES.put("sphere", "Sphere 3D");
+        KNOWN_NAMES.put("stretchaxis", "Stretch Axis");
+        KNOWN_NAMES.put("textprogress", "Text Progress");
+        KNOWN_NAMES.put("textrandomizer", "Text Randomize");
+        KNOWN_NAMES.put("texttransform", "Text Transform");
+        KNOWN_NAMES.put("textspacing", "Text Spacing");
+    }
+
     private static String humanizeEffectName(String rawName, String fileName) {
+        String key = "";
         if (rawName != null && !rawName.isEmpty()) {
-            String name = rawName;
-            if (name.contains("/")) {
-                name = name.substring(name.lastIndexOf('/') + 1);
+            key = rawName;
+            if (key.contains("/")) {
+                key = key.substring(key.lastIndexOf('/') + 1);
             }
-            name = name.replace("effect_", "").replace("_name", "");
-            return toTitleCase(name.replace('_', ' ').replace('-', ' '));
+            key = key.replace("effect_", "").replace("_name", "");
+        } else {
+            key = fileName.replace(".xml", "");
         }
 
-        String base = fileName.replace(".xml", "").replace('_', ' ').replace('-', ' ');
-        return toTitleCase(base);
+        String cleanKey = key.toLowerCase(java.util.Locale.US).replace("-", "").replace("_", "");
+        if (KNOWN_NAMES.containsKey(cleanKey)) {
+            return KNOWN_NAMES.get(cleanKey);
+        }
+
+        String noDigits = cleanKey.replaceAll("[0-9]", "");
+        if (KNOWN_NAMES.containsKey(noDigits)) {
+            return KNOWN_NAMES.get(noDigits);
+        }
+
+        String spaced = key.replaceAll("([a-z])([A-Z])", "$1 $2")
+                           .replaceAll("([A-Za-z])([0-9])", "$1 $2")
+                           .replace('_', ' ')
+                           .replace('-', ' ');
+        return toTitleCase(spaced);
     }
 
     private static String humanizeLabel(String rawLabel, String fallback) {

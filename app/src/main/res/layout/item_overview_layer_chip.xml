@@ -17,6 +17,15 @@
         android:src="@drawable/ic_pe_visible"
         app:tint="@color/pe_text_secondary" />
 
+    <ImageButton
+        android:id="@+id/btnOverviewLayerlock"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/baseline_lock_24"
+        app:tint="@color/pe_text_secondary" />
+
+
     <!-- Layer Card (Colored timeline bar) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardOverviewLayerRow"
@@ -36,13 +45,23 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="10dp"
+            android:paddingStart="6dp"
             android:paddingEnd="12dp">
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cbOverviewLayerSelect"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                app:buttonTint="@color/pe_accent_mint" />
 
             <ImageView
                 android:id="@+id/ivOverviewChipIcon"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
+                android:layout_marginStart="2dp"
                 android:src="@drawable/ic_tool_shape"
                 app:tint="@color/pe_accent_mint" />
 

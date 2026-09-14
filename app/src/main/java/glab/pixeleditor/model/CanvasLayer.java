@@ -12,6 +12,85 @@ import java.util.UUID;
 import glab.pixeleditor.effect.EffectDefinition;
 
 public abstract class CanvasLayer {
+
+    public enum MaskType {
+        NONE,
+        MASK,
+        EXCLUDE
+    }
+
+    public enum BlendMode {
+        NORMAL,
+        MULTIPLY,
+        DARKEN,
+        COLOR_BURN,
+        LINEAR_BURN,
+        SCREEN,
+        LIGHTEN,
+        COLOR_DODGE,
+        LINEAR_DODGE,
+        OVERLAY,
+        SOFT_LIGHT,
+        HARD_LIGHT,
+        DIFFERENCE,
+        EXCLUSION,
+        HUE,
+        SATURATION,
+        COLOR,
+        LUMINOSITY;
+
+        public android.graphics.PorterDuff.Mode toPorterDuffMode() {
+            switch (this) {
+                case MULTIPLY: return android.graphics.PorterDuff.Mode.MULTIPLY;
+                case SCREEN: return android.graphics.PorterDuff.Mode.SCREEN;
+                case OVERLAY: return android.graphics.PorterDuff.Mode.OVERLAY;
+                case DARKEN: return android.graphics.PorterDuff.Mode.DARKEN;
+                case LIGHTEN: return android.graphics.PorterDuff.Mode.LIGHTEN;
+                case LINEAR_DODGE: return android.graphics.PorterDuff.Mode.ADD;
+                default: return android.graphics.PorterDuff.Mode.SRC_OVER;
+            }
+        }
+
+        public void applyToPaint(android.graphics.Paint paint) {
+            if (paint == null) return;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                android.graphics.BlendMode bm = toAndroidBlendMode();
+                if (bm != null) {
+                    paint.setBlendMode(bm);
+                    return;
+                }
+            }
+            android.graphics.PorterDuff.Mode pd = toPorterDuffMode();
+            if (pd != android.graphics.PorterDuff.Mode.SRC_OVER) {
+                paint.setXfermode(new android.graphics.PorterDuffXfermode(pd));
+            } else {
+                paint.setXfermode(null);
+            }
+        }
+
+        public android.graphics.BlendMode toAndroidBlendMode() {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return null;
+            switch (this) {
+                case MULTIPLY: return android.graphics.BlendMode.MULTIPLY;
+                case SCREEN: return android.graphics.BlendMode.SCREEN;
+                case OVERLAY: return android.graphics.BlendMode.OVERLAY;
+                case DARKEN: return android.graphics.BlendMode.DARKEN;
+                case LIGHTEN: return android.graphics.BlendMode.LIGHTEN;
+                case COLOR_DODGE: return android.graphics.BlendMode.COLOR_DODGE;
+                case COLOR_BURN: return android.graphics.BlendMode.COLOR_BURN;
+                case HARD_LIGHT: return android.graphics.BlendMode.HARD_LIGHT;
+                case SOFT_LIGHT: return android.graphics.BlendMode.SOFT_LIGHT;
+                case DIFFERENCE: return android.graphics.BlendMode.DIFFERENCE;
+                case EXCLUSION: return android.graphics.BlendMode.EXCLUSION;
+                case HUE: return android.graphics.BlendMode.HUE;
+                case SATURATION: return android.graphics.BlendMode.SATURATION;
+                case COLOR: return android.graphics.BlendMode.COLOR;
+                case LUMINOSITY: return android.graphics.BlendMode.LUMINOSITY;
+                default: return android.graphics.BlendMode.SRC_OVER;
+            }
+        }
+    }
+
     protected String id;
     protected String name;
     protected float x; // Center X on canvas
@@ -26,7 +105,11 @@ public abstract class CanvasLayer {
     protected int opacity = 255; // 0..255
     protected boolean isVisible = true;
     protected boolean isLocked = false;
+    protected MaskType maskType = MaskType.NONE;
+    protected BlendMode blendMode = BlendMode.NORMAL;
     protected final List<EffectDefinition> appliedEffects = new ArrayList<>();
+    protected final List<BorderItem> borders = new ArrayList<>();
+    protected final List<ShadowItem> shadows = new ArrayList<>();
 
     public CanvasLayer(String name, float x, float y, float width, float height) {
         this.id = UUID.randomUUID().toString();
@@ -40,6 +123,11 @@ public abstract class CanvasLayer {
     public abstract void draw(Canvas canvas, Paint basePaint);
 
     public abstract CanvasLayer copy();
+
+    /**
+     * Exact state clone for snapshots, undo, and redo. Preserves original ID, name, and position.
+     */
+    public abstract CanvasLayer cloneLayer();
 
     public boolean containsPoint(float px, float py) {
         if (!isVisible) return false;
@@ -88,6 +176,7 @@ public abstract class CanvasLayer {
 
     // Getters and Setters
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public float getX() { return x; }
@@ -110,10 +199,17 @@ public abstract class CanvasLayer {
     public void setSkewY(float skewY) { this.skewY = skewY; }
     public int getOpacity() { return opacity; }
     public void setOpacity(int opacity) { this.opacity = Math.max(0, Math.min(255, opacity)); }
+    public float getOpacityPercent() { return (opacity / 255f) * 100f; }
+    public void setOpacityPercent(float percent) { this.opacity = Math.round(Math.max(0f, Math.min(100f, percent)) * 2.55f); }
     public boolean isVisible() { return isVisible; }
     public void setVisible(boolean visible) { isVisible = visible; }
     public boolean isLocked() { return isLocked; }
     public void setLocked(boolean locked) { isLocked = locked; }
+
+    public MaskType getMaskType() { return maskType; }
+    public void setMaskType(MaskType maskType) { this.maskType = maskType != null ? maskType : MaskType.NONE; }
+    public BlendMode getBlendMode() { return blendMode; }
+    public void setBlendMode(BlendMode blendMode) { this.blendMode = blendMode != null ? blendMode : BlendMode.NORMAL; }
 
     public List<EffectDefinition> getAppliedEffects() { return appliedEffects; }
     public void addEffect(EffectDefinition effect) {
@@ -133,6 +229,24 @@ public abstract class CanvasLayer {
         appliedEffects.clear();
     }
 
+    public List<BorderItem> getBorders() { return borders; }
+    public void addBorder(BorderItem border) {
+        if (border != null) borders.add(border);
+    }
+    public void removeBorder(int index) {
+        if (index >= 0 && index < borders.size()) borders.remove(index);
+    }
+    public void clearBorders() { borders.clear(); }
+
+    public List<ShadowItem> getShadows() { return shadows; }
+    public void addShadow(ShadowItem shadow) {
+        if (shadow != null) shadows.add(shadow);
+    }
+    public void removeShadow(int index) {
+        if (index >= 0 && index < shadows.size()) shadows.remove(index);
+    }
+    public void clearShadows() { shadows.clear(); }
+
     public abstract org.json.JSONObject toJson(android.content.Context context);
 
     protected void writeBaseJson(org.json.JSONObject json) {
@@ -151,12 +265,26 @@ public abstract class CanvasLayer {
             json.put("opacity", opacity);
             json.put("isVisible", isVisible);
             json.put("isLocked", isLocked);
+            json.put("maskType", maskType.name());
+            json.put("blendMode", blendMode.name());
 
             org.json.JSONArray effArray = new org.json.JSONArray();
             for (EffectDefinition eff : appliedEffects) {
                 effArray.put(eff.toJson());
             }
             json.put("appliedEffects", effArray);
+
+            org.json.JSONArray bArray = new org.json.JSONArray();
+            for (BorderItem b : borders) {
+                bArray.put(b.toJson());
+            }
+            json.put("borders", bArray);
+
+            org.json.JSONArray sArray = new org.json.JSONArray();
+            for (ShadowItem s : shadows) {
+                sArray.put(s.toJson());
+            }
+            json.put("shadows", sArray);
         } catch (Exception ignored) {}
     }
 
@@ -176,6 +304,20 @@ public abstract class CanvasLayer {
         this.isVisible = json.optBoolean("isVisible", isVisible);
         this.isLocked = json.optBoolean("isLocked", isLocked);
 
+        String mType = json.optString("maskType", "NONE");
+        try {
+            this.maskType = MaskType.valueOf(mType.toUpperCase());
+        } catch (Exception ignored) {
+            this.maskType = MaskType.NONE;
+        }
+
+        String bMode = json.optString("blendMode", "NORMAL");
+        try {
+            this.blendMode = BlendMode.valueOf(bMode.toUpperCase());
+        } catch (Exception ignored) {
+            this.blendMode = BlendMode.NORMAL;
+        }
+
         appliedEffects.clear();
         org.json.JSONArray effArray = json.optJSONArray("appliedEffects");
         if (effArray != null) {
@@ -187,12 +329,38 @@ public abstract class CanvasLayer {
                 }
             }
         }
+
+        borders.clear();
+        org.json.JSONArray bArray = json.optJSONArray("borders");
+        if (bArray != null) {
+            for (int i = 0; i < bArray.length(); i++) {
+                org.json.JSONObject bJson = bArray.optJSONObject(i);
+                if (bJson != null) {
+                    BorderItem b = BorderItem.fromJson(bJson);
+                    if (b != null) borders.add(b);
+                }
+            }
+        }
+
+        shadows.clear();
+        org.json.JSONArray sArray = json.optJSONArray("shadows");
+        if (sArray != null) {
+            for (int i = 0; i < sArray.length(); i++) {
+                org.json.JSONObject sJson = sArray.optJSONObject(i);
+                if (sJson != null) {
+                    ShadowItem s = ShadowItem.fromJson(sJson);
+                    if (s != null) shadows.add(s);
+                }
+            }
+        }
     }
 
     public static CanvasLayer fromJson(android.content.Context context, org.json.JSONObject json) {
         if (json == null) return null;
         String type = json.optString("layerType", "SHAPE");
-        if ("TEXT".equalsIgnoreCase(type)) {
+        if ("GROUP".equalsIgnoreCase(type)) {
+            return GroupLayer.fromJson(context, json);
+        } else if ("TEXT".equalsIgnoreCase(type)) {
             return TextLayer.fromJson(context, json);
         } else if ("PHOTO".equalsIgnoreCase(type)) {
             return PhotoLayer.fromJson(context, json);

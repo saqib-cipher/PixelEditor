@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.PixelEditor.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="6dp"
+    app:cardBackgroundColor="#202A3C"
+    app:cardCornerRadius="8dp"
+    app:strokeColor="@color/pe_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Header Row: Color Swatch + Title + Switch + Delete -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/viewShadowItemSwatch"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/bg_pill_accent"
+                android:backgroundTint="#88000000" />
+
+            <TextView
+                android:id="@+id/tvShadowItemTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Shadow 1"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchShadowItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+
+            <ImageButton
+                android:id="@+id/btnDeleteShadowItem"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_pe_delete"
+                app:tint="@color/pe_text_secondary" />
+        </LinearLayout>
+
+        <!-- 1. Size (Blur Radius) Slider -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="46dp"
+                android:layout_height="wrap_content"
+                android:text="Size"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="10sp" />
+
+            <glab.pixeleditor.view.ClampedSliderView
+                android:id="@+id/sliderShadowItemSize"
+                android:layout_width="0dp"
+                android:layout_height="28dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvShadowItemSizeVal"
+                android:layout_width="40dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_input_box"
+                android:gravity="center"
+                android:text="12"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 2. Alpha (Opacity) Slider -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="46dp"
+                android:layout_height="wrap_content"
+                android:text="Alpha"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="10sp" />
+
+            <glab.pixeleditor.view.ClampedSliderView
+                android:id="@+id/sliderShadowItemAlpha"
+                android:layout_width="0dp"
+                android:layout_height="28dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvShadowItemAlphaVal"
+                android:layout_width="40dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_input_box"
+                android:gravity="center"
+                android:text="60%"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 3. Position X & Y Sliders -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <!-- Pos X -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="X"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="10sp" />
+
+                <glab.pixeleditor.view.ClampedSliderView
+                    android:id="@+id/sliderShadowItemPosX"
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvShadowItemPosXVal"
+                    android:layout_width="32dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:background="@drawable/bg_input_box"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <!-- Pos Y -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Y"
+                    android:textColor="@color/pe_text_secondary"
+                    android:textSize="10sp" />
+
+                <glab.pixeleditor.view.ClampedSliderView
+                    android:id="@+id/sliderShadowItemPosY"
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvShadowItemPosYVal"
+                    android:layout_width="32dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:background="@drawable/bg_input_box"
+                    android:gravity="center"
+                    android:text="8"
+                    android:textColor="@color/pe_text_primary"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,5 +1,7 @@
 package glab.pixeleditor.effect;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Camera;
 import android.graphics.Canvas;
@@ -8,10 +10,12 @@ import android.graphics.ColorFilter;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.util.LruCache;
 
 import java.util.List;
 
@@ -47,15 +51,33 @@ public class EffectPipeline {
                 }
             }
 
-            // 2. Flip
+            // 2. Flip (3D Axis Flip as defined in flip.xml, flip2.xml)
             if (id.contains("flip") || name.contains("flip")) {
+                EffectParam angleParam = eff.getParam("angle");
                 EffectParam axisParam = eff.getParam("axis");
+                EffectParam zdistParam = eff.getParam("zdist");
+
+                float angle = angleParam != null ? angleParam.getFloatValue() : 0f;
+                float axis = axisParam != null ? axisParam.getFloatValue() : 0f;
+                float zdist = zdistParam != null ? zdistParam.getFloatValue() : 0f;
+
+                // 2D Boolean flips
                 EffectParam flipH = eff.getParam("horizontal");
                 EffectParam flipV = eff.getParam("vertical");
-                float sx = (flipH != null && flipH.getBooleanValue()) ? -1f : 1f;
-                float sy = (flipV != null && flipV.getBooleanValue()) ? -1f : 1f;
-                if (axisParam != null && axisParam.getFloatValue() > 0) sx = -1f;
-                canvas.scale(sx, sy);
+                if (flipH != null && flipH.getBooleanValue()) canvas.scale(-1f, 1f);
+                if (flipV != null && flipV.getBooleanValue()) canvas.scale(1f, -1f);
+
+                // 3D Axis Flip: Rotates layer plane around custom axis vector
+                if (angle != 0f) {
+                    canvas.rotate(-axis);
+                    Camera camera = new Camera();
+                    camera.save();
+                    camera.setLocation(0, 0, -45f - zdist * 8f);
+                    camera.rotateY(angle);
+                    camera.applyToCanvas(canvas);
+                    camera.restore();
+                    canvas.rotate(axis);
+                }
             }
 
             // 3. Offset
@@ -71,30 +93,46 @@ public class EffectPipeline {
                 }
             }
 
-            // 4. 3D Perspective Rotation & Depth (Box, Cube, Cylinder, Extrude, etc.)
+            // 4. Cube 3D (cube.xml, cube2.xml) - Isometric Perspective Raymarch Space
             String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
-            if (cat.contains("3d") || id.contains("s3d") || id.contains("3d") || id.contains("cube") || id.contains("box") || fn.contains("3d") || fn.contains("s3d") || fn.contains("cube") || fn.contains("box") || name.contains("3d")) {
-                EffectParam rxParam = eff.getParam("rotate_x");
-                EffectParam ryParam = eff.getParam("rotate_y");
-                EffectParam rzParam = eff.getParam("rotate_z");
+            if (id.contains("cube") || fn.contains("cube")) {
+                EffectParam rxParam = eff.getParam("orient_x");
+                EffectParam ryParam = eff.getParam("orient_y");
+                EffectParam rzParam = eff.getParam("orient_z");
+                EffectParam depthParam = eff.getParam("depth");
+                EffectParam zdistParam = eff.getParam("zdist");
 
-                float rx = rxParam != null ? rxParam.getFloatValue() : 0f;
-                float ry = ryParam != null ? ryParam.getFloatValue() : 0f;
+                float rx = rxParam != null ? rxParam.getFloatValue() : 25f;
+                float ry = ryParam != null ? ryParam.getFloatValue() : -35f;
                 float rz = rzParam != null ? rzParam.getFloatValue() : 0f;
+                float zdist = zdistParam != null ? zdistParam.getFloatValue() : 0f;
+                float depth = depthParam != null ? depthParam.getFloatValue() : 1.0f;
 
-                // Orient offsets
-                EffectParam ox = eff.getParam("orient_x");
-                EffectParam oy = eff.getParam("orient_y");
-                EffectParam oz = eff.getParam("orient_z");
-                if (ox != null) rx += ox.getFloatValue();
-                if (oy != null) ry += oy.getFloatValue();
-                if (oz != null) rz += oz.getFloatValue();
+                Camera camera = new Camera();
+                camera.save();
+                camera.setLocation(0, 0, -42f - zdist * 10f);
+                camera.rotateX(rx);
+                camera.rotateY(ry);
+                camera.rotateZ(rz);
+                camera.applyToCanvas(canvas);
+                camera.restore();
 
-                // If orientation is untouched (0, 0, 0), supply default noticeable 3D tilt
-                if (rx == 0f && ry == 0f && rz == 0f) {
-                    rx = 25f;
-                    ry = -30f;
+                if (depth > 0.01f && depth != 1.0f) {
+                    canvas.scale(1.0f, 1.0f * depth);
                 }
+            }
+            // 5. Shape 3D & Extrusions (s3d-box, s3d-extrude, s3d-cylinder, s3d-ring, etc.)
+            else if (id.startsWith("s3d") || fn.startsWith("s3d") || cat.contains("3d")) {
+                EffectParam rxParam = eff.getParam("rotate_x");
+                if (rxParam == null) rxParam = eff.getParam("orient_x");
+                EffectParam ryParam = eff.getParam("rotate_y");
+                if (ryParam == null) ryParam = eff.getParam("orient_y");
+                EffectParam rzParam = eff.getParam("rotate_z");
+                if (rzParam == null) rzParam = eff.getParam("orient_z");
+
+                float rx = rxParam != null ? rxParam.getFloatValue() : 20f;
+                float ry = ryParam != null ? ryParam.getFloatValue() : -25f;
+                float rz = rzParam != null ? rzParam.getFloatValue() : 0f;
 
                 EffectParam scaleParam = eff.getParam("scale");
                 float sc = scaleParam != null ? scaleParam.getFloatValue() : 1.0f;
@@ -110,6 +148,30 @@ public class EffectPipeline {
 
                 if (sc != 1.0f && sc > 0f) {
                     canvas.scale(sc, sc);
+                }
+            }
+
+            // 6. Bend (bend.xml)
+            if (id.contains("bend") || fn.contains("bend")) {
+                EffectParam angleParam = eff.getParam("angle");
+                EffectParam axisParam = eff.getParam("axis");
+                float ang = angleParam != null ? angleParam.getFloatValue() : 30f;
+                float axis = axisParam != null ? axisParam.getFloatValue() : 0f;
+                if (ang != 0f) {
+                    canvas.rotate(-axis);
+                    float skew = (float) Math.tan(Math.toRadians(ang * 0.5f));
+                    canvas.skew(0f, skew * 0.2f);
+                    canvas.rotate(axis);
+                }
+            }
+
+            // 7. Spherize / 360 Reorient (spherize.xml, 360-reorient-sphere.xml)
+            if (id.contains("spherize") || id.contains("sphere") || fn.contains("sphere")) {
+                EffectParam strParam = eff.getParam("strength");
+                float str = strParam != null ? strParam.getFloatValue() : 0.5f;
+                if (str != 0f) {
+                    float s = 1.0f + str * 0.35f;
+                    canvas.scale(s, s);
                 }
             }
         }
@@ -173,170 +235,47 @@ public class EffectPipeline {
             }
         }
 
-        // Loop applied effects
-        for (EffectDefinition eff : layer.getAppliedEffects()) {
-            if (!eff.isEnabled()) continue;
-            String id = eff.getId().toLowerCase();
-            String name = eff.getName().toLowerCase();
-
-            // 1. Brightness & Contrast
-            if (id.contains("bright") || name.contains("brightness") || id.contains("contrast") || name.contains("contrast")) {
-                EffectParam bParam = eff.getParam("brightness");
-                if (bParam == null) bParam = eff.getParam("bright");
-                if (bParam == null) bParam = eff.getParam("bias");
-                if (bParam != null) {
-                    totalBrightness += bParam.getFloatValue() * 100f;
-                }
-
-                EffectParam cParam = eff.getParam("contrast");
-                if (cParam != null) {
-                    totalContrast += (cParam.getFloatValue() - 1.0f) * 100f;
-                }
-            }
-
-            // 2. Saturation & Vibrance
-            if (id.contains("sat") || name.contains("saturation") || id.contains("vibrance") || name.contains("vibrance")) {
-                EffectParam sParam = eff.getParam("saturation");
-                if (sParam == null) sParam = eff.getParam("sat");
-                if (sParam == null) sParam = eff.getParam("vibrance");
-                if (sParam != null) {
-                    totalSaturation += (sParam.getFloatValue() - 1.0f) * 100f;
-                }
-            }
-
-            // 3. Hue Shift / Temperature / Tint
-            if (id.contains("hue") || name.contains("hue") || id.contains("temperature") || id.contains("tint") || id.contains("warmth")) {
-                EffectParam hParam = eff.getParam("shift");
-                if (hParam == null) hParam = eff.getParam("hue");
-                if (hParam == null) hParam = eff.getParam("angle");
-                if (hParam != null) {
-                    totalHue += hParam.getFloatValue();
-                }
-
-                EffectParam tParam = eff.getParam("temp");
-                if (tParam == null) tParam = eff.getParam("temperature");
-                if (tParam == null) tParam = eff.getParam("warmth");
-                if (tParam != null) {
-                    totalWarmth += (tParam.getFloatValue() - 1.0f) * 100f;
-                }
-            }
-
-            // 4. Invert
-            if (id.contains("invert") || name.contains("invert")) {
-                isInverted = !isInverted;
-            }
-
-            // 5. Exposure / Gamma
-            if (id.contains("exposure") || name.contains("exposure")) {
-                EffectParam exp = eff.getParam("exposure");
-                if (exp == null) exp = eff.getParam("gain");
-                if (exp != null) {
-                    totalBrightness += (exp.getFloatValue() - 1.0f) * 120f;
-                }
-            }
-
-            // 6. Colorize / Solid Color
-            if (id.contains("colorize") || id.contains("colortint") || name.contains("colorize")) {
-                EffectParam colorParam = eff.getParam("color");
-                EffectParam strengthParam = eff.getParam("strength");
-                if (colorParam != null) {
-                    colorTint = colorParam.getColorValue();
-                    tintAmount = strengthParam != null ? strengthParam.getFloatValue() : 0.5f;
-                }
-            }
-        }
-
-        // Apply Brightness
-        if (totalBrightness != 0) {
+        if (totalBrightness != 0f) {
             ColorMatrix bMat = new ColorMatrix();
-            float b = totalBrightness * 1.5f;
             bMat.set(new float[]{
-                    1f, 0f, 0f, 0f, b,
-                    0f, 1f, 0f, 0f, b,
-                    0f, 0f, 1f, 0f, b,
-                    0f, 0f, 0f, 1f, 0f
+                    1, 0, 0, 0, totalBrightness * 2.55f,
+                    0, 1, 0, 0, totalBrightness * 2.55f,
+                    0, 0, 1, 0, totalBrightness * 2.55f,
+                    0, 0, 0, 1, 0
             });
             matrix.postConcat(bMat);
             hasAdjustment = true;
         }
 
-        // Apply Contrast
-        if (totalContrast != 0) {
-            float c = (totalContrast + 100f) / 100f;
-            float t = (1f - c) / 2f * 255f;
+        if (totalContrast != 0f) {
+            float scale = (totalContrast + 100f) / 100f;
+            float translate = (-0.5f * scale + 0.5f) * 255f;
             ColorMatrix cMat = new ColorMatrix(new float[]{
-                    c, 0f, 0f, 0f, t,
-                    0f, c, 0f, 0f, t,
-                    0f, 0f, c, 0f, t,
-                    0f, 0f, 0f, 1f, 0f
+                    scale, 0, 0, 0, translate,
+                    0, scale, 0, 0, translate,
+                    0, 0, scale, 0, translate,
+                    0, 0, 0, 1, 0
             });
             matrix.postConcat(cMat);
             hasAdjustment = true;
         }
 
-        // Apply Saturation
-        if (totalSaturation != 0) {
-            float s = Math.max(0f, (totalSaturation + 100f) / 100f);
+        if (totalSaturation != 0f) {
             ColorMatrix sMat = new ColorMatrix();
-            sMat.setSaturation(s);
+            sMat.setSaturation((totalSaturation + 100f) / 100f);
             matrix.postConcat(sMat);
             hasAdjustment = true;
         }
 
-        // Apply Hue Shift
-        if (totalHue != 0) {
-            ColorMatrix hMat = new ColorMatrix();
-            float rad = (float) Math.toRadians(totalHue);
-            float cos = (float) Math.cos(rad);
-            float sin = (float) Math.sin(rad);
-            hMat.set(new float[]{
-                    0.213f + cos * 0.787f - sin * 0.213f, 0.715f - cos * 0.715f - sin * 0.715f, 0.072f - cos * 0.072f + sin * 0.928f, 0f, 0f,
-                    0.213f - cos * 0.213f + sin * 0.143f, 0.715f + cos * 0.285f + sin * 0.140f, 0.072f - cos * 0.072f - sin * 0.283f, 0f, 0f,
-                    0.213f - cos * 0.213f - sin * 0.787f, 0.715f - cos * 0.715f + sin * 0.715f, 0.072f + cos * 0.928f + sin * 0.072f, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-            });
-            matrix.postConcat(hMat);
-            hasAdjustment = true;
-        }
-
-        // Apply Warmth
-        if (totalWarmth != 0) {
-            float w = totalWarmth * 0.8f;
+        if (totalWarmth != 0f) {
+            float w = totalWarmth / 100f;
             ColorMatrix wMat = new ColorMatrix(new float[]{
-                    1f, 0f, 0f, 0f, w,
-                    0f, 1f, 0f, 0f, 0f,
-                    0f, 0f, 1f, 0f, -w,
-                    0f, 0f, 0f, 1f, 0f
+                    1f + w * 0.15f, 0, 0, 0, 0,
+                    0, 1f, 0, 0, 0,
+                    0, 0, 1f - w * 0.15f, 0, 0,
+                    0, 0, 0, 1, 0
             });
             matrix.postConcat(wMat);
-            hasAdjustment = true;
-        }
-
-        // Apply Invert
-        if (isInverted) {
-            ColorMatrix invMat = new ColorMatrix(new float[]{
-                    -1f, 0f, 0f, 0f, 255f,
-                    0f, -1f, 0f, 0f, 255f,
-                    0f, 0f, -1f, 0f, 255f,
-                    0f, 0f, 0f, 1f, 0f
-            });
-            matrix.postConcat(invMat);
-            hasAdjustment = true;
-        }
-
-        // Apply Color Tint / Colorize
-        if (colorTint != 0 && tintAmount > 0) {
-            float r = Color.red(colorTint) / 255f * tintAmount;
-            float g = Color.green(colorTint) / 255f * tintAmount;
-            float b = Color.blue(colorTint) / 255f * tintAmount;
-            float base = 1f - tintAmount;
-            ColorMatrix tintMat = new ColorMatrix(new float[]{
-                    base + r, 0f, 0f, 0f, 0f,
-                    0f, base + g, 0f, 0f, 0f,
-                    0f, 0f, base + b, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-            });
-            matrix.postConcat(tintMat);
             hasAdjustment = true;
         }
 
@@ -366,28 +305,6 @@ public class EffectPipeline {
                 }
             }
 
-            // 2. Blur / Gaussian Blur / Box Blur (Powered by Shader CDATA formulas)
-            String shader = eff.getShaderSource() != null ? eff.getShaderSource().toLowerCase() : "";
-            boolean isBlur = id.contains("blur") || name.contains("blur") || shader.contains("blur") || shader.contains("nsamples");
-            if (isBlur) {
-                EffectParam strParam = eff.getParam("strength");
-                if (strParam == null) strParam = eff.getParam("radius");
-                if (strParam == null) strParam = eff.getParam("size");
-                float strengthVal = strParam != null ? strParam.getFloatValue() : 0.15f;
-                float radius;
-                if (shader.contains("actualstrength = strength/10.0") || shader.contains("strength/10")) {
-                    radius = (strengthVal / 10.0f) * 350f;
-                } else if (shader.contains("kernelsize") || shader.contains("incrementalgaussian")) {
-                    radius = strengthVal * 45f;
-                } else {
-                    radius = strengthVal * 30f;
-                }
-                if (radius > 0.5f) {
-                    BlurMaskFilter filter = new BlurMaskFilter(Math.min(60f, radius), BlurMaskFilter.Blur.NORMAL);
-                    if (fillPaint != null) fillPaint.setMaskFilter(filter);
-                    if (strokePaint != null) strokePaint.setMaskFilter(filter);
-                }
-            }
 
             // 3. Shadow / Glow / Drop Shadow
             if (id.contains("shadow") || name.contains("shadow") || id.contains("glow") || name.contains("glow")) {
@@ -486,5 +403,189 @@ public class EffectPipeline {
             vigPaint.setShader(gradient);
             canvas.drawRect(bounds, vigPaint);
         }
+    }
+
+    // Bitmap processing cache (keyed by layer id + effect hash)
+    private static final LruCache<String, Bitmap> sProcessedBitmapCache = new LruCache<>(10);
+
+    /**
+     * Checks if the layer has an active Tiles effect (tile.xml).
+     */
+    public static boolean hasTileEffect(CanvasLayer layer) {
+        for (EffectDefinition eff : layer.getAppliedEffects()) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+            if (id.contains("tile") || fn.contains("tile")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Creates a BitmapShader configured with mirroring and tiling from tile.xml.
+     */
+    public static BitmapShader createTileShader(CanvasLayer layer, Bitmap source, RectF destRect) {
+        EffectDefinition tileEff = null;
+        for (EffectDefinition eff : layer.getAppliedEffects()) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+            if (id.contains("tile") || fn.contains("tile")) {
+                tileEff = eff;
+                break;
+            }
+        }
+        if (tileEff == null || source == null) return null;
+
+        EffectParam mirrorParam = tileEff.getParam("mirror");
+        EffectParam scaleParam = tileEff.getParam("scale");
+        EffectParam phaseParam = tileEff.getParam("phase");
+
+        boolean isMirror = mirrorParam != null && mirrorParam.getBooleanValue();
+        float scale = scaleParam != null ? Math.max(0.1f, scaleParam.getFloatValue()) : 1.0f;
+        float phase = phaseParam != null ? phaseParam.getFloatValue() : 0f;
+
+        Shader.TileMode mode = isMirror ? Shader.TileMode.MIRROR : Shader.TileMode.REPEAT;
+        BitmapShader shader = new BitmapShader(source, mode, mode);
+
+        Matrix m = new Matrix();
+        float sx = (destRect.width() / (float) source.getWidth()) / scale;
+        float sy = (destRect.height() / (float) source.getHeight()) / scale;
+        m.postScale(sx, sy);
+        m.postTranslate(destRect.left + phase * destRect.width(), destRect.top);
+        shader.setLocalMatrix(m);
+
+        return shader;
+    }
+
+    /**
+     * Executes the layer's enabled Alight Motion effects sequentially using the GLSL CDATA shader engine.
+     */
+    public static Bitmap processLayerEffects(CanvasLayer layer, Bitmap source, RectF layerBounds, RectF canvasBounds) {
+        if (layer == null || source == null || source.isRecycled()) return source;
+
+        List<EffectDefinition> effects = layer.getAppliedEffects();
+        if (effects == null || effects.isEmpty()) {
+            return source;
+        }
+
+        // Build deterministic cache key representing the layer + enabled effects + params
+        StringBuilder keyBuilder = new StringBuilder();
+        keyBuilder.append(layer.getId()).append("_").append(source.getWidth()).append("x").append(source.getHeight()).append("_");
+        boolean hasAnyActive = false;
+
+        for (EffectDefinition eff : effects) {
+            if (!eff.isEnabled()) continue;
+            hasAnyActive = true;
+            keyBuilder.append(eff.getId()).append(":");
+            for (EffectParam p : eff.getParams()) {
+                keyBuilder.append(p.getId()).append("=").append(p.getFormattedValue()).append(",");
+            }
+            keyBuilder.append(";");
+        }
+
+        if (!hasAnyActive) {
+            return source;
+        }
+
+        String cacheKey = keyBuilder.toString();
+        Bitmap cached = sProcessedBitmapCache.get(cacheKey);
+        if (cached != null && !cached.isRecycled()) {
+            return cached;
+        }
+
+        Bitmap current = source;
+        for (EffectDefinition eff : effects) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+
+            // Handle repeat/pattern effects that have no GLSL shader — rendered CPU-side
+            if (id.contains("repeat") || fn.startsWith("repeat")) {
+                current = applyRepeatEffect(current, eff);
+                continue;
+            }
+
+            String shader = eff.getShaderSource();
+            if (shader != null && !shader.trim().isEmpty()) {
+                current = GLEffectEngine.getInstance().applyEffect(current, eff, layerBounds, canvasBounds);
+            }
+        }
+
+        sProcessedBitmapCache.put(cacheKey, current);
+        return current;
+    }
+
+    /**
+     * CPU-side implementation of repeat.xml effect.
+     * Draws N copies of the source bitmap, each offset/rotated/scaled by cumulative step values.
+     */
+    private static Bitmap applyRepeatEffect(Bitmap source, EffectDefinition eff) {
+        if (source == null || source.isRecycled()) return source;
+
+        int count = 10;
+        float offsetX = 0f, offsetY = 0f;
+        float angle = 0f;
+        float scale = 1.0f;
+        float alpha = 1.0f;
+
+        EffectParam countParam = eff.getParam("count");
+        if (countParam != null) count = Math.max(1, Math.min(50, Math.round(countParam.getFloatValue())));
+
+        EffectParam oxParam = eff.getParam("offset_x");
+        EffectParam oyParam = eff.getParam("offset_y");
+        if (oxParam != null) offsetX = oxParam.getFloatValue();
+        if (oyParam != null) offsetY = oyParam.getFloatValue();
+
+        EffectParam angleParam = eff.getParam("angle");
+        if (angleParam != null) angle = angleParam.getFloatValue();
+
+        EffectParam scaleParam = eff.getParam("scale");
+        if (scaleParam != null) scale = scaleParam.getFloatValue();
+
+        EffectParam alphaParam = eff.getParam("alpha");
+        if (alphaParam != null) alpha = alphaParam.getFloatValue();
+
+        int w = source.getWidth();
+        int h = source.getHeight();
+
+        // Compute canvas size to fit all copies (add padding for offsets)
+        int padX = (int) (Math.abs(offsetX) * count + Math.abs(w));
+        int padY = (int) (Math.abs(offsetY) * count + Math.abs(h));
+        int outW = Math.max(w, padX + w);
+        int outH = Math.max(h, padY + h);
+        // Safety cap
+        outW = Math.min(outW, 4096);
+        outH = Math.min(outH, 4096);
+
+        Bitmap output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        Paint drawPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        float cx = outW / 2f;
+        float cy = outH / 2f;
+
+        for (int i = count; i >= 0; i--) {
+            float stepAlpha = alpha - (alpha / count) * i;
+            int a = (int) (Math.max(0f, Math.min(1f, stepAlpha)) * 255);
+            drawPaint.setAlpha(a);
+
+            canvas.save();
+            canvas.translate(cx + offsetX * i, cy + offsetY * i);
+            canvas.rotate(angle * i);
+            float sc = (float) Math.pow(scale, i);
+            canvas.scale(sc, sc);
+            canvas.drawBitmap(source, -w / 2f, -h / 2f, drawPaint);
+            canvas.restore();
+        }
+
+        return output;
+    }
+
+    /**
+     * Backward-compatible alias for photo layer and legacy callers.
+     */
+    public static Bitmap getRenderBitmap(CanvasLayer layer, Bitmap source) {
+        return processLayerEffects(layer, source, null, null);
     }
 }

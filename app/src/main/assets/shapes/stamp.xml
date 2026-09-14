@@ -1,10 +1,10 @@
-<shape id="com.alightcreative.shapes.stamp"  name="@am:string/shape_stamp">
+<shape id="glab.pixeleditor.shapes.stamp"  name="@string/shape_stamp">
 
     <params>
-        <point id="size" label="@am:string/effect_param_size" default="150,150" type="size" />
-        <spinner id="cornerRadius" min="0" max="2000" default="5" step="1" label="@am:string/effect_param_radius"  />
-        <spinner id="perforationSize" min="0" max="500" default="40" step="1" label="@am:string/effect_param_perfsize"  />
-        <spinner id="perforationSpacing" min="0" max="500" default="20" step="1" label="@am:string/effect_param_spacing"  />
+        <point id="size" label="@string/effect_param_size" default="150,150" type="size" />
+        <spinner id="cornerRadius" min="0" max="2000" default="5" step="1" label="@string/effect_param_radius"  />
+        <spinner id="perforationSize" min="0" max="500" default="40" step="1" label="@string/effect_param_perfsize"  />
+        <spinner id="perforationSpacing" min="0" max="500" default="20" step="1" label="@string/effect_param_spacing"  />
     </params>
 
     <handle id="r" param="cornerRadius" type="x" style="square" icon="grip" />

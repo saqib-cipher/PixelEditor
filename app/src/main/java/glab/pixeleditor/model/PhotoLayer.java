@@ -21,9 +21,26 @@ public class PhotoLayer extends CanvasLayer {
     private float vignette = 0f;   // 0 to 100
     private String filterPreset = "NORMAL";
 
+    // Color & Gradient Overlay Fill
+    private ShapeLayer.FillMode fillMode = ShapeLayer.FillMode.MEDIA;
+    private int fillColor = 0xFF7A4B58;
+    private ShapeLayer.GradientType gradientType = ShapeLayer.GradientType.LINEAR;
+    private int gradientStartColor = 0xFF000000;
+    private int gradientEndColor = 0xFFFFFFFF;
+    private float gradientStartX = -100f;
+    private float gradientStartY = -100f;
+    private float gradientEndX = 100f;
+    private float gradientEndY = 100f;
+    private float gradientStartOffset = 0.0f;
+    private float gradientEndOffset = 1.0f;
+
     public PhotoLayer(String name, Bitmap bitmap, float x, float y, float width, float height) {
         super(name, x, y, width, height);
         this.bitmap = bitmap;
+        this.gradientStartX = -width / 3f;
+        this.gradientStartY = -height / 3f;
+        this.gradientEndX = width / 3f;
+        this.gradientEndY = height / 3f;
     }
 
     @Override
@@ -46,7 +63,6 @@ public class PhotoLayer extends CanvasLayer {
         float right = width / 2f;
         float bottom = height / 2f;
         RectF destRect = new RectF(left, top, right, bottom);
-        Rect srcRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
 
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         paint.setAlpha(opacity);
@@ -60,7 +76,70 @@ public class PhotoLayer extends CanvasLayer {
         // Apply Mask, Trim, Blur
         glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, destRect, paint, null);
 
-        canvas.drawBitmap(bitmap, srcRect, destRect, paint);
+        // Check if Tiles effect is active
+        android.graphics.BitmapShader tileShader = glab.pixeleditor.effect.EffectPipeline.createTileShader(this, bitmap, destRect);
+        if (tileShader != null) {
+            paint.setShader(tileShader);
+            canvas.drawRect(destRect, paint);
+            paint.setShader(null);
+        } else {
+            // Processed bitmap through authentic Alight Motion GLSL CDATA shaders
+            RectF layerBounds = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
+            Bitmap renderBitmap = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, bitmap, layerBounds, null);
+            android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, renderBitmap.getWidth(), renderBitmap.getHeight());
+            canvas.drawBitmap(renderBitmap, srcRect, destRect, paint);
+        }
+
+        // Apply Gradient or Solid Color Overlay if active
+        if (fillMode == ShapeLayer.FillMode.GRADIENT) {
+            Paint gradPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            gradPaint.setAlpha(opacity);
+            gradPaint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_ATOP));
+
+            int startA = Math.round(android.graphics.Color.alpha(gradientStartColor) * (opacity / 255f));
+            int endA = Math.round(android.graphics.Color.alpha(gradientEndColor) * (opacity / 255f));
+            int sCol = android.graphics.Color.argb(startA, android.graphics.Color.red(gradientStartColor), android.graphics.Color.green(gradientStartColor), android.graphics.Color.blue(gradientStartColor));
+            int eCol = android.graphics.Color.argb(endA, android.graphics.Color.red(gradientEndColor), android.graphics.Color.green(gradientEndColor), android.graphics.Color.blue(gradientEndColor));
+
+            if (gradientType == ShapeLayer.GradientType.RADIAL) {
+                float radius = (float) Math.hypot(gradientEndX - gradientStartX, gradientEndY - gradientStartY);
+                android.graphics.RadialGradient rg = new android.graphics.RadialGradient(
+                        gradientStartX, gradientStartY, Math.max(1f, radius),
+                        sCol, eCol, android.graphics.Shader.TileMode.CLAMP
+                );
+                gradPaint.setShader(rg);
+            } else if (gradientType == ShapeLayer.GradientType.SWEEP) {
+                android.graphics.SweepGradient sg = new android.graphics.SweepGradient(
+                        gradientStartX, gradientStartY,
+                        new int[]{sCol, eCol, sCol},
+                        new float[]{0f, 0.5f, 1f}
+                );
+                float angle = (float) Math.toDegrees(Math.atan2(gradientEndY - gradientStartY, gradientEndX - gradientStartX));
+                android.graphics.Matrix sm = new android.graphics.Matrix();
+                sm.postRotate(angle, gradientStartX, gradientStartY);
+                sg.setLocalMatrix(sm);
+                gradPaint.setShader(sg);
+            } else {
+                // LINEAR
+                android.graphics.LinearGradient lg = new android.graphics.LinearGradient(
+                        gradientStartX, gradientStartY, gradientEndX, gradientEndY,
+                        new int[]{sCol, eCol},
+                        new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)},
+                        android.graphics.Shader.TileMode.CLAMP
+                );
+                gradPaint.setShader(lg);
+            }
+            canvas.drawRect(destRect, gradPaint);
+        } else if (fillMode == ShapeLayer.FillMode.SOLID) {
+            int fillAlpha = Math.round(android.graphics.Color.alpha(fillColor) * (opacity / 255f));
+            if (fillAlpha > 0) {
+                Paint solidPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                solidPaint.setColor(fillColor);
+                solidPaint.setAlpha(fillAlpha);
+                solidPaint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_ATOP));
+                canvas.drawRect(destRect, solidPaint);
+            }
+        }
 
         // Post-draw vignette & overlays
         glab.pixeleditor.effect.EffectPipeline.applyPostDraw(canvas, this, destRect);
@@ -166,10 +245,72 @@ public class PhotoLayer extends CanvasLayer {
         copy.setWarmth(warmth);
         copy.setVignette(vignette);
         copy.setFilterPreset(filterPreset);
+        copy.setFillMode(fillMode);
+        copy.setFillColor(fillColor);
+        copy.setGradientType(gradientType);
+        copy.setGradientStartColor(gradientStartColor);
+        copy.setGradientEndColor(gradientEndColor);
+        copy.setGradientStartX(gradientStartX);
+        copy.setGradientStartY(gradientStartY);
+        copy.setGradientEndX(gradientEndX);
+        copy.setGradientEndY(gradientEndY);
+        copy.setGradientStartOffset(gradientStartOffset);
+        copy.setGradientEndOffset(gradientEndOffset);
+        copy.setMaskType(maskType);
+        copy.setBlendMode(blendMode);
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             copy.addEffect(eff.copy());
         }
+        for (BorderItem b : borders) {
+            copy.addBorder(b.copy());
+        }
+        for (ShadowItem s : shadows) {
+            copy.addShadow(s.copy());
+        }
         return copy;
+    }
+
+    @Override
+    public CanvasLayer cloneLayer() {
+        PhotoLayer clone = new PhotoLayer(this.name, bitmap, x, y, width, height);
+        clone.setId(this.id);
+        clone.setRotation(rotation);
+        clone.setScaleX(scaleX);
+        clone.setScaleY(scaleY);
+        clone.setSkewX(skewX);
+        clone.setSkewY(skewY);
+        clone.setOpacity(opacity);
+        clone.setBrightness(brightness);
+        clone.setContrast(contrast);
+        clone.setSaturation(saturation);
+        clone.setWarmth(warmth);
+        clone.setVignette(vignette);
+        clone.setFilterPreset(filterPreset);
+        clone.setFillMode(fillMode);
+        clone.setFillColor(fillColor);
+        clone.setGradientType(gradientType);
+        clone.setGradientStartColor(gradientStartColor);
+        clone.setGradientEndColor(gradientEndColor);
+        clone.setGradientStartX(gradientStartX);
+        clone.setGradientStartY(gradientStartY);
+        clone.setGradientEndX(gradientEndX);
+        clone.setGradientEndY(gradientEndY);
+        clone.setGradientStartOffset(gradientStartOffset);
+        clone.setGradientEndOffset(gradientEndOffset);
+        clone.setVisible(isVisible);
+        clone.setLocked(isLocked);
+        clone.setMaskType(maskType);
+        clone.setBlendMode(blendMode);
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            clone.addEffect(eff.copy());
+        }
+        for (BorderItem b : borders) {
+            clone.addBorder(b.cloneItem());
+        }
+        for (ShadowItem s : shadows) {
+            clone.addShadow(s.cloneItem());
+        }
+        return clone;
     }
 
     // Getters and Setters
@@ -187,6 +328,30 @@ public class PhotoLayer extends CanvasLayer {
     public void setVignette(float vignette) { this.vignette = vignette; }
     public String getFilterPreset() { return filterPreset; }
     public void setFilterPreset(String filterPreset) { this.filterPreset = filterPreset; }
+
+    public ShapeLayer.FillMode getFillMode() { return fillMode != null ? fillMode : ShapeLayer.FillMode.MEDIA; }
+    public void setFillMode(ShapeLayer.FillMode fillMode) { this.fillMode = fillMode != null ? fillMode : ShapeLayer.FillMode.MEDIA; }
+    public int getFillColor() { return fillColor; }
+    public void setFillColor(int fillColor) { this.fillColor = fillColor; }
+
+    public ShapeLayer.GradientType getGradientType() { return gradientType != null ? gradientType : ShapeLayer.GradientType.LINEAR; }
+    public void setGradientType(ShapeLayer.GradientType gradientType) { this.gradientType = gradientType != null ? gradientType : ShapeLayer.GradientType.LINEAR; }
+    public int getGradientStartColor() { return gradientStartColor; }
+    public void setGradientStartColor(int gradientStartColor) { this.gradientStartColor = gradientStartColor; }
+    public int getGradientEndColor() { return gradientEndColor; }
+    public void setGradientEndColor(int gradientEndColor) { this.gradientEndColor = gradientEndColor; }
+    public float getGradientStartX() { return gradientStartX; }
+    public void setGradientStartX(float gradientStartX) { this.gradientStartX = gradientStartX; }
+    public float getGradientStartY() { return gradientStartY; }
+    public void setGradientStartY(float gradientStartY) { this.gradientStartY = gradientStartY; }
+    public float getGradientEndX() { return gradientEndX; }
+    public void setGradientEndX(float gradientEndX) { this.gradientEndX = gradientEndX; }
+    public float getGradientEndY() { return gradientEndY; }
+    public void setGradientEndY(float gradientEndY) { this.gradientEndY = gradientEndY; }
+    public float getGradientStartOffset() { return gradientStartOffset; }
+    public void setGradientStartOffset(float gradientStartOffset) { this.gradientStartOffset = gradientStartOffset; }
+    public float getGradientEndOffset() { return gradientEndOffset; }
+    public void setGradientEndOffset(float gradientEndOffset) { this.gradientEndOffset = gradientEndOffset; }
 
     private String photoFileName = "";
     private float originalWidth = 0f;
@@ -214,6 +379,17 @@ public class PhotoLayer extends CanvasLayer {
             json.put("warmth", warmth);
             json.put("vignette", vignette);
             json.put("filterPreset", filterPreset);
+            json.put("fillMode", fillMode != null ? fillMode.name() : ShapeLayer.FillMode.MEDIA.name());
+            json.put("fillColor", fillColor);
+            json.put("gradientType", gradientType != null ? gradientType.name() : ShapeLayer.GradientType.LINEAR.name());
+            json.put("gradientStartColor", gradientStartColor);
+            json.put("gradientEndColor", gradientEndColor);
+            json.put("gradientStartX", (double) gradientStartX);
+            json.put("gradientStartY", (double) gradientStartY);
+            json.put("gradientEndX", (double) gradientEndX);
+            json.put("gradientEndY", (double) gradientEndY);
+            json.put("gradientStartOffset", (double) gradientStartOffset);
+            json.put("gradientEndOffset", (double) gradientEndOffset);
             json.put("originalWidth", getOriginalWidth());
             json.put("originalHeight", getOriginalHeight());
 
@@ -268,6 +444,28 @@ public class PhotoLayer extends CanvasLayer {
         layer.warmth = (float) json.optDouble("warmth", 0.0);
         layer.vignette = (float) json.optDouble("vignette", 0.0);
         layer.filterPreset = json.optString("filterPreset", "NORMAL");
+
+        String fmStr = json.optString("fillMode", ShapeLayer.FillMode.MEDIA.name());
+        try {
+            layer.fillMode = ShapeLayer.FillMode.valueOf(fmStr);
+        } catch (Exception ignored) {}
+
+        layer.fillColor = json.optInt("fillColor", 0xFF7A4B58);
+
+        String gtStr = json.optString("gradientType", ShapeLayer.GradientType.LINEAR.name());
+        try {
+            layer.gradientType = ShapeLayer.GradientType.valueOf(gtStr);
+        } catch (Exception ignored) {}
+
+        layer.gradientStartColor = json.optInt("gradientStartColor", 0xFF000000);
+        layer.gradientEndColor = json.optInt("gradientEndColor", 0xFFFFFFFF);
+        layer.gradientStartX = (float) json.optDouble("gradientStartX", -w / 3f);
+        layer.gradientStartY = (float) json.optDouble("gradientStartY", -h / 3f);
+        layer.gradientEndX = (float) json.optDouble("gradientEndX", w / 3f);
+        layer.gradientEndY = (float) json.optDouble("gradientEndY", h / 3f);
+        layer.gradientStartOffset = (float) json.optDouble("gradientStartOffset", 0.0);
+        layer.gradientEndOffset = (float) json.optDouble("gradientEndOffset", 1.0);
+
         layer.photoFileName = photoPath;
         layer.originalWidth = (float) json.optDouble("originalWidth", loadedBmp.getWidth());
         layer.originalHeight = (float) json.optDouble("originalHeight", loadedBmp.getHeight());

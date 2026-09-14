@@ -1,5 +1,6 @@
 package glab.pixeleditor.model;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -224,14 +225,39 @@ public class TextLayer extends CanvasLayer {
         // Apply Mask, Trim, Blur, Shadow, Gradient
         glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, bounds, fillPaint, strokePaint);
 
-        // Draw Stroke
-        if (strokePaint != null && !displayText.isEmpty()) {
-            canvas.drawText(displayText, 0, baseline, strokePaint);
+        boolean hasActiveEffects = false;
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            if (eff.isEnabled() && eff.getShaderSource() != null && !eff.getShaderSource().trim().isEmpty()) {
+                hasActiveEffects = true;
+                break;
+            }
         }
 
-        // Draw Fill
-        if (!displayText.isEmpty()) {
-            canvas.drawText(displayText, 0, baseline, fillPaint);
+        if (hasActiveEffects && bounds.width() > 0 && bounds.height() > 0 && !displayText.isEmpty()) {
+            int bw = Math.max(1, (int) Math.ceil(bounds.width()));
+            int bh = Math.max(1, (int) Math.ceil(bounds.height()));
+            Bitmap textBmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
+            Canvas offCanvas = new Canvas(textBmp);
+            float offBaseline = baseline - bounds.top;
+            float offX = -bounds.left;
+            if (strokePaint != null) {
+                offCanvas.drawText(displayText, offX, offBaseline, strokePaint);
+            }
+            offCanvas.drawText(displayText, offX, offBaseline, fillPaint);
+
+            RectF layerBounds = new RectF(x + bounds.left, y + bounds.top, x + bounds.right, y + bounds.bottom);
+            Bitmap processed = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, textBmp, layerBounds, null);
+            canvas.drawBitmap(processed, bounds.left, bounds.top, null);
+        } else {
+            // Draw Stroke
+            if (strokePaint != null && !displayText.isEmpty()) {
+                canvas.drawText(displayText, 0, baseline, strokePaint);
+            }
+
+            // Draw Fill
+            if (!displayText.isEmpty()) {
+                canvas.drawText(displayText, 0, baseline, fillPaint);
+            }
         }
 
         // Post-draw vignette
@@ -262,6 +288,35 @@ public class TextLayer extends CanvasLayer {
             copy.addEffect(eff.copy());
         }
         return copy;
+    }
+
+    @Override
+    public CanvasLayer cloneLayer() {
+        TextLayer clone = new TextLayer(this.name, text, x, y);
+        clone.setId(this.id);
+        clone.setWidth(width);
+        clone.setHeight(height);
+        clone.setRotation(rotation);
+        clone.setScaleX(scaleX);
+        clone.setScaleY(scaleY);
+        clone.setSkewX(skewX);
+        clone.setSkewY(skewY);
+        clone.setOpacity(opacity);
+        clone.setTextColor(textColor);
+        clone.setTextSize(textSize);
+        clone.setBold(isBold);
+        clone.setItalic(isItalic);
+        clone.setStrokeColor(strokeColor);
+        clone.setStrokeWidth(strokeWidth);
+        clone.setHasStroke(hasStroke);
+        clone.setHasShadow(hasShadow);
+        clone.setVisible(isVisible);
+        clone.setLocked(isLocked);
+        clone.recalculateBounds();
+        for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+            clone.addEffect(eff.copy());
+        }
+        return clone;
     }
 
     // Getters and Setters

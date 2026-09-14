@@ -7,9 +7,9 @@
     android:background="@color/pe_surface_panel"
     android:orientation="vertical"
     android:paddingStart="12dp"
-    android:paddingTop="8dp"
+    android:paddingTop="4dp"
     android:paddingEnd="12dp"
-    android:paddingBottom="10dp">
+    android:paddingBottom="4dp">
 
     <!-- Header Row: Layers count & quick + button -->
     <LinearLayout
@@ -50,6 +50,93 @@
             app:cornerRadius="8dp" />
     </LinearLayout>
 
+    <!-- Multi-Selection & Grouping Toolbar (Alight Motion style) -->
+    <HorizontalScrollView
+        android:id="@+id/layoutOverviewMultiSelectActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="2dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:gravity="center_vertical"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverviewGroup"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Group"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/pe_surface_elevated"
+                app:cornerRadius="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverviewMaskGroup"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Mask Group"
+                android:textColor="@color/pe_accent_mint"
+                android:textSize="11sp"
+                app:backgroundTint="@color/pe_surface_elevated"
+                app:cornerRadius="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverviewExcludeGroup"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Exclude Group"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/pe_surface_elevated"
+                app:cornerRadius="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverviewUngroup"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Ungroup"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/pe_surface_elevated"
+                app:cornerRadius="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverviewClearSelect"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:text="Clear"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
@@ -57,18 +144,12 @@
         android:layout_marginBottom="8dp"
         android:background="@color/pe_border" />
 
-    <!-- Vertical scrollable layer cards (Alight Motion timeline stack style) -->
-    <androidx.core.widget.NestedScrollView
+    <!-- Vertical scrollable layer cards (Alight Motion timeline stack style with drag reorder) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvOverviewLayers"
         android:layout_width="match_parent"
         android:layout_height="175dp"
-        android:fillViewport="true"
-        android:scrollbars="vertical">
-
-        <LinearLayout
-            android:id="@+id/containerOverviewLayerCards"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-    </androidx.core.widget.NestedScrollView>
+        android:clipToPadding="false"
+        android:scrollbars="vertical" />
 
 </LinearLayout>

@@ -7,14 +7,14 @@
     android:background="@color/pe_surface_panel"
     android:orientation="vertical"
     android:paddingStart="12dp"
-    android:paddingTop="6dp"
+    android:paddingTop="4dp"
     android:paddingEnd="12dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="4dp">
 
-    <!-- Header -->
+    <!-- Header Row -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="38dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -27,6 +27,7 @@
             app:tint="@color/pe_text_primary" />
 
         <TextView
+            android:id="@+id/tvColorFillTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -38,66 +39,487 @@
 
         <View
             android:id="@+id/viewCurrentFillColorPreview"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:background="@drawable/bg_pill_accent" />
+    </LinearLayout>
+
+    <!-- Top 4 Fill Mode Tabs: None, Solid, Gradient, Media -->
+    <LinearLayout
+        android:id="@+id/layoutFillModeTabs"
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Tab 0: None / Transparent Fill -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/tabFillNone"
+            style="@style/Widget.PixelEditor.Card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/pe_surface_elevated"
+            app:cardCornerRadius="8dp"
+            app:strokeColor="@color/pe_border">
+
+            <ImageView
+                android:id="@+id/ivTabNoneIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_alight_none"
+                app:tint="@color/pe_text_secondary" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Tab 1: Solid Color Fill (Default Active) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/tabFillSolid"
+            style="@style/Widget.PixelEditor.Card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/pe_surface_elevated"
+            app:cardCornerRadius="8dp"
+            app:strokeColor="@color/pe_accent_mint">
+
+            <ImageView
+                android:id="@+id/ivTabSolidIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_tool_color"
+                app:tint="@color/pe_accent_mint" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Tab 2: Gradient Fill -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/tabFillGradient"
+            style="@style/Widget.PixelEditor.Card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/pe_surface_elevated"
+            app:cardCornerRadius="8dp"
+            app:strokeColor="@color/pe_border">
+
+            <ImageView
+                android:id="@+id/ivTabGradientIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_alight_gradient"
+                app:tint="@color/pe_text_secondary" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Tab 3: Media Fill -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/tabFillMedia"
+            style="@style/Widget.PixelEditor.Card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/pe_surface_elevated"
+            app:cardCornerRadius="8dp"
+            app:strokeColor="@color/pe_border">
+
+            <ImageView
+                android:id="@+id/ivTabMediaIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_alight_media"
+                app:tint="@color/pe_text_secondary" />
+        </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:background="@color/pe_border" />
 
-    <!-- Color Palette Chips -->
-    <HorizontalScrollView
+    <!-- Flipper for Fill Subpanels -->
+    <ViewFlipper
+        android:id="@+id/flipperFillSubpanels"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none">
+        android:layout_height="wrap_content">
 
+        <!-- Child 0: None / Transparent Fill -->
         <LinearLayout
-            android:id="@+id/layoutFillColorChips"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
-
-    <!-- Opacity Slider -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="60dp"
-            android:layout_height="wrap_content"
-            android:text="@string/prop_opacity"
-            android:textColor="@color/pe_text_secondary"
-            android:textSize="13sp" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderLayerOpacity"
-            style="@style/Widget.PixelEditor.Slider"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:valueFrom="0"
-            android:valueTo="255"
-            android:value="255" />
-
-        <TextView
-            android:id="@+id/tvOpacityVal"
-            android:layout_width="50dp"
-            android:layout_height="30dp"
-            android:background="@drawable/bg_input_box"
+            android:layout_width="match_parent"
+            android:layout_height="140dp"
             android:gravity="center"
-            android:text="100%"
-            android:textColor="@color/pe_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_alight_none"
+                app:tint="@color/pe_text_secondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Transparent (No Fill)"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Child 1: Solid Color Fill (AlightColorPickerView) -->
+        <glab.pixeleditor.ui.AlightColorPickerView
+            android:id="@+id/panelAlightColorPicker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- Child 2: Gradient Fill Controls (Matching Alight Motion Screenshot) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="6dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="6dp">
+
+            <!-- 1. Gradient Type Switcher: Linear, Radial, Sweep -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="10dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Linear -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnGradTypeLinear"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="44dp"
+                        android:layout_height="28dp"
+                        android:layout_marginEnd="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="#243048"
+                        app:cardCornerRadius="6dp"
+                        app:strokeColor="@color/pe_accent_mint"
+                        app:strokeWidth="1.5dp">
+
+                        <ImageView
+                            android:id="@+id/ivGradTypeLinear"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_grad_linear"
+                            app:tint="@color/pe_accent_mint" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Radial -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnGradTypeRadial"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="44dp"
+                        android:layout_height="28dp"
+                        android:layout_marginEnd="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_elevated"
+                        app:cardCornerRadius="6dp"
+                        app:strokeColor="@color/pe_border"
+                        app:strokeWidth="1dp">
+
+                        <ImageView
+                            android:id="@+id/ivGradTypeRadial"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_grad_radial"
+                            app:tint="@color/pe_text_secondary" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Sweep / Angle -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnGradTypeSweep"
+                        style="@style/Widget.PixelEditor.Card"
+                        android:layout_width="44dp"
+                        android:layout_height="28dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/pe_surface_elevated"
+                        app:cardCornerRadius="6dp"
+                        app:strokeColor="@color/pe_border"
+                        app:strokeWidth="1dp">
+
+                        <ImageView
+                            android:id="@+id/ivGradTypeSweep"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_grad_sweep"
+                            app:tint="@color/pe_text_secondary" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. Interactive Gradient Bar with Draggable Thumbs -->
+            <glab.pixeleditor.view.GradientBarView
+                android:id="@+id/gradientBarView"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="6dp" />
+
+            <!-- 3. Bottom Color Swatches & Actions -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Start Color Button -->
+                <LinearLayout
+                    android:id="@+id/btnGradStartContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_panel_card"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp">
+
+                    <View
+                        android:id="@+id/btnGradStartColor"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="#FF000000" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="Start"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- End Color Button -->
+                <LinearLayout
+                    android:id="@+id/btnGradEndContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_panel_card"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp">
+
+                    <View
+                        android:id="@+id/btnGradEndColor"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:background="@drawable/bg_pill_accent"
+                        android:backgroundTint="#FFFFFFFF" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="End"
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Reverse Gradient Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnReverseGradient"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:contentDescription="Reverse"
+                    app:backgroundTint="@color/pe_surface_elevated"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_pe_undo"
+                    app:iconTint="@color/pe_text_secondary" />
+
+                <!-- Gradient Eyedropper Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGradEyedropper"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="Eyedropper"
+                    app:backgroundTint="@color/pe_surface_elevated"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_eyedropper"
+                    app:iconTint="@color/pe_text_secondary" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Child 3: Media Fill Controls (Matching Screenshot 1) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="12dp">
+
+            <!-- Media Name / File Picker Row (Screenshot 1) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMediaFileSelector"
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="8dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp">
+
+                    <TextView
+                        android:id="@+id/tvMediaFillName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Select Image / Media..."
+                        android:textColor="@color/pe_text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/btnPickMediaFill"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pe_media"
+                        app:tint="@color/pe_accent_mint" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Segmented Scaling Buttons: Fill | Fit | Stretch (Screenshot 1) -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.PixelEditor.Card"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/pe_surface_elevated"
+                app:cardCornerRadius="8dp"
+                app:strokeColor="@color/pe_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <!-- Fill (Center Crop) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaScaleFill"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="Fill"
+                        android:textColor="@color/pe_accent_mint"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="0dp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="4dp"
+                        android:background="@color/pe_border" />
+
+                    <!-- Fit (Center Inside) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaScaleFit"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="Fit"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="13sp"
+                        app:cornerRadius="0dp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="4dp"
+                        android:background="@color/pe_border" />
+
+                    <!-- Stretch -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMediaScaleStretch"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="Stretch"
+                        android:textColor="@color/pe_text_secondary"
+                        android:textSize="13sp"
+                        app:cornerRadius="0dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </ViewFlipper>
+
 </LinearLayout>

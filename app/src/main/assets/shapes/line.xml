@@ -1,8 +1,8 @@
-<shape id="com.alightcreative.shapes.line" name="@am:string/shape_line">
+<shape id="glab.pixeleditor.shapes.line" name="@string/shape_line">
 
     <params>
-        <point id="p1" label="@am:string/effect_param_point_1" default="-100,100" />
-        <point id="p2" label="@am:string/effect_param_point_2" default="100,-100" />
+        <point id="p1" label="@string/effect_param_point_1" default="-100,100" />
+        <point id="p2" label="@string/effect_param_point_2" default="100,-100" />
     </params>
 
     <handle id="p1" param="p1" type="xy" icon="dot" />

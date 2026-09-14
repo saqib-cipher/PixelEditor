@@ -1,11 +1,11 @@
-<shape id="com.alightcreative.shapes.arrow" name="@am:string/shape_arrow">
+<shape id="glab.pixeleditor.shapes.arrow" name="@string/shape_arrow">
 
     <params>
-        <point id="start" label="@am:string/effect_param_start" default="0,0" />
-        <point id="end" label="@am:string/effect_param_end" default="250,-250" />
-        <spinner id="lineWidth" min="0" max="2000" default="40" step="1" label="@am:string/effect_param_tail_width"  />
-        <spinner id="headWidth" min="0" max="2000" default="120" step="1" label="@am:string/effect_param_head_width"  />
-        <spinner id="headLength" min="0" max="2000" default="130" step="1" label="@am:string/effect_param_head_length"  />
+        <point id="start" label="@string/effect_param_start" default="0,0" />
+        <point id="end" label="@string/effect_param_end" default="250,-250" />
+        <spinner id="lineWidth" min="0" max="2000" default="40" step="1" label="@string/effect_param_tail_width"  />
+        <spinner id="headWidth" min="0" max="2000" default="120" step="1" label="@string/effect_param_head_width"  />
+        <spinner id="headLength" min="0" max="2000" default="130" step="1" label="@string/effect_param_head_length"  />
 </params>
 
     <handle id="s" param="start" type="xy" icon="dot" />

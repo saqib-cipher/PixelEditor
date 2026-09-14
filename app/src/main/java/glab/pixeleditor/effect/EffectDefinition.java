@@ -19,6 +19,12 @@ public class EffectDefinition {
     private boolean isEnabled = true;
     private boolean isExpanded = false;
 
+    private final List<String> passTargets = new ArrayList<>();
+    private final List<String> passEffects = new ArrayList<>();
+    private final java.util.Map<String, Integer> textureDownsamples = new java.util.HashMap<>();
+    private final List<String> textureIds = new ArrayList<>();
+    private final java.util.Map<String, String> uniformTypes = new java.util.LinkedHashMap<>();
+
     public EffectDefinition(String id, String fileName, String name, String category) {
         this.id = id;
         this.fileName = fileName;
@@ -58,6 +64,11 @@ public class EffectDefinition {
         for (EffectParam p : params) {
             copy.addParam(p.copy());
         }
+        copy.passTargets.addAll(this.passTargets);
+        copy.passEffects.addAll(this.passEffects);
+        copy.textureDownsamples.putAll(this.textureDownsamples);
+        copy.textureIds.addAll(this.textureIds);
+        copy.uniformTypes.putAll(this.uniformTypes);
         return copy;
     }
 
@@ -84,6 +95,12 @@ public class EffectDefinition {
     public String getShaderSource() { return shaderSource; }
     public void setShaderSource(String shaderSource) { this.shaderSource = shaderSource; }
 
+    public List<String> getPassTargets() { return passTargets; }
+    public List<String> getPassEffects() { return passEffects; }
+    public java.util.Map<String, Integer> getTextureDownsamples() { return textureDownsamples; }
+    public List<String> getTextureIds() { return textureIds; }
+    public java.util.Map<String, String> getUniformTypes() { return uniformTypes; }
+
     public org.json.JSONObject toJson() {
         try {
             org.json.JSONObject json = new org.json.JSONObject();
@@ -104,6 +121,29 @@ public class EffectDefinition {
                 pArray.put(p.toJson());
             }
             json.put("params", pArray);
+
+            if (!passTargets.isEmpty()) {
+                org.json.JSONArray passArr = new org.json.JSONArray();
+                for (String t : passTargets) passArr.put(t != null ? t : "");
+                json.put("passTargets", passArr);
+            }
+            if (!passEffects.isEmpty()) {
+                org.json.JSONArray effArr = new org.json.JSONArray();
+                for (String e : passEffects) effArr.put(e != null ? e : "");
+                json.put("passEffects", effArr);
+            }
+            if (!uniformTypes.isEmpty()) {
+                org.json.JSONObject uObj = new org.json.JSONObject();
+                for (java.util.Map.Entry<String, String> e : uniformTypes.entrySet()) {
+                    uObj.put(e.getKey(), e.getValue());
+                }
+                json.put("uniformTypes", uObj);
+            }
+            if (!textureIds.isEmpty()) {
+                org.json.JSONArray texArr = new org.json.JSONArray();
+                for (String tid : textureIds) texArr.put(tid);
+                json.put("textureIds", texArr);
+            }
             return json;
         } catch (Exception e) {
             return new org.json.JSONObject();
@@ -134,6 +174,38 @@ public class EffectDefinition {
                     EffectParam p = EffectParam.fromJson(pJson);
                     if (p != null) eff.addParam(p);
                 }
+            }
+        }
+
+        org.json.JSONArray passArr = json.optJSONArray("passTargets");
+        if (passArr != null) {
+            for (int i = 0; i < passArr.length(); i++) {
+                String t = passArr.optString(i, "");
+                eff.passTargets.add(t.isEmpty() ? null : t);
+            }
+        }
+
+        org.json.JSONArray effArr = json.optJSONArray("passEffects");
+        if (effArr != null) {
+            for (int i = 0; i < effArr.length(); i++) {
+                String e = effArr.optString(i, "");
+                eff.passEffects.add(e.isEmpty() ? null : e);
+            }
+        }
+
+        org.json.JSONObject uObj = json.optJSONObject("uniformTypes");
+        if (uObj != null) {
+            java.util.Iterator<String> keys = uObj.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                eff.uniformTypes.put(k, uObj.optString(k, "float"));
+            }
+        }
+
+        org.json.JSONArray texArr = json.optJSONArray("textureIds");
+        if (texArr != null) {
+            for (int i = 0; i < texArr.length(); i++) {
+                eff.textureIds.add(texArr.optString(i));
             }
         }
         return eff;

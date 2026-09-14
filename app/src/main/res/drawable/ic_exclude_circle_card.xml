@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <!-- Checkerboard pattern background simulation -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M0,0h64v64h-64z" />
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M0,0h16v16h-16z M32,0h16v16h-16z M16,16h16v16h-16z M48,16h16v16h-16z M0,32h16v16h-16z M32,32h16v16h-16z M16,48h16v16h-16z M48,48h16v16h-16z" />
+    <!-- Cutout hole in circle representing Exclude -->
+    <path
+        android:fillColor="#00E5BC"
+        android:pathData="M32,8A24,24 0 1,1 8,32A24,24 0 0,1 32,8ZM32,18A14,14 0 1,0 46,32A14,14 0 0,0 32,18Z" />
+</vector>

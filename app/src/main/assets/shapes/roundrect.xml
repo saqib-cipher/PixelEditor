@@ -1,8 +1,8 @@
-<shape id="com.alightcreative.shapes.roundrect"  name="@am:string/shape_roundrect">
+<shape id="glab.pixeleditor.shapes.roundrect"  name="@string/shape_roundrect">
 
     <params>
-        <point id="size" label="@am:string/effect_param_size" default="100,100" type="size" />
-        <spinner id="cornerRadius" min="0" max="2000" default="25" step="1" label="@am:string/effect_param_radius"  />
+        <point id="size" label="@string/effect_param_size" default="100,100" type="size" />
+        <spinner id="cornerRadius" min="0" max="2000" default="25" step="1" label="@string/effect_param_radius"  />
     </params>
 
     <handle id="r" param="cornerRadius" type="x" style="square" icon="grip" />

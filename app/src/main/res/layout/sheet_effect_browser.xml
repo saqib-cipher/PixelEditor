@@ -28,7 +28,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pe_close"
+                android:src="@drawable/ic_pe_chevron_left"
                 app:tint="@color/pe_text_primary" />
 
             <TextView
@@ -103,101 +103,118 @@
         android:layout_height="1dp"
         android:background="@color/pe_border" />
 
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scrollEffectBrowser"
+    <!-- Scrollable Content Area -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollEffectBrowser"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
-            <!-- Category Filter Results Header (Visible when a category or search is active) -->
             <LinearLayout
-                android:id="@+id/layoutCategoryFilterHeader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/tvActiveCategoryFilterTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Color &amp; Light Effects"
-                    android:textColor="@color/pe_accent_mint"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnClearCategoryFilter"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="All Categories"
-                    android:textColor="@color/pe_text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- Dynamic Effect Cards List Container (populated by search or category filter) -->
-            <LinearLayout
-                android:id="@+id/layoutFilteredEffectsList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="gone" />
+                android:paddingStart="12dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="24dp">
 
-            <!-- Default Main Browser View (Image 4): Popular Effects + Category Grid -->
-            <LinearLayout
-                android:id="@+id/layoutMainCategoryView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <!-- Horizontal Quick Trending Effects (matching top row of Image 4) -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="POPULAR EFFECTS"
-                    android:textColor="@color/pe_text_tertiary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <HorizontalScrollView
+                <!-- 3-Column Dynamic Effect Grid Container (populated by search or category filter) -->
+                <LinearLayout
+                    android:id="@+id/layoutFilteredEffectsGrid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:orientation="vertical"
+                    android:visibility="gone" />
 
-                    <LinearLayout
-                        android:id="@+id/layoutQuickEffects"
+                <!-- Default Main Browser View: Popular Effects + Category Grid -->
+                <LinearLayout
+                    android:id="@+id/layoutMainCategoryView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Horizontal Quick Trending Effects -->
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal" />
-                </HorizontalScrollView>
+                        android:layout_marginBottom="8dp"
+                        android:text="POPULAR EFFECTS"
+                        android:textColor="@color/pe_text_tertiary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
 
-                <!-- 2-Column Effect Categories Grid (matching Image 4) -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="CATEGORIES"
-                    android:textColor="@color/pe_text_tertiary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
 
-                <LinearLayout
-                    android:id="@+id/gridEffectCategories"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
+                        <LinearLayout
+                            android:id="@+id/layoutQuickEffects"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
+
+                    <!-- 2-Column Effect Categories Grid -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="CATEGORIES"
+                        android:textColor="@color/pe_text_tertiary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/gridEffectCategories"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
             </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
 
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    <!-- Bottom Category Navigation Bar (< and > arrows) -->
+    <LinearLayout
+        android:id="@+id/layoutCategoryBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/pe_surface_panel_elevated"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/btnCategoryPrev"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_chevron_left"
+            app:tint="@color/pe_text_primary" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnCategoryNext"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_chevron_right"
+            app:tint="@color/pe_text_primary" />
+    </LinearLayout>
+
 </LinearLayout>

@@ -1,11 +1,11 @@
-<shape id="com.alightcreative.shapes.quad" name="@am:string/shape_quad">
+<shape id="glab.pixeleditor.shapes.quad" name="@string/shape_quad">
 
     <params>
-        <point id="p1" label="@am:string/effect_param_point_1" default="-100,-100" />
-        <point id="p2" label="@am:string/effect_param_point_2" default="50,-100" />
-        <point id="p3" label="@am:string/effect_param_point_3" default="100,100" />
-        <point id="p4" label="@am:string/effect_param_point_4" default="-100,100" />
-        <switch id="closed" default="true" label="@am:string/effect_param_closed" />
+        <point id="p1" label="@string/effect_param_point_1" default="-100,-100" />
+        <point id="p2" label="@string/effect_param_point_2" default="50,-100" />
+        <point id="p3" label="@string/effect_param_point_3" default="100,100" />
+        <point id="p4" label="@string/effect_param_point_4" default="-100,100" />
+        <switch id="closed" default="true" label="@string/effect_param_closed" />
     </params>
 
     <handle id="p1" param="p1" type="xy" icon="hollow-dot" />

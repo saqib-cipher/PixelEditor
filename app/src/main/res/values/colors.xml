@@ -4,6 +4,7 @@
     <color name="pe_bg_canvas_workspace">#0F1320</color>
     <color name="pe_surface_panel">#161D2D</color>
     <color name="pe_surface_panel_elevated">#1E273C</color>
+    <color name="pe_surface_elevated">#1E273C</color>
     <color name="pe_surface_card">#24304A</color>
     <color name="pe_surface_card_hover">#2C3957</color>
     <color name="pe_surface_input">#1A2234</color>
