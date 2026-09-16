@@ -5,7 +5,9 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -13,10 +15,15 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.OvershootInterpolator;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.ImageButton;
@@ -27,22 +34,45 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
+
+import glab.pixeleditor.svg.SvgIconItem;
+import glab.pixeleditor.svg.SvgIconManager;
+import glab.pixeleditor.ui.CanvasLayerSidebarAdapter;
+import glab.pixeleditor.ui.SvgIconAdapter;
+import glab.pixeleditor.view.CircularDialView;
 import glab.pixeleditor.view.ClampedSliderView;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.Stack;
+import java.util.UUID;
+
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -67,8 +97,14 @@ import glab.pixeleditor.model.ShapeLayer;
 import glab.pixeleditor.model.TextLayer;
 import glab.pixeleditor.ui.AlightColorPickerDialog;
 import glab.pixeleditor.ui.AlightColorPickerView;
+import glab.pixeleditor.ui.BackgroundRemoverActivity;
+import glab.pixeleditor.ui.FontAdapter;
+import glab.pixeleditor.font.FontItem;
+import glab.pixeleditor.font.FontManager;
 import glab.pixeleditor.view.GradientBarView;
 import glab.pixeleditor.view.PixelCanvasView;
+import glab.pixeleditor.view.ScrubRulerView;
+
 import android.content.res.ColorStateList;
 import android.graphics.Paint;
 
@@ -78,7 +114,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private EditorProject project;
     private ActivityResultLauncher<String> photoPickerLauncher;
     private ActivityResultLauncher<String> mediaFillPickerLauncher;
-    private final java.util.Set<CanvasLayer> selectedMultiLayers = new java.util.HashSet<>();
+    private ActivityResultLauncher<Intent> bgRemoverLauncher;
+    private final Set<CanvasLayer> selectedMultiLayers = new HashSet<>();
 
     // ViewFlipper Index constants
     private static final int PANEL_LAYER_MENU = 0;
@@ -91,6 +128,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private static final int PANEL_MOVE_TRANSFORM = 7;
     private static final int PANEL_LAYERS_OVERVIEW = 8;
     private static final int PANEL_BLENDING_OPACITY = 9;
+    private static final int PANEL_EDIT_TEXT = 10;
+
+    private FontAdapter fontAdapter;
+    private String currentFontCategory = FontManager.CATEGORY_FAVORITES;
 
     private enum TransformMode {
         POSITION,
@@ -124,11 +165,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private boolean hasCopiedTransform = false;
     private float copyX, copyY, copyRot, copyScaleX = 1f, copyScaleY = 1f, copyWidth = 300f, copyHeight = 300f, copySkewX = 0f, copySkewY = 0f;
 
-    private glab.pixeleditor.ui.CanvasLayerSidebarAdapter sidebarAdapter;
+    private boolean isRightToolsVisible = true;
+
+    private CanvasLayerSidebarAdapter sidebarAdapter;
 
     // Nested Group Edit Mode stack
     private EditorProject rootProject = null;
-    private final java.util.Stack<GroupEditSession> groupEditSessionStack = new java.util.Stack<>();
+    private final Stack<GroupEditSession> groupEditSessionStack = new Stack<>();
 
     private static class GroupEditSession {
         final GroupLayer groupLayer;
@@ -187,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         setupEffectControlsPanel();
         setupMoveTransformPanel();
         setupRightCanvasTools();
+        setupBottomPanelExpandCollapse();
 
         // Hide overlay UI elements while eyedropper is active
         binding.canvasView.setEyedropperStateListener(new PixelCanvasView.OnEyedropperStateListener() {
@@ -226,6 +270,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     WindowInsetsCompat.Type.systemBars()
                     | WindowInsetsCompat.Type.displayCutout()
             );
+            Insets imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottomInset = Math.max(insets.bottom, imeInsets.bottom);
 
             float density = getResources().getDisplayMetrics().density;
             int padHoriz = (int) (8 * density);
@@ -243,13 +289,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     0
             );
 
-            // Pad Bottom Controls Container for Navigation Bar
-            // Only pad left/right for cutouts — bottom is handled by the ViewFlipper content itself
+            // Pad Bottom Controls Container for Navigation Bar and Keyboard (IME)
             binding.layoutBottomContainer.setPadding(
                     insets.left,
                     0,
                     insets.right,
-                    0
+                    bottomInset
             );
 
             // Pad Effect Browser header and scroll container
@@ -269,7 +314,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         insets.left,
                         0,
                         insets.right,
-                        insets.bottom
+                        bottomInset
                 );
             }
 
@@ -278,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     }
 
     private void setupBackNavigation() {
-        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 handleSmartBack();
@@ -341,7 +386,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             Intent intent = getIntent();
             String projectId = intent != null ? intent.getStringExtra("EXTRA_PROJECT_ID") : null;
             if (projectId == null || projectId.isEmpty()) {
-                projectId = java.util.UUID.randomUUID().toString();
+                projectId = UUID.randomUUID().toString();
                 if (intent != null) intent.putExtra("EXTRA_PROJECT_ID", projectId);
             }
 
@@ -423,6 +468,25 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 new ActivityResultContracts.GetContent(),
                 this::loadMediaFillFromUri
         );
+
+        bgRemoverLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && BackgroundRemoverActivity.sResultBitmap != null) {
+                        CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                        if (layer instanceof PhotoLayer) {
+                            PhotoLayer pl = (PhotoLayer) layer;
+                            project.saveSnapshot();
+                            pl.setBitmap(BackgroundRemoverActivity.sResultBitmap);
+                            binding.canvasView.invalidate();
+                            updateCanvasToolsState();
+                            Toast.makeText(this, "AI Cutout applied to layer", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    BackgroundRemoverActivity.sResultBitmap = null;
+                    BackgroundRemoverActivity.sInputBitmap = null;
+                }
+        );
     }
 
     private void loadMediaFillFromUri(Uri uri) {
@@ -451,6 +515,15 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     PhotoLayer pl = (PhotoLayer) selectedLayer;
                     pl.setBitmap(bitmap);
                     populateColorFillPanel(pl);
+                    binding.canvasView.invalidate();
+                } else if (selectedLayer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) selectedLayer;
+                    tl.setMediaBitmap(bitmap);
+                    tl.setMediaUri(uri.toString());
+                    String name = "media_" + (System.currentTimeMillis() % 10000);
+                    tl.setMediaName(name);
+                    tl.setFillMode(ShapeLayer.FillMode.MEDIA);
+                    populateColorFillPanel(tl);
                     binding.canvasView.invalidate();
                 }
             }
@@ -577,7 +650,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private int selectedJpegQuality = 95;
 
     private void showExportDialog() {
-        com.google.android.material.bottomsheet.BottomSheetDialog dialog = new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = getLayoutInflater().inflate(R.layout.dialog_export_share, null);
         dialog.setContentView(view);
 
@@ -593,9 +666,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ClampedSliderView sliderQuality = view.findViewById(R.id.sliderJpegQuality);
         TextView tvQualityVal = view.findViewById(R.id.tvJpegQualityVal);
 
-        com.google.android.material.button.MaterialButton btn1x = view.findViewById(R.id.btnScale1x);
-        com.google.android.material.button.MaterialButton btn2x = view.findViewById(R.id.btnScale2x);
-        com.google.android.material.button.MaterialButton btn4x = view.findViewById(R.id.btnScale4x);
+        MaterialButton btn1x = view.findViewById(R.id.btnScale1x);
+        MaterialButton btn2x = view.findViewById(R.id.btnScale2x);
+        MaterialButton btn4x = view.findViewById(R.id.btnScale4x);
 
         View btnSave = view.findViewById(R.id.btnSaveExportToGallery);
         View btnShare = view.findViewById(R.id.btnShareExport);
@@ -618,13 +691,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         };
 
         Runnable updateScaleUI = () -> {
-            btn1x.setStrokeColor(android.content.res.ColorStateList.valueOf(selectedExportScale == 1.0f ? 0xFF00E5BC : 0x22FFFFFF));
+            btn1x.setStrokeColor(ColorStateList.valueOf(selectedExportScale == 1.0f ? 0xFF00E5BC : 0x22FFFFFF));
             btn1x.setTextColor(selectedExportScale == 1.0f ? 0xFF00E5BC : 0xFF94A3B8);
 
-            btn2x.setStrokeColor(android.content.res.ColorStateList.valueOf(selectedExportScale == 2.0f ? 0xFF00E5BC : 0x22FFFFFF));
+            btn2x.setStrokeColor(ColorStateList.valueOf(selectedExportScale == 2.0f ? 0xFF00E5BC : 0x22FFFFFF));
             btn2x.setTextColor(selectedExportScale == 2.0f ? 0xFF00E5BC : 0xFF94A3B8);
 
-            btn4x.setStrokeColor(android.content.res.ColorStateList.valueOf(selectedExportScale == 4.0f ? 0xFF00E5BC : 0x22FFFFFF));
+            btn4x.setStrokeColor(ColorStateList.valueOf(selectedExportScale == 4.0f ? 0xFF00E5BC : 0x22FFFFFF));
             btn4x.setTextColor(selectedExportScale == 4.0f ? 0xFF00E5BC : 0xFF94A3B8);
         };
 
@@ -730,14 +803,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
     private void shareArtworkBitmap(Bitmap bitmap, Bitmap.CompressFormat format, int quality) {
         try {
-            java.io.File cacheDir = new java.io.File(getCacheDir(), "shared");
+            File cacheDir = new File(getCacheDir(), "shared");
             if (!cacheDir.exists()) cacheDir.mkdirs();
             String ext = (format == Bitmap.CompressFormat.PNG) ? ".png" : ".jpg";
-            java.io.File file = new java.io.File(cacheDir, "PixelEditor_" + System.currentTimeMillis() + ext);
-            try (OutputStream out = new java.io.FileOutputStream(file)) {
+            File file = new File(cacheDir, "PixelEditor_" + System.currentTimeMillis() + ext);
+            try (OutputStream out = new FileOutputStream(file)) {
                 bitmap.compress(format, quality, out);
             }
-            Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
             Intent share = new Intent(Intent.ACTION_SEND);
             share.setType(format == Bitmap.CompressFormat.PNG ? "image/png" : "image/jpeg");
             share.putExtra(Intent.EXTRA_STREAM, uri);
@@ -860,7 +933,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             } else if (layer instanceof PhotoLayer) {
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_PHOTO_ADJUST);
             } else if (layer instanceof TextLayer) {
-                showTextEditDialog((TextLayer) layer);
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_EDIT_TEXT);
+                populateEditTextPanel((TextLayer) layer);
             }
         });
 
@@ -874,24 +948,268 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         });
     }
 
-    private void showTextEditDialog(TextLayer textLayer) {
-        EditText input = new EditText(this);
-        input.setText(textLayer.getText());
-        input.setTextColor(Color.WHITE);
-        input.setPadding(40, 30, 40, 30);
+    private void populateEditTextPanel(TextLayer textLayer) {
+        if (textLayer == null) return;
 
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Edit Text")
-                .setView(input)
-                .setPositiveButton("Update", (dialog, which) -> {
-                    String txt = input.getText().toString();
-                    textLayer.setText(txt);
+        EditText etText = binding.getRoot().findViewById(R.id.etLayerText);
+        View swatchColor = binding.getRoot().findViewById(R.id.swatchTextColor);
+        ImageButton btnAlignLeft = binding.getRoot().findViewById(R.id.btnTextAlignLeft);
+        ImageButton btnAlignCenter = binding.getRoot().findViewById(R.id.btnTextAlignCenter);
+        ImageButton btnAlignRight = binding.getRoot().findViewById(R.id.btnTextAlignRight);
+        TextView chipRegular = binding.getRoot().findViewById(R.id.chipStyleRegular);
+        TextView chipBold = binding.getRoot().findViewById(R.id.chipStyleBold);
+        TextView chipItalic = binding.getRoot().findViewById(R.id.chipStyleItalic);
+        TextView chipMono = binding.getRoot().findViewById(R.id.chipStyleMono);
+        ScrubRulerView rulerSize = binding.getRoot().findViewById(R.id.rulerTextSize);
+        TextView tvSizeDisplay = binding.getRoot().findViewById(R.id.tvTextSizeDisplay);
+        LinearLayout layoutCategoryChips = binding.getRoot().findViewById(R.id.layoutFontCategoryChips);
+        RecyclerView rvFonts = binding.getRoot().findViewById(R.id.rvFontsList);
+        View layoutEmptyFonts = binding.getRoot().findViewById(R.id.layoutEmptyFonts);
+        TextView tvEmptyFontsTitle = binding.getRoot().findViewById(R.id.tvEmptyFontsTitle);
+        TextView tvEmptyFontsSubtitle = binding.getRoot().findViewById(R.id.tvEmptyFontsSubtitle);
+
+        // 1. Text input
+        if (etText != null) {
+            // Remove old watcher BEFORE setting text to prevent firing on old layer
+            Object oldWatcher = etText.getTag();
+            if (oldWatcher instanceof TextWatcher) {
+                etText.removeTextChangedListener((TextWatcher) oldWatcher);
+            }
+            etText.setText(textLayer.getText() != null ? textLayer.getText() : "");
+            if (textLayer.getText() != null && !textLayer.getText().isEmpty()) {
+                etText.setSelection(textLayer.getText().length());
+            }
+            TextWatcher watcher = new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    textLayer.setText(s != null ? s.toString() : "");
+                    binding.canvasView.invalidate();
+                }
+                @Override public void afterTextChanged(Editable s) {}
+            };
+            etText.setTag(watcher);
+            etText.addTextChangedListener(watcher);
+        }
+
+        // 2. Color swatch
+        if (swatchColor != null) {
+            swatchColor.setBackgroundColor(textLayer.getTextColor());
+            swatchColor.setOnClickListener(v -> {
+                AlightColorPickerDialog.show(this, "Text Color", textLayer.getTextColor(), color -> {
+                    textLayer.setTextColor(color);
+                    swatchColor.setBackgroundColor(color);
+                    binding.canvasView.invalidate();
+                }, null);
+            });
+        }
+
+        // 3. Alignment update & listeners
+        Runnable updateAlignmentUI = () -> {
+            String align = textLayer.getAlignment();
+            if (btnAlignLeft != null) {
+                btnAlignLeft.setColorFilter("LEFT".equalsIgnoreCase(align) ? 0xFF00E5BC : 0xFF64748B);
+            }
+            if (btnAlignCenter != null) {
+                btnAlignCenter.setColorFilter("CENTER".equalsIgnoreCase(align) ? 0xFF00E5BC : 0xFF64748B);
+            }
+            if (btnAlignRight != null) {
+                btnAlignRight.setColorFilter("RIGHT".equalsIgnoreCase(align) ? 0xFF00E5BC : 0xFF64748B);
+            }
+        };
+        updateAlignmentUI.run();
+
+        if (btnAlignLeft != null) {
+            btnAlignLeft.setOnClickListener(v -> {
+                textLayer.setAlignment("LEFT");
+                updateAlignmentUI.run();
+                binding.canvasView.invalidate();
+            });
+        }
+        if (btnAlignCenter != null) {
+            btnAlignCenter.setOnClickListener(v -> {
+                textLayer.setAlignment("CENTER");
+                updateAlignmentUI.run();
+                binding.canvasView.invalidate();
+            });
+        }
+        if (btnAlignRight != null) {
+            btnAlignRight.setOnClickListener(v -> {
+                textLayer.setAlignment("RIGHT");
+                updateAlignmentUI.run();
+                binding.canvasView.invalidate();
+            });
+        }
+
+        // 4. Style update & listeners
+        Runnable updateStyleUI = () -> {
+            boolean isRegular = !textLayer.isBold() && !textLayer.isItalic() && !textLayer.isMonospace();
+            if (chipRegular != null) {
+                chipRegular.setTextColor(isRegular ? 0xFF00382B : 0xFF94A3B8);
+                chipRegular.setBackgroundResource(isRegular ? R.drawable.bg_pill_accent : R.drawable.bg_input_box);
+            }
+            if (chipBold != null) {
+                chipBold.setTextColor(textLayer.isBold() ? 0xFF00382B : 0xFF94A3B8);
+                chipBold.setBackgroundResource(textLayer.isBold() ? R.drawable.bg_pill_accent : R.drawable.bg_input_box);
+            }
+            if (chipItalic != null) {
+                chipItalic.setTextColor(textLayer.isItalic() ? 0xFF00382B : 0xFF94A3B8);
+                chipItalic.setBackgroundResource(textLayer.isItalic() ? R.drawable.bg_pill_accent : R.drawable.bg_input_box);
+            }
+            if (chipMono != null) {
+                chipMono.setTextColor(textLayer.isMonospace() ? 0xFF00382B : 0xFF94A3B8);
+                chipMono.setBackgroundResource(textLayer.isMonospace() ? R.drawable.bg_pill_accent : R.drawable.bg_input_box);
+            }
+        };
+        updateStyleUI.run();
+
+        if (chipRegular != null) {
+            chipRegular.setOnClickListener(v -> {
+                textLayer.setBold(false);
+                textLayer.setItalic(false);
+                textLayer.setMonospace(false);
+                updateStyleUI.run();
+                textLayer.recalculateBounds();
+                binding.canvasView.invalidate();
+            });
+        }
+        if (chipBold != null) {
+            chipBold.setOnClickListener(v -> {
+                textLayer.setBold(!textLayer.isBold());
+                updateStyleUI.run();
+                textLayer.recalculateBounds();
+                binding.canvasView.invalidate();
+            });
+        }
+        if (chipItalic != null) {
+            chipItalic.setOnClickListener(v -> {
+                textLayer.setItalic(!textLayer.isItalic());
+                updateStyleUI.run();
+                textLayer.recalculateBounds();
+                binding.canvasView.invalidate();
+            });
+        }
+        if (chipMono != null) {
+            chipMono.setOnClickListener(v -> {
+                textLayer.setMonospace(!textLayer.isMonospace());
+                updateStyleUI.run();
+                textLayer.recalculateBounds();
+                binding.canvasView.invalidate();
+            });
+        }
+
+        // 5. Text size ruler
+        if (tvSizeDisplay != null) {
+            tvSizeDisplay.setText(Math.round(textLayer.getTextSize()) + " pt");
+        }
+        if (rulerSize != null) {
+            float curSize = Math.max(8f, Math.min(200f, textLayer.getTextSize()));
+            rulerSize.setBounds(8f, 200f, curSize, 0.5f);
+            rulerSize.setOnScrubListener(delta -> {
+                float newSize = Math.max(8f, Math.min(200f, textLayer.getTextSize() + delta));
+                textLayer.setTextSize(newSize);
+                rulerSize.setCurrentValue(newSize);
+                if (tvSizeDisplay != null) {
+                    tvSizeDisplay.setText(Math.round(newSize) + " pt");
+                }
+                binding.canvasView.invalidate();
+            });
+        }
+
+        // 6. Fonts List & Categories
+        try {
+            Runnable updateFontsState = () -> {
+                List<FontItem> items = FontManager.getFontsByCategory(this, currentFontCategory);
+                if (fontAdapter != null) {
+                    fontAdapter.setItems(items, textLayer.getFontPath());
+                }
+                boolean isEmpty = (items == null || items.isEmpty());
+                if (rvFonts != null) {
+                    rvFonts.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+                }
+                if (layoutEmptyFonts != null) {
+                    layoutEmptyFonts.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+                    if (isEmpty) {
+                        if (FontManager.CATEGORY_FAVORITES.equalsIgnoreCase(currentFontCategory)) {
+                            if (tvEmptyFontsTitle != null) tvEmptyFontsTitle.setText("No favorite fonts yet");
+                            if (tvEmptyFontsSubtitle != null) tvEmptyFontsSubtitle.setText("Tap the star icon next to any font to add it to your favorites.");
+                        } else {
+                            if (tvEmptyFontsTitle != null) tvEmptyFontsTitle.setText("No fonts found");
+                            if (tvEmptyFontsSubtitle != null) tvEmptyFontsSubtitle.setText("No items available in this category.");
+                        }
+                    }
+                }
+            };
+
+            if (rvFonts != null) {
+                rvFonts.setLayoutManager(new LinearLayoutManager(this));
+                if (fontAdapter == null) {
+                    fontAdapter = new FontAdapter(this);
+                }
+                rvFonts.setAdapter(fontAdapter);
+
+                fontAdapter.setOnFontSelectedListener(font -> {
+                    textLayer.setFontPath(font.getFilePath());
+                    textLayer.setFontName(font.getName());
+                    fontAdapter.setSelectedFontPath(font.getFilePath());
                     textLayer.recalculateBounds();
                     binding.canvasView.invalidate();
-                    updateUIForActiveLayer(textLayer);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                });
+
+                fontAdapter.setOnFavoriteToggledListener((font, isFav) -> {
+                    if (FontManager.CATEGORY_FAVORITES.equalsIgnoreCase(currentFontCategory)) {
+                        updateFontsState.run();
+                    }
+                });
+            }
+
+            // 7. Category Chips
+            if (layoutCategoryChips != null) {
+                layoutCategoryChips.removeAllViews();
+                List<String> categories = FontManager.getCategories(this);
+                if (categories == null || categories.isEmpty()) {
+                    categories = Collections.singletonList(FontManager.CATEGORY_ALL);
+                }
+                float density = getResources().getDisplayMetrics().density;
+
+                for (String cat : categories) {
+                    TextView chip = new TextView(this);
+                    chip.setText(cat);
+                    chip.setTextSize(11);
+                    chip.setPadding((int) (12 * density), (int) (6 * density), (int) (12 * density), (int) (6 * density));
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+                    lp.setMargins(0, 0, (int) (6 * density), 0);
+                    chip.setLayoutParams(lp);
+
+                    boolean isSelected = cat.equalsIgnoreCase(currentFontCategory);
+                    chip.setTextColor(isSelected ? 0xFF00382B : 0xFF94A3B8);
+                    chip.setBackgroundResource(isSelected ? R.drawable.bg_pill_accent : R.drawable.bg_chip_pill);
+
+                    chip.setOnClickListener(v -> {
+                        currentFontCategory = cat;
+                        for (int i = 0; i < layoutCategoryChips.getChildCount(); i++) {
+                            View child = layoutCategoryChips.getChildAt(i);
+                            if (child instanceof TextView) {
+                                TextView tv = (TextView) child;
+                                boolean sel = tv.getText().toString().equalsIgnoreCase(currentFontCategory);
+                                tv.setTextColor(sel ? 0xFF00382B : 0xFF94A3B8);
+                                tv.setBackgroundResource(sel ? R.drawable.bg_pill_accent : R.drawable.bg_chip_pill);
+                            }
+                        }
+                        updateFontsState.run();
+                    });
+
+                    layoutCategoryChips.addView(chip);
+                }
+
+                // Load initial fonts for current category
+                updateFontsState.run();
+            }
+        } catch (Throwable t) {
+            Log.e("MainActivity", "Error in populateEditTextPanel: " + t.getMessage(), t);
+        }
     }
 
     private void populateEditShapePanel(ShapeLayer shapeLayer) {
@@ -990,7 +1308,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 tvS.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 switchRow.addView(tvS);
 
-                com.google.android.material.materialswitch.MaterialSwitch ms = new com.google.android.material.materialswitch.MaterialSwitch(this);
+                MaterialSwitch ms = new MaterialSwitch(this);
                 ms.setChecked(param.getBooleanValue());
                 ms.setOnCheckedChangeListener((buttonView, isChecked) -> {
                     param.setBooleanValue(isChecked);
@@ -1107,7 +1425,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         RecyclerView rv = dialog.findViewById(R.id.rvChooseShapeGrid);
         if (rv != null) {
-            rv.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 3));
+            rv.setLayoutManager(new GridLayoutManager(this, 3));
             rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 @NonNull
                 @Override
@@ -1170,6 +1488,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             btnBackBlending.setOnClickListener(v ->
                     binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
         }
+
+        View btnBackText = binding.getRoot().findViewById(R.id.btnBackTextEdit);
+        if (btnBackText != null) {
+            btnBackText.setOnClickListener(v ->
+                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+        }
+        View btnDoneText = binding.getRoot().findViewById(R.id.btnDoneTextEdit);
+        if (btnDoneText != null) {
+            btnDoneText.setOnClickListener(v ->
+                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+        }
         binding.getRoot().findViewById(R.id.btnCloseAddSheet).setOnClickListener(v -> {
             binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
             populateLayersOverviewPanel();
@@ -1190,7 +1519,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ClampedSliderView sliderPhotoH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
         TextView tvPhotoW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
         TextView tvPhotoH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
-        com.google.android.material.materialswitch.MaterialSwitch switchAspect =
+        MaterialSwitch switchAspect =
                 binding.getRoot().findViewById(R.id.switchPhotoAspectLock);
 
         if (sliderPhotoW != null) {
@@ -1302,7 +1631,29 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 }
             });
         }
-    }
+        // AI Subject / Background Remover (Both Adjust and Color & Fill panels)
+        View.OnClickListener removeBgListener = v -> {
+            CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+            if (layer instanceof PhotoLayer) {
+                PhotoLayer pl = (PhotoLayer) layer;
+                Bitmap bmp = pl.getBitmap();
+                if (bmp != null && !bmp.isRecycled()) {
+                    BackgroundRemoverActivity.sInputBitmap = bmp;
+                    Intent intent = new Intent(this, BackgroundRemoverActivity.class);
+                    bgRemoverLauncher.launch(intent);
+                }
+            }
+        };
+
+        View btnRemoveBg = binding.getRoot().findViewById(R.id.btnRemoveBackground);
+        if (btnRemoveBg != null) {
+            btnRemoveBg.setOnClickListener(removeBgListener);
+        }
+        View btnRemoveBgFill = binding.getRoot().findViewById(R.id.btnRemoveBgFromFill);
+        if (btnRemoveBgFill != null) {
+            btnRemoveBgFill.setOnClickListener(removeBgListener);
+        }        }
+    
 
     // -------------------------------------------------------------
     // SUBPANEL 2: BORDER & SHADOW (ALIGHT MOTION 3-TAB SYSTEM)
@@ -1358,19 +1709,19 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
 
         // 1. Primary Stroke Controls
-        com.google.android.material.materialswitch.MaterialSwitch switchStroke =
+        MaterialSwitch switchStroke =
                 binding.getRoot().findViewById(R.id.switchStrokeToggle);
         ClampedSliderView sliderStroke = binding.getRoot().findViewById(R.id.sliderStrokeWidth);
         TextView tvStrokeVal = binding.getRoot().findViewById(R.id.tvStrokeVal);
         View viewStrokeSwatch = binding.getRoot().findViewById(R.id.viewStrokeColorSwatch);
 
-        com.google.android.material.button.MaterialButton btnInside = binding.getRoot().findViewById(R.id.btnAlignInside);
-        com.google.android.material.button.MaterialButton btnCenter = binding.getRoot().findViewById(R.id.btnAlignCenter);
-        com.google.android.material.button.MaterialButton btnOutside = binding.getRoot().findViewById(R.id.btnAlignOutside);
+        MaterialButton btnInside = binding.getRoot().findViewById(R.id.btnBorderAlignInside);
+        MaterialButton btnCenter = binding.getRoot().findViewById(R.id.btnBorderAlignCenter);
+        MaterialButton btnOutside = binding.getRoot().findViewById(R.id.btnBorderAlignOutside);
 
-        com.google.android.material.button.MaterialButton btnJoinRound = binding.getRoot().findViewById(R.id.btnJoinRound);
-        com.google.android.material.button.MaterialButton btnJoinMiter = binding.getRoot().findViewById(R.id.btnJoinMiter);
-        com.google.android.material.button.MaterialButton btnJoinBevel = binding.getRoot().findViewById(R.id.btnJoinBevel);
+        MaterialButton btnJoinRound = binding.getRoot().findViewById(R.id.btnJoinRound);
+        MaterialButton btnJoinMiter = binding.getRoot().findViewById(R.id.btnJoinMiter);
+        MaterialButton btnJoinBevel = binding.getRoot().findViewById(R.id.btnJoinBevel);
 
         if (switchStroke != null) {
             switchStroke.setOnCheckedChangeListener((btn, isChecked) -> {
@@ -1393,7 +1744,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         ((ShapeLayer) layer).setHasStroke(true);
                         if (switchStroke != null) switchStroke.setChecked(true);
                     }
-                    if (tvStrokeVal != null) tvStrokeVal.setText(String.format(java.util.Locale.US, "%.1f", value));
+                    if (tvStrokeVal != null) tvStrokeVal.setText(String.format(Locale.US, "%.1f", value));
                     binding.canvasView.invalidate();
                 }
             });
@@ -1569,25 +1920,25 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     private void populateBorderShadowPanel(CanvasLayer layer) {
         if (layer == null) return;
 
-        com.google.android.material.materialswitch.MaterialSwitch switchStroke =
+        MaterialSwitch switchStroke =
                 binding.getRoot().findViewById(R.id.switchStrokeToggle);
         ClampedSliderView sliderStroke = binding.getRoot().findViewById(R.id.sliderStrokeWidth);
         TextView tvStrokeVal = binding.getRoot().findViewById(R.id.tvStrokeVal);
         View viewStrokeSwatch = binding.getRoot().findViewById(R.id.viewStrokeColorSwatch);
 
-        com.google.android.material.button.MaterialButton btnInside = binding.getRoot().findViewById(R.id.btnAlignInside);
-        com.google.android.material.button.MaterialButton btnCenter = binding.getRoot().findViewById(R.id.btnAlignCenter);
-        com.google.android.material.button.MaterialButton btnOutside = binding.getRoot().findViewById(R.id.btnAlignOutside);
+        MaterialButton btnInside = binding.getRoot().findViewById(R.id.btnBorderAlignInside);
+        MaterialButton btnCenter = binding.getRoot().findViewById(R.id.btnBorderAlignCenter);
+        MaterialButton btnOutside = binding.getRoot().findViewById(R.id.btnBorderAlignOutside);
 
-        com.google.android.material.button.MaterialButton btnJoinRound = binding.getRoot().findViewById(R.id.btnJoinRound);
-        com.google.android.material.button.MaterialButton btnJoinMiter = binding.getRoot().findViewById(R.id.btnJoinMiter);
-        com.google.android.material.button.MaterialButton btnJoinBevel = binding.getRoot().findViewById(R.id.btnJoinBevel);
+        MaterialButton btnJoinRound = binding.getRoot().findViewById(R.id.btnJoinRound);
+        MaterialButton btnJoinMiter = binding.getRoot().findViewById(R.id.btnJoinMiter);
+        MaterialButton btnJoinBevel = binding.getRoot().findViewById(R.id.btnJoinBevel);
 
         if (layer instanceof ShapeLayer) {
             ShapeLayer sl = (ShapeLayer) layer;
             if (switchStroke != null) switchStroke.setChecked(sl.isHasStroke());
             if (sliderStroke != null) sliderStroke.setValue(sl.getStrokeWidth());
-            if (tvStrokeVal != null) tvStrokeVal.setText(String.format(java.util.Locale.US, "%.1f", sl.getStrokeWidth()));
+            if (tvStrokeVal != null) tvStrokeVal.setText(String.format(Locale.US, "%.1f", sl.getStrokeWidth()));
             if (viewStrokeSwatch != null) {
                 viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(sl.getStrokeColor()));
             }
@@ -1637,14 +1988,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
             TextView tvTitle = card.findViewById(R.id.tvBorderItemTitle);
             View viewSwatch = card.findViewById(R.id.viewBorderItemSwatch);
-            com.google.android.material.materialswitch.MaterialSwitch sw = card.findViewById(R.id.switchBorderItem);
+            MaterialSwitch sw = card.findViewById(R.id.switchBorderItem);
             View btnDelete = card.findViewById(R.id.btnDeleteBorderItem);
             ClampedSliderView sliderW = card.findViewById(R.id.sliderBorderItemWidth);
             TextView tvWVal = card.findViewById(R.id.tvBorderItemWidthVal);
 
-            com.google.android.material.button.MaterialButton btnIn = card.findViewById(R.id.btnItemAlignInside);
-            com.google.android.material.button.MaterialButton btnCtr = card.findViewById(R.id.btnItemAlignCenter);
-            com.google.android.material.button.MaterialButton btnOut = card.findViewById(R.id.btnItemAlignOutside);
+            MaterialButton btnIn = card.findViewById(R.id.btnItemAlignInside);
+            MaterialButton btnCtr = card.findViewById(R.id.btnItemAlignCenter);
+            MaterialButton btnOut = card.findViewById(R.id.btnItemAlignOutside);
 
             if (tvTitle != null) tvTitle.setText("Border " + (index + 1));
             if (viewSwatch != null) {
@@ -1686,11 +2037,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 sliderW.setValueFrom(0);
                 sliderW.setValueTo(60);
                 sliderW.setValue(item.getWidth());
-                if (tvWVal != null) tvWVal.setText(String.format(java.util.Locale.US, "%.1f", item.getWidth()));
+                if (tvWVal != null) tvWVal.setText(String.format(Locale.US, "%.1f", item.getWidth()));
                 sliderW.addOnChangeListener((slider, value, fromUser) -> {
                     if (fromUser) {
                         item.setWidth(value);
-                        if (tvWVal != null) tvWVal.setText(String.format(java.util.Locale.US, "%.1f", value));
+                        if (tvWVal != null) tvWVal.setText(String.format(Locale.US, "%.1f", value));
                         binding.canvasView.invalidate();
                     }
                 });
@@ -1760,7 +2111,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
             TextView tvTitle = card.findViewById(R.id.tvShadowItemTitle);
             View viewSwatch = card.findViewById(R.id.viewShadowItemSwatch);
-            com.google.android.material.materialswitch.MaterialSwitch sw = card.findViewById(R.id.switchShadowItem);
+            MaterialSwitch sw = card.findViewById(R.id.switchShadowItem);
             View btnDelete = card.findViewById(R.id.btnDeleteShadowItem);
 
             ClampedSliderView sliderSize = card.findViewById(R.id.sliderShadowItemSize);
@@ -1909,9 +2260,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         View btnEyedropper = binding.getRoot().findViewById(R.id.btnGradEyedropper);
 
         // Media Fill scaling & picking controls (Screenshot 1)
-        com.google.android.material.button.MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
-        com.google.android.material.button.MaterialButton btnMediaScaleFit = binding.getRoot().findViewById(R.id.btnMediaScaleFit);
-        com.google.android.material.button.MaterialButton btnMediaScaleStretch = binding.getRoot().findViewById(R.id.btnMediaScaleStretch);
+        MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
+        MaterialButton btnMediaScaleFit = binding.getRoot().findViewById(R.id.btnMediaScaleFit);
+        MaterialButton btnMediaScaleStretch = binding.getRoot().findViewById(R.id.btnMediaScaleStretch);
         View cardMediaSelector = binding.getRoot().findViewById(R.id.cardMediaFileSelector);
         View btnPickMedia = binding.getRoot().findViewById(R.id.btnPickMediaFill);
 
@@ -1937,6 +2288,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setFillMode(ShapeLayer.FillMode.NONE);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setFillMode(ShapeLayer.FillMode.NONE);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setFillMode(ShapeLayer.FillMode.NONE);
                 }
                 if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(0x33FFFFFF));
                 binding.canvasView.invalidate();
@@ -1966,10 +2319,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     if (previewFill != null) {
                         previewFill.setBackgroundTintList(ColorStateList.valueOf(pl.getFillColor()));
                     }
-                } else if (layer instanceof TextLayer && colorPicker != null) {
-                    ((TextLayer) layer).setTextColor(colorPicker.getColor());
+                } else if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    tl.setFillMode(ShapeLayer.FillMode.SOLID);
+                    if (colorPicker != null) {
+                        tl.setFillColor(colorPicker.getColor());
+                    }
                     if (previewFill != null) {
-                        previewFill.setBackgroundTintList(ColorStateList.valueOf(colorPicker.getColor()));
+                        previewFill.setBackgroundTintList(ColorStateList.valueOf(tl.getFillColor()));
                     }
                 }
                 binding.canvasView.invalidate();
@@ -2001,6 +2358,16 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
                     if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientEndColor()));
                     if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
+                } else if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    tl.setFillMode(ShapeLayer.FillMode.GRADIENT);
+                    if (gradientBarView != null) {
+                        gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
+                        gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
+                    }
+                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
+                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
+                    if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
                 }
                 binding.canvasView.invalidate();
             });
@@ -2015,6 +2382,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setFillMode(ShapeLayer.FillMode.MEDIA);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setFillMode(ShapeLayer.FillMode.MEDIA);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setFillMode(ShapeLayer.FillMode.MEDIA);
                 }
                 binding.canvasView.invalidate();
             });
@@ -2026,6 +2395,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             ShapeLayer.MediaScaleMode mode = ShapeLayer.MediaScaleMode.FILL;
             if (layer instanceof ShapeLayer) {
                 mode = ((ShapeLayer) layer).getMediaScaleMode();
+            } else if (layer instanceof TextLayer) {
+                mode = ((TextLayer) layer).getMediaScaleMode();
             }
             if (btnMediaScaleFill != null) {
                 btnMediaScaleFill.setTextColor(mode == ShapeLayer.MediaScaleMode.FILL ? 0xFF00E5BC : 0xFF94A3B8);
@@ -2045,6 +2416,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.FILL);
                     updateMediaScaleButtons.run();
                     binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.FILL);
+                    updateMediaScaleButtons.run();
+                    binding.canvasView.invalidate();
                 }
             });
         }
@@ -2055,6 +2430,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.FIT);
                     updateMediaScaleButtons.run();
                     binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.FIT);
+                    updateMediaScaleButtons.run();
+                    binding.canvasView.invalidate();
                 }
             });
         }
@@ -2063,6 +2442,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof ShapeLayer) {
                     ((ShapeLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.STRETCH);
+                    updateMediaScaleButtons.run();
+                    binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setMediaScaleMode(ShapeLayer.MediaScaleMode.STRETCH);
                     updateMediaScaleButtons.run();
                     binding.canvasView.invalidate();
                 }
@@ -2085,6 +2468,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 gt = ((ShapeLayer) layer).getGradientType();
             } else if (layer instanceof PhotoLayer) {
                 gt = ((PhotoLayer) layer).getGradientType();
+            } else if (layer instanceof TextLayer) {
+                gt = ((TextLayer) layer).getGradientType();
             }
 
             if (btnGradTypeLinear != null) {
@@ -2114,6 +2499,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setGradientType(ShapeLayer.GradientType.LINEAR);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setGradientType(ShapeLayer.GradientType.LINEAR);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.LINEAR);
                 }
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
@@ -2127,6 +2514,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setGradientType(ShapeLayer.GradientType.RADIAL);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setGradientType(ShapeLayer.GradientType.RADIAL);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.RADIAL);
                 }
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
@@ -2140,6 +2529,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     ((ShapeLayer) layer).setGradientType(ShapeLayer.GradientType.SWEEP);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setGradientType(ShapeLayer.GradientType.SWEEP);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.SWEEP);
                 }
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
@@ -2166,6 +2557,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         pl.setGradientStartOffset(startOffset);
                         pl.setGradientEndOffset(endOffset);
                         binding.canvasView.invalidate();
+                    } else if (layer instanceof TextLayer) {
+                        TextLayer tl = (TextLayer) layer;
+                        tl.setGradientStartOffset(startOffset);
+                        tl.setGradientEndOffset(endOffset);
+                        binding.canvasView.invalidate();
                     }
                 }
             });
@@ -2177,17 +2573,21 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             int curCol = 0xFF000000;
             if (layer instanceof ShapeLayer) curCol = ((ShapeLayer) layer).getGradientStartColor();
             else if (layer instanceof PhotoLayer) curCol = ((PhotoLayer) layer).getGradientStartColor();
+            else if (layer instanceof TextLayer) curCol = ((TextLayer) layer).getGradientStartColor();
 
             AlightColorPickerDialog.show(MainActivity.this, "Gradient Start Color", curCol, col -> {
                 if (layer instanceof ShapeLayer) {
                     ((ShapeLayer) layer).setGradientStartColor(col);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setGradientStartColor(col);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setGradientStartColor(col);
                 }
                 if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(col));
                 if (gradientBarView != null) {
                     int endCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientEndColor() :
-                                 (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
+                                 (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() :
+                                 (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
                     gradientBarView.setColors(col, endCol);
                 }
                 binding.canvasView.invalidate();
@@ -2198,12 +2598,15 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         ((ShapeLayer) layer).setGradientStartColor(col);
                     } else if (layer instanceof PhotoLayer) {
                         ((PhotoLayer) layer).setGradientStartColor(col);
+                    } else if (layer instanceof TextLayer) {
+                        ((TextLayer) layer).setGradientStartColor(col);
                     }
                     pickerView.setColor(col, true);
                     if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(col));
                     if (gradientBarView != null) {
                         int endCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientEndColor() :
-                                     (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
+                                     (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() :
+                                     (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
                         gradientBarView.setColors(col, endCol);
                     }
                     binding.canvasView.invalidate();
@@ -2219,17 +2622,21 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             int curCol = 0xFFFFFFFF;
             if (layer instanceof ShapeLayer) curCol = ((ShapeLayer) layer).getGradientEndColor();
             else if (layer instanceof PhotoLayer) curCol = ((PhotoLayer) layer).getGradientEndColor();
+            else if (layer instanceof TextLayer) curCol = ((TextLayer) layer).getGradientEndColor();
 
             AlightColorPickerDialog.show(MainActivity.this, "Gradient End Color", curCol, col -> {
                 if (layer instanceof ShapeLayer) {
                     ((ShapeLayer) layer).setGradientEndColor(col);
                 } else if (layer instanceof PhotoLayer) {
                     ((PhotoLayer) layer).setGradientEndColor(col);
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setGradientEndColor(col);
                 }
                 if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(col));
                 if (gradientBarView != null) {
                     int startCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientStartColor() :
-                                   (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() : 0xFF000000;
+                                   (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() :
+                                   (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientStartColor() : 0xFF000000;
                     gradientBarView.setColors(startCol, col);
                 }
                 binding.canvasView.invalidate();
@@ -2240,12 +2647,15 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         ((ShapeLayer) layer).setGradientEndColor(col);
                     } else if (layer instanceof PhotoLayer) {
                         ((PhotoLayer) layer).setGradientEndColor(col);
+                    } else if (layer instanceof TextLayer) {
+                        ((TextLayer) layer).setGradientEndColor(col);
                     }
                     pickerView.setColor(col, true);
                     if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(col));
                     if (gradientBarView != null) {
                         int startCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientStartColor() :
-                                       (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() : 0xFF000000;
+                                       (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() :
+                                       (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientStartColor() : 0xFF000000;
                         gradientBarView.setColors(startCol, col);
                     }
                     binding.canvasView.invalidate();
@@ -2294,6 +2704,23 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         gradientBarView.setOffsets(pl.getGradientStartOffset(), pl.getGradientEndOffset());
                     }
                     binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    int tempCol = tl.getGradientStartColor();
+                    tl.setGradientStartColor(tl.getGradientEndColor());
+                    tl.setGradientEndColor(tempCol);
+
+                    float tempOff = tl.getGradientStartOffset();
+                    tl.setGradientStartOffset(tl.getGradientEndOffset());
+                    tl.setGradientEndOffset(tempOff);
+
+                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
+                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
+                    if (gradientBarView != null) {
+                        gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
+                        gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
+                    }
+                    binding.canvasView.invalidate();
                 }
             });
         }
@@ -2329,6 +2756,18 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         if (gradientBarView != null) {
                             gradientBarView.setColors(pl.getGradientStartColor(), pl.getGradientEndColor());
                         }
+                    } else if (layer instanceof TextLayer) {
+                        TextLayer tl = (TextLayer) layer;
+                        if (selectedStop == 0) {
+                            tl.setGradientStartColor(color);
+                            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(color));
+                        } else {
+                            tl.setGradientEndColor(color);
+                            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(color));
+                        }
+                        if (gradientBarView != null) {
+                            gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
+                        }
                     }
                     binding.canvasView.invalidate();
                 });
@@ -2346,7 +2785,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     } else if (layer instanceof PhotoLayer) {
                         ((PhotoLayer) layer).setFillColor(color);
                     } else if (layer instanceof TextLayer) {
-                        ((TextLayer) layer).setTextColor(color);
+                        ((TextLayer) layer).setFillColor(color);
                     }
                     if (previewFill != null) {
                         previewFill.setBackgroundTintList(ColorStateList.valueOf(color));
@@ -2393,9 +2832,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         View btnGradEnd = binding.getRoot().findViewById(R.id.btnGradEndColor);
 
         TextView tvMediaName = binding.getRoot().findViewById(R.id.tvMediaFillName);
-        com.google.android.material.button.MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
-        com.google.android.material.button.MaterialButton btnMediaScaleFit = binding.getRoot().findViewById(R.id.btnMediaScaleFit);
-        com.google.android.material.button.MaterialButton btnMediaScaleStretch = binding.getRoot().findViewById(R.id.btnMediaScaleStretch);
+        MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
+        MaterialButton btnMediaScaleFit = binding.getRoot().findViewById(R.id.btnMediaScaleFit);
+        MaterialButton btnMediaScaleStretch = binding.getRoot().findViewById(R.id.btnMediaScaleStretch);
 
         int childIdx = 1; // Default Solid
         if (layer instanceof ShapeLayer) {
@@ -2503,13 +2942,62 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 tvMediaName.setText(pl.getName());
             }
         } else if (layer instanceof TextLayer) {
-            childIdx = 1;
-            if (colorPicker != null) {
-                colorPicker.setColor(((TextLayer) layer).getTextColor(), false);
+            TextLayer tl = (TextLayer) layer;
+            ShapeLayer.FillMode fm = tl.getFillMode();
+            if (fm == ShapeLayer.FillMode.NONE) childIdx = 0;
+            else if (fm == ShapeLayer.FillMode.SOLID) childIdx = 1;
+            else if (fm == ShapeLayer.FillMode.GRADIENT) childIdx = 2;
+            else if (fm == ShapeLayer.FillMode.MEDIA) childIdx = 3;
+
+            if (colorPicker != null && fm == ShapeLayer.FillMode.SOLID) {
+                colorPicker.setColor(tl.getTextColor(), false);
             }
             if (previewFill != null) {
-                previewFill.setBackgroundTintList(ColorStateList.valueOf(((TextLayer) layer).getTextColor()));
+                int col = (fm == ShapeLayer.FillMode.GRADIENT) ? tl.getGradientStartColor() : tl.getTextColor();
+                previewFill.setBackgroundTintList(ColorStateList.valueOf(col));
             }
+
+            if (gradientBarView != null) {
+                gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
+                gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
+            }
+            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
+            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
+
+            ShapeLayer.GradientType gt = tl.getGradientType();
+            if (btnGradTypeLinear != null) {
+                boolean active = (gt == ShapeLayer.GradientType.LINEAR);
+                btnGradTypeLinear.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+                btnGradTypeLinear.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+                if (ivGradLinear != null) ivGradLinear.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+            }
+            if (btnGradTypeRadial != null) {
+                boolean active = (gt == ShapeLayer.GradientType.RADIAL);
+                btnGradTypeRadial.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+                btnGradTypeRadial.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+                if (ivGradRadial != null) ivGradRadial.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+            }
+            if (btnGradTypeSweep != null) {
+                boolean active = (gt == ShapeLayer.GradientType.SWEEP);
+                btnGradTypeSweep.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+                btnGradTypeSweep.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+                if (ivGradSweep != null) ivGradSweep.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+            }
+
+            if (tvMediaName != null) {
+                if (tl.getMediaName() != null && !tl.getMediaName().isEmpty()) {
+                    tvMediaName.setText(tl.getMediaName());
+                } else if (tl.getMediaBitmap() != null) {
+                    tvMediaName.setText("Media Fill (" + tl.getMediaBitmap().getWidth() + "x" + tl.getMediaBitmap().getHeight() + ")");
+                } else {
+                    tvMediaName.setText("Select Image / Media...");
+                }
+            }
+
+            ShapeLayer.MediaScaleMode scaleMode = tl.getMediaScaleMode();
+            if (btnMediaScaleFill != null) btnMediaScaleFill.setTextColor(scaleMode == ShapeLayer.MediaScaleMode.FILL ? 0xFF00E5BC : 0xFF94A3B8);
+            if (btnMediaScaleFit != null) btnMediaScaleFit.setTextColor(scaleMode == ShapeLayer.MediaScaleMode.FIT ? 0xFF00E5BC : 0xFF94A3B8);
+            if (btnMediaScaleStretch != null) btnMediaScaleStretch.setTextColor(scaleMode == ShapeLayer.MediaScaleMode.STRETCH ? 0xFF00E5BC : 0xFF94A3B8);
         }
 
         if (flipperFill != null) {
@@ -3009,61 +3497,258 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     // 6. ADD ELEMENT SHEET (Loads all shapes from assets/shapes/*.xml)
     // -------------------------------------------------------------
     private void setupAddElementSheet() {
-        androidx.recyclerview.widget.RecyclerView rv = binding.getRoot().findViewById(R.id.rvAddShapesGrid);
+        RecyclerView rv = binding.getRoot().findViewById(R.id.rvAddShapesGrid);
         List<ShapeDefinition> allShapes = ShapeHelper.getAllShapes(this);
 
-        if (rv != null && allShapes != null && !allShapes.isEmpty()) {
-            rv.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 4));
-            rv.setAdapter(new androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
-                @NonNull
-                @Override
-                public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                    View view = getLayoutInflater().inflate(R.layout.item_add_shape_cell, parent, false);
-                    return new androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {};
+        View tabShape = binding.getRoot().findViewById(R.id.tabAddShape);
+        View tabElements = binding.getRoot().findViewById(R.id.tabAddElements);
+        View tabIcons = binding.getRoot().findViewById(R.id.tabAddIcons);
+        ImageView ivTabShape = binding.getRoot().findViewById(R.id.ivTabShape);
+        TextView tvTabShape = binding.getRoot().findViewById(R.id.tvTabShape);
+        ImageView ivTabElements = binding.getRoot().findViewById(R.id.ivTabElements);
+        TextView tvTabElements = binding.getRoot().findViewById(R.id.tvTabElements);
+        ImageView ivTabIcons = binding.getRoot().findViewById(R.id.ivTabIcons);
+        TextView tvTabIcons = binding.getRoot().findViewById(R.id.tvTabIcons);
+
+        View searchBar = binding.getRoot().findViewById(R.id.layoutIconSearchBar);
+        EditText etSearch = binding.getRoot().findViewById(R.id.etIconSearch);
+        View btnClearSearch = binding.getRoot().findViewById(R.id.btnClearIconSearch);
+
+        Runnable showShapesGrid = () -> {
+            if (searchBar != null) searchBar.setVisibility(View.GONE);
+            if (ivTabShape != null) ivTabShape.setColorFilter(0xFF00E5BC);
+            if (tvTabShape != null) tvTabShape.setTextColor(0xFF00E5BC);
+            if (ivTabElements != null) ivTabElements.setColorFilter(0xFF64748B);
+            if (tvTabElements != null) tvTabElements.setTextColor(0xFF94A3B8);
+            if (ivTabIcons != null) ivTabIcons.setColorFilter(0xFF64748B);
+            if (tvTabIcons != null) tvTabIcons.setTextColor(0xFF94A3B8);
+
+            if (rv != null && allShapes != null && !allShapes.isEmpty()) {
+                rv.setLayoutManager(new GridLayoutManager(this, 4));
+                rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                    @NonNull
+                    @Override
+                    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                        View view = getLayoutInflater().inflate(R.layout.item_add_shape_cell, parent, false);
+                        return new RecyclerView.ViewHolder(view) {};
+                    }
+
+                    @Override
+                    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                        ShapeDefinition sDef = allShapes.get(position);
+                        ImageView ivIcon = holder.itemView.findViewById(R.id.ivShapeIcon);
+                        TextView tvName = holder.itemView.findViewById(R.id.tvShapeName);
+
+                        if (tvName != null) {
+                            tvName.setText(sDef.getName());
+                        }
+
+                        if (ivIcon != null) {
+                            Bitmap thumb = ShapeGeometryHelper.renderShapeThumbnail(sDef, 80, 0xFF00E5BC);
+                            ivIcon.setImageBitmap(thumb);
+                        }
+
+                        View.OnClickListener addShapeClick = v -> {
+                            float cx = project.getCanvasWidth() / 2f;
+                            float cy = project.getCanvasHeight() / 2f;
+                            ShapeDefinition sCopy = sDef.copy();
+                            ShapeLayer shape = new ShapeLayer(sDef.getName() + " " + (project.getLayers().size() + 1), cx, cy, 300, 300);
+                            shape.setShapeDefinition(sCopy);
+                            shape.setFillColor(paletteColors[(project.getLayers().size()) % paletteColors.length]);
+                            shape.setCornerRadius(25f);
+
+                            project.addLayer(shape);
+                            binding.canvasView.invalidate();
+                            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                            updateUIForActiveLayer(shape);
+                        };
+                        holder.itemView.setOnClickListener(addShapeClick);
+                        if (ivIcon != null) ivIcon.setOnClickListener(addShapeClick);
+                        if (tvName != null) tvName.setOnClickListener(addShapeClick);
+                        View cardCell = holder.itemView.findViewById(R.id.cardShapeCell);
+                        if (cardCell != null) cardCell.setOnClickListener(addShapeClick);
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return allShapes.size();
+                    }
+                });
+            }
+        };
+
+        Runnable showElementsGrid = () -> {
+            if (searchBar != null) searchBar.setVisibility(View.GONE);
+            if (ivTabShape != null) ivTabShape.setColorFilter(0xFF64748B);
+            if (tvTabShape != null) tvTabShape.setTextColor(0xFF94A3B8);
+            if (ivTabElements != null) ivTabElements.setColorFilter(0xFF00E5BC);
+            if (tvTabElements != null) tvTabElements.setTextColor(0xFF00E5BC);
+            if (ivTabIcons != null) ivTabIcons.setColorFilter(0xFF64748B);
+            if (tvTabIcons != null) tvTabIcons.setTextColor(0xFF94A3B8);
+
+            List<ProjectStorageManager.ProjectItem> allProjects = ProjectStorageManager.loadAllProjects(this, false);
+            List<ProjectStorageManager.ProjectItem> savedElements = new ArrayList<>();
+            for (ProjectStorageManager.ProjectItem p : allProjects) {
+                if (p.isElement() && !p.isInTrash()) {
+                    savedElements.add(p);
                 }
+            }
 
-                @Override
-                public void onBindViewHolder(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder holder, int position) {
-                    ShapeDefinition sDef = allShapes.get(position);
-                    ImageView ivIcon = holder.itemView.findViewById(R.id.ivShapeIcon);
-                    TextView tvName = holder.itemView.findViewById(R.id.tvShapeName);
+            if (rv != null) {
+                if (savedElements.isEmpty()) {
+                    rv.setLayoutManager(new LinearLayoutManager(this));
+                    rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                        @NonNull
+                        @Override
+                        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                            TextView tv = new TextView(MainActivity.this);
+                            tv.setText("No saved elements found.\nCreate an element from Home with transparent background to reuse it here.");
+                            tv.setTextColor(0xFF94A3B8);
+                            tv.setTextSize(12);
+                            tv.setGravity(Gravity.CENTER);
+                            tv.setPadding(32, 64, 32, 64);
+                            tv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                            return new RecyclerView.ViewHolder(tv) {};
+                        }
 
-                    if (tvName != null) {
-                        tvName.setText(sDef.getName());
+                        @Override
+                        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {}
+
+                        @Override
+                        public int getItemCount() { return 1; }
+                    });
+                } else {
+                    rv.setLayoutManager(new GridLayoutManager(this, 3));
+                    rv.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                        @NonNull
+                        @Override
+                        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                            View view = getLayoutInflater().inflate(R.layout.item_add_shape_cell, parent, false);
+                            return new RecyclerView.ViewHolder(view) {};
+                        }
+
+                        @Override
+                        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                            ProjectStorageManager.ProjectItem elemItem = savedElements.get(position);
+                            ImageView ivIcon = holder.itemView.findViewById(R.id.ivShapeIcon);
+                            TextView tvName = holder.itemView.findViewById(R.id.tvShapeName);
+
+                            if (tvName != null) {
+                                tvName.setText(elemItem.getTitle());
+                            }
+
+                            if (ivIcon != null) {
+                                Bitmap thumb = ProjectStorageManager.loadThumbnail(MainActivity.this, elemItem);
+                                if (thumb != null) {
+                                    ivIcon.setImageBitmap(thumb);
+                                } else {
+                                    ivIcon.setImageResource(R.drawable.ic_pe_element);
+                                    ivIcon.setColorFilter(0xFF00E5BC);
+                                }
+                            }
+
+                            View.OnClickListener insertElementClick = v -> {
+                                EditorProject elemProj = ProjectStorageManager.loadProjectContent(MainActivity.this, elemItem.getId());
+                                if (elemProj != null && !elemProj.getLayers().isEmpty()) {
+                                    CanvasLayer lastAdded = null;
+                                    for (CanvasLayer l : elemProj.getLayers()) {
+                                        CanvasLayer copy = l.copy();
+                                        copy.setX(project.getCanvasWidth() / 2f);
+                                        copy.setY(project.getCanvasHeight() / 2f);
+                                        project.addLayer(copy);
+                                        lastAdded = copy;
+                                    }
+                                    binding.canvasView.invalidate();
+                                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                                    if (lastAdded != null) {
+                                        updateUIForActiveLayer(lastAdded);
+                                    }
+                                }
+                            };
+                            holder.itemView.setOnClickListener(insertElementClick);
+                            if (ivIcon != null) ivIcon.setOnClickListener(insertElementClick);
+                            if (tvName != null) tvName.setOnClickListener(insertElementClick);
+                        }
+
+                        @Override
+                        public int getItemCount() {
+                            return savedElements.size();
+                        }
+                    });
+                }
+            }
+        };
+
+        Runnable showIconsGrid = () -> {
+            if (searchBar != null) searchBar.setVisibility(View.VISIBLE);
+            if (ivTabShape != null) ivTabShape.setColorFilter(0xFF64748B);
+            if (tvTabShape != null) tvTabShape.setTextColor(0xFF94A3B8);
+            if (ivTabElements != null) ivTabElements.setColorFilter(0xFF64748B);
+            if (tvTabElements != null) tvTabElements.setTextColor(0xFF94A3B8);
+            if (ivTabIcons != null) ivTabIcons.setColorFilter(0xFF00E5BC);
+            if (tvTabIcons != null) tvTabIcons.setTextColor(0xFF00E5BC);
+
+            List<SvgIconItem> allIcons = SvgIconManager.getAllIcons(this);
+            if (rv != null) {
+                rv.setLayoutManager(new GridLayoutManager(this, 4));
+                SvgIconAdapter iconAdapter = new SvgIconAdapter(this);
+                iconAdapter.setItems(allIcons);
+                if (etSearch != null && etSearch.getText() != null) {
+                    String currentQ = etSearch.getText().toString();
+                    if (!currentQ.isEmpty()) {
+                        iconAdapter.filter(currentQ);
                     }
-
-                    if (ivIcon != null) {
-                        Bitmap thumb = ShapeGeometryHelper.renderShapeThumbnail(sDef, 80, 0xFF00E5BC);
-                        ivIcon.setImageBitmap(thumb);
-                    }
-
-                    View.OnClickListener addShapeClick = v -> {
-                        float cx = project.getCanvasWidth() / 2f;
-                        float cy = project.getCanvasHeight() / 2f;
-                        ShapeDefinition sCopy = sDef.copy();
-                        ShapeLayer shape = new ShapeLayer(sDef.getName() + " " + (project.getLayers().size() + 1), cx, cy, 300, 300);
-                        shape.setShapeDefinition(sCopy);
-                        shape.setFillColor(paletteColors[(project.getLayers().size()) % paletteColors.length]);
-                        shape.setCornerRadius(25f);
-
+                }
+                iconAdapter.setOnIconSelectedListener(iconItem -> {
+                    float cx = project.getCanvasWidth() / 2f;
+                    float cy = project.getCanvasHeight() / 2f;
+                    ShapeLayer shape = SvgIconManager.createShapeLayerFromSvg(this, iconItem, cx, cy);
+                    if (shape != null) {
                         project.addLayer(shape);
                         binding.canvasView.invalidate();
                         binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
                         updateUIForActiveLayer(shape);
-                    };
-                    holder.itemView.setOnClickListener(addShapeClick);
-                    if (ivIcon != null) ivIcon.setOnClickListener(addShapeClick);
-                    if (tvName != null) tvName.setOnClickListener(addShapeClick);
-                    View cardCell = holder.itemView.findViewById(R.id.cardShapeCell);
-                    if (cardCell != null) cardCell.setOnClickListener(addShapeClick);
+                    }
+                });
+                rv.setAdapter(iconAdapter);
+            }
+        };
+
+        if (etSearch != null) {
+            etSearch.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    String q = s != null ? s.toString() : "";
+                    if (btnClearSearch != null) {
+                        btnClearSearch.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
+                    }
+                    if (rv != null && rv.getAdapter() instanceof SvgIconAdapter) {
+                        ((SvgIconAdapter) rv.getAdapter()).filter(q);
+                    }
                 }
 
                 @Override
-                public int getItemCount() {
-                    return allShapes.size();
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        if (btnClearSearch != null) {
+            btnClearSearch.setOnClickListener(v -> {
+                if (etSearch != null) etSearch.setText("");
+                if (rv != null && rv.getAdapter() instanceof SvgIconAdapter) {
+                    ((SvgIconAdapter) rv.getAdapter()).filter("");
                 }
             });
         }
+
+        if (tabShape != null) tabShape.setOnClickListener(v -> showShapesGrid.run());
+        if (tabElements != null) tabElements.setOnClickListener(v -> showElementsGrid.run());
+        if (tabIcons != null) tabIcons.setOnClickListener(v -> showIconsGrid.run());
+
+        showShapesGrid.run();
 
         // Add Media tab
         binding.getRoot().findViewById(R.id.tabAddMedia).setOnClickListener(v -> {
@@ -3091,10 +3776,18 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         binding.getRoot().findViewById(R.id.btnRailVector).setOnClickListener(v -> {
         });
 
-        // Templates tab
-        binding.getRoot().findViewById(R.id.tabAddTemplates).setOnClickListener(v -> {
-            showCanvasSettingsDialog();
-        });
+        // Close 'X' button
+        View btnCloseAdd = binding.getRoot().findViewById(R.id.btnCloseAddSheet);
+        if (btnCloseAdd != null) {
+            btnCloseAdd.setOnClickListener(v -> {
+                if (project != null && project.getSelectedLayer() != null) {
+                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                } else {
+                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
+                    populateLayersOverviewPanel();
+                }
+            });
+        }
     }
 
     // -------------------------------------------------------------
@@ -3224,7 +3917,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             ImageView iv = new ImageView(this);
             iv.setLayoutParams(new LinearLayout.LayoutParams((int) (42 * density), (int) (42 * density)));
             iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            android.graphics.drawable.Drawable thumbDrawable = EffectHelper.loadThumbnailDrawable(this, finalEff);
+            Drawable thumbDrawable = EffectHelper.loadThumbnailDrawable(this, finalEff);
             if (thumbDrawable != null) {
                 iv.setImageDrawable(thumbDrawable);
             } else {
@@ -3238,7 +3931,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             tv.setTextColor(Color.WHITE);
             tv.setTextSize(11);
             tv.setGravity(Gravity.CENTER);
-            tv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            tv.setEllipsize(TextUtils.TruncateAt.END);
             tv.setMaxLines(1);
             tv.setPadding(2, 4, 2, 0);
             col.addView(tv);
@@ -3380,7 +4073,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
                     tvName.setText(eff.getName());
 
-                    android.graphics.drawable.Drawable thumbDrawable = EffectHelper.loadThumbnailDrawable(this, eff);
+                    Drawable thumbDrawable = EffectHelper.loadThumbnailDrawable(this, eff);
                     if (thumbDrawable != null) {
                         ivThumb.setImageDrawable(thumbDrawable);
                     } else {
@@ -3633,7 +4326,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     }
 
     private void populateLayersOverviewPanel() {
-        androidx.recyclerview.widget.RecyclerView rv = binding.getRoot().findViewById(R.id.rvOverviewLayers);
+        RecyclerView rv = binding.getRoot().findViewById(R.id.rvOverviewLayers);
         TextView tvCount = binding.getRoot().findViewById(R.id.tvOverviewLayersCount);
         View btnAdd = binding.getRoot().findViewById(R.id.btnOverviewAddLayer);
 
@@ -3674,20 +4367,20 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         if (rv == null || project == null) return;
 
-        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        rv.setLayoutManager(new LinearLayoutManager(this));
 
-        androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder> adapter =
-                new androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+        RecyclerView.Adapter<RecyclerView.ViewHolder> adapter =
+                new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
             @NonNull
             @Override
-            public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View view = getLayoutInflater().inflate(R.layout.item_overview_layer_chip, parent, false);
-                return new androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {};
+                return new RecyclerView.ViewHolder(view) {};
             }
 
             @Override
-            public void onBindViewHolder(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder holder, int position) {
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
                 // Topmost layer is at position 0 in timeline stack
                 int actualIndex = project.getLayers().size() - 1 - position;
                 if (actualIndex < 0 || actualIndex >= project.getLayers().size()) return;
@@ -3698,7 +4391,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 ImageButton btnVis = holder.itemView.findViewById(R.id.btnOverviewLayerVisibility);
                 ImageButton btnLock = holder.itemView.findViewById(R.id.btnOverviewLayerlock);
                 View card = holder.itemView.findViewById(R.id.cardOverviewLayerRow);
-                com.google.android.material.checkbox.MaterialCheckBox cbSelect = holder.itemView.findViewById(R.id.cbOverviewLayerSelect);
+                MaterialCheckBox cbSelect = holder.itemView.findViewById(R.id.cbOverviewLayerSelect);
 
                 if (tvName != null) {
                     tvName.setText(l.getName());
@@ -3803,15 +4496,15 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         rv.setAdapter(adapter);
 
         // Attach ItemTouchHelper for drag reordering on long-press / grab handle
-        final androidx.recyclerview.widget.ItemTouchHelper[] touchHelperRef = {null};
-        androidx.recyclerview.widget.ItemTouchHelper itemTouchHelper =
-                new androidx.recyclerview.widget.ItemTouchHelper(new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
-                        androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+        final ItemTouchHelper[] touchHelperRef = {null};
+        ItemTouchHelper itemTouchHelper =
+                new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                        ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
 
             @Override
-            public boolean onMove(@NonNull androidx.recyclerview.widget.RecyclerView recyclerView,
-                                  @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder source,
-                                  @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder target) {
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder source,
+                                  @NonNull RecyclerView.ViewHolder target) {
                 int fromPos = source.getBindingAdapterPosition();
                 int toPos = target.getBindingAdapterPosition();
                 if (fromPos == toPos || fromPos < 0 || toPos < 0) return false;
@@ -3840,12 +4533,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
 
             @Override
-            public void onSwiped(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder viewHolder, int direction) {
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             }
 
             @Override
-            public void clearView(@NonNull androidx.recyclerview.widget.RecyclerView recyclerView,
-                                  @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder viewHolder) {
+            public void clearView(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder) {
                 super.clearView(recyclerView, viewHolder);
                 project.saveSnapshot();
                 adapter.notifyDataSetChanged();
@@ -3861,14 +4554,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         itemTouchHelper.attachToRecyclerView(rv);
 
         // Wire drag handle to start drag immediately on touch
-        rv.addOnChildAttachStateChangeListener(new androidx.recyclerview.widget.RecyclerView.OnChildAttachStateChangeListener() {
+        rv.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
             @Override
-            public void onChildViewAttachedToWindow(@NonNull android.view.View view) {
-                android.widget.ImageView dragHandle = view.findViewById(R.id.ivOverviewReorder);
+            public void onChildViewAttachedToWindow(@NonNull View view) {
+                ImageView dragHandle = view.findViewById(R.id.ivOverviewReorder);
                 if (dragHandle != null) {
                     dragHandle.setOnTouchListener((v, ev) -> {
-                        if (ev.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-                            androidx.recyclerview.widget.RecyclerView.ViewHolder vh = rv.getChildViewHolder(view);
+                        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+                            RecyclerView.ViewHolder vh = rv.getChildViewHolder(view);
                             if (vh != null && touchHelperRef[0] != null) {
                                 touchHelperRef[0].startDrag(vh);
                             }
@@ -3880,7 +4573,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
 
             @Override
-            public void onChildViewDetachedFromWindow(@NonNull android.view.View view) {}
+            public void onChildViewDetachedFromWindow(@NonNull View view) {}
         });
     }
 
@@ -3889,11 +4582,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     // 9. RIGHT-SIDE CANVA TOOLS (Zoom, Grid, Layers, Fit)
     // -------------------------------------------------------------
     private void setupRightCanvasTools() {
-        // 1. Add Element quick action
         View btnShape = findViewById(R.id.btnRightShapeAspect);
         if (btnShape != null) {
             btnShape.setOnClickListener(v -> {
-                binding.flipperBottomPanels.setDisplayedChild(SHEET_ADD_ELEMENT);
+                isRightToolsVisible = !isRightToolsVisible;
+                hideShowRightCntr(isRightToolsVisible);
             });
         }
 
@@ -3966,6 +4659,50 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
     }
 
+    private void hideShowRightCntr(Boolean show){
+        View BtnGrid = findViewById(R.id.btnRightGridToggle);
+        View BtnLayer = findViewById(R.id.btnRightLayersToggle);
+        View BtnFit = findViewById(R.id.btnRightFitCanvas);
+        View BtnPan = findViewById(R.id.btnRightPanToggle);
+        View CardZoom = findViewById(R.id.cardZoomWidget);
+        ImageView BtnControl = findViewById(R.id.rightLayoutToggle);
+
+        if (show) {
+            BtnControl.setImageResource(R.drawable.ic_pe_expand_arrow);
+            View[] vieew = {BtnGrid, BtnLayer, BtnFit, BtnPan, CardZoom};
+            for (int i = 0; i < vieew.length; i++) {
+                final View ViewsGr = vieew[i];
+                ViewsGr.setVisibility(View.VISIBLE);
+                ViewsGr.animate()
+                        .setStartDelay(i * 200)
+                        .setInterpolator(new OvershootInterpolator(4f))
+                        .alpha(1f)
+                        .translationX(0f);
+
+            }
+        } else {
+            BtnControl.setImageResource(R.drawable.ic_pe_expand_arrow);
+
+            View[] vieew = {CardZoom, BtnPan, BtnFit, BtnLayer, BtnGrid};
+            for (int i = 0; i < vieew.length; i++) {
+                final View ViewsGr = vieew[i];
+                ViewsGr.animate()
+                        .setStartDelay(i * 200)
+                        .setInterpolator(new OvershootInterpolator(4f))
+                        .translationX(20f)
+                        .alpha(0f)
+                        .withEndAction(new Runnable() {
+                                           @Override
+                                           public void run() {
+                                               ViewsGr.setVisibility(View.GONE);
+                                           }
+                                       }
+                        );
+
+            }
+        }
+    }
+
     private void showLayersListBottomSheet() {
         Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_layers_stack);
@@ -3980,7 +4717,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         if (rv != null) {
             rv.setLayoutManager(new LinearLayoutManager(this));
-            glab.pixeleditor.ui.CanvasLayerSidebarAdapter adapter = new glab.pixeleditor.ui.CanvasLayerSidebarAdapter(this, new glab.pixeleditor.ui.CanvasLayerSidebarAdapter.OnLayerSidebarListener() {
+            CanvasLayerSidebarAdapter adapter = new CanvasLayerSidebarAdapter(this, new CanvasLayerSidebarAdapter.OnLayerSidebarListener() {
                 @Override
                 public void onLayerSelected(int index) {
                     project.setSelectedIndex(index);
@@ -4036,76 +4773,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ImageView[] modeIcons = {ivPos, ivRot, ivScale, ivSkew};
         TransformMode[] modes = {TransformMode.POSITION, TransformMode.ROTATE, TransformMode.SCALE, TransformMode.SKEW};
 
-        // Container Views for each mode
+        // Contextual mode containers
         View containerPos = panel.findViewById(R.id.containerModePosition);
         View containerRot = panel.findViewById(R.id.containerModeRotation);
         View containerScale = panel.findViewById(R.id.containerModeScale);
         View containerSkew = panel.findViewById(R.id.containerModeSkew);
 
-        glab.pixeleditor.view.CircularDialView circularDial = panel.findViewById(R.id.circularDialRotation);
-        glab.pixeleditor.view.ScrubRulerView rulerScale = panel.findViewById(R.id.rulerScale);
-        glab.pixeleditor.view.ScrubRulerView rulerSkew = panel.findViewById(R.id.rulerSkew);
+        CircularDialView circularDial = panel.findViewById(R.id.circularDialRotation);
+        ScrubRulerView rulerScale = panel.findViewById(R.id.rulerScale);
+        ScrubRulerView rulerSkew = panel.findViewById(R.id.rulerSkew);
 
-        // Left Sub-Rail Action Buttons: Reset, Copy, Paste, Center
-        View btnReset = panel.findViewById(R.id.btnTransformReset);
-        if (btnReset != null) {
-            btnReset.setOnClickListener(v -> {
-                CanvasLayer layer = project.getSelectedLayer();
-                if (layer != null) {
-                    layer.setX(project.getCanvasWidth() / 2f);
-                    layer.setY(project.getCanvasHeight() / 2f);
-                    layer.setRotation(0f);
-                    layer.setScaleX(1f);
-                    layer.setScaleY(1f);
-                    layer.setWidth(300f);
-                    layer.setHeight(300f);
-                    layer.setSkewX(0f);
-                    layer.setSkewY(0f);
-                    binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
-                }
-            });
-        }
-
-        View btnCopy = panel.findViewById(R.id.btnTransformCopy);
-        if (btnCopy != null) {
-            btnCopy.setOnClickListener(v -> {
-                CanvasLayer layer = project.getSelectedLayer();
-                if (layer != null) {
-                    copyX = layer.getX();
-                    copyY = layer.getY();
-                    copyRot = layer.getRotation();
-                    copyScaleX = layer.getScaleX();
-                    copyScaleY = layer.getScaleY();
-                    copyWidth = layer.getWidth();
-                    copyHeight = layer.getHeight();
-                    copySkewX = layer.getSkewX();
-                    copySkewY = layer.getSkewY();
-                    hasCopiedTransform = true;
-                }
-            });
-        }
-
-        View btnPaste = panel.findViewById(R.id.btnTransformPaste);
-        if (btnPaste != null) {
-            btnPaste.setOnClickListener(v -> {
-                CanvasLayer layer = project.getSelectedLayer();
-                if (layer != null && hasCopiedTransform) {
-                    layer.setX(copyX);
-                    layer.setY(copyY);
-                    layer.setRotation(copyRot);
-                    layer.setScaleX(copyScaleX);
-                    layer.setScaleY(copyScaleY);
-                    layer.setWidth(copyWidth);
-                    layer.setHeight(copyHeight);
-                    layer.setSkewX(copySkewX);
-                    layer.setSkewY(copySkewY);
-                    binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
-                }
-            });
-        }
-
+        // Center / Reset Position Button
         View btnCenter = panel.findViewById(R.id.btnTransformCenter);
         if (btnCenter != null) {
             btnCenter.setOnClickListener(v -> {
@@ -4276,6 +4954,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 if (circularDial != null) {
                     circularDial.setAngle(layer.getRotation());
                 }
+                if (rulerScale != null) {
+                    float curVal = (layer instanceof TextLayer) ? ((TextLayer) layer).getTextSize() : layer.getWidth();
+                    rulerScale.setBounds(layer instanceof TextLayer ? 8f : 20f, layer instanceof TextLayer ? 400f : 3000f, curVal, 0.5f);
+                }
+                if (rulerSkew != null) {
+                    float curSkew = (activeSkewAxis == SkewAxis.X) ? layer.getSkewX() : layer.getSkewY();
+                    rulerSkew.setBounds(-85f, 85f, curSkew, 0.3f);
+                }
             }
 
             updatePositionPillsUI.run();
@@ -4306,22 +4992,31 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         // Mode 3: Scale Scrub Ruler listener
         if (rulerScale != null) {
-            rulerScale.setBounds(20f, 3000f);
             rulerScale.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
-                    float factor = 1.0f + (delta * 0.005f);
-                    if (isScaleAspectLinked || activeScaleAxis == ScaleAxis.BOTH) {
-                        float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
-                        float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
-                        layer.setWidth(newW);
-                        layer.setHeight(newH);
-                    } else if (activeScaleAxis == ScaleAxis.WIDTH) {
-                        float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
-                        layer.setWidth(newW);
-                    } else if (activeScaleAxis == ScaleAxis.HEIGHT) {
-                        float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
-                        layer.setHeight(newH);
+                    float factor = 1.0f + (delta * 0.005f); // Drag right increases scale, drag left decreases scale
+                    if (layer instanceof TextLayer) {
+                        TextLayer tl = (TextLayer) layer;
+                        float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * factor));
+                        tl.setTextSize(newSize);
+                        rulerScale.setCurrentValue(newSize);
+                    } else {
+                        if (isScaleAspectLinked || activeScaleAxis == ScaleAxis.BOTH) {
+                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                            float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                            layer.setWidth(newW);
+                            layer.setHeight(newH);
+                            rulerScale.setCurrentValue(newW);
+                        } else if (activeScaleAxis == ScaleAxis.WIDTH) {
+                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                            layer.setWidth(newW);
+                            rulerScale.setCurrentValue(newW);
+                        } else if (activeScaleAxis == ScaleAxis.HEIGHT) {
+                            float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                            layer.setHeight(newH);
+                            rulerScale.setCurrentValue(newH);
+                        }
                     }
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
@@ -4331,16 +5026,17 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
 
         // Mode 4: Skew Scrub Ruler listener
         if (rulerSkew != null) {
-            rulerSkew.setBounds(-85f, 85f);
             rulerSkew.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
                     if (activeSkewAxis == SkewAxis.X) {
                         float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewX() + (delta * 0.3f)));
                         layer.setSkewX(newSkew);
+                        rulerSkew.setCurrentValue(newSkew);
                     } else {
                         float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewY() + (delta * 0.3f)));
                         layer.setSkewY(newSkew);
+                        rulerSkew.setCurrentValue(newSkew);
                     }
                     binding.canvasView.invalidate();
                     updateTransformCoordinatesUI();
@@ -4357,12 +5053,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 private boolean hasSavedSnapshotForPad = false;
 
                 @Override
-                public boolean onTouch(View v, android.view.MotionEvent event) {
+                public boolean onTouch(View v, MotionEvent event) {
                     CanvasLayer layer = project.getSelectedLayer();
                     if (layer == null) return false;
 
                     switch (event.getActionMasked()) {
-                        case android.view.MotionEvent.ACTION_DOWN:
+                        case MotionEvent.ACTION_DOWN:
                             lastTouchX = event.getX();
                             lastTouchY = event.getY();
                             accumulatedZDy = 0f;
@@ -4370,7 +5066,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                             v.getParent().requestDisallowInterceptTouchEvent(true);
                             return true;
 
-                        case android.view.MotionEvent.ACTION_MOVE:
+                        case MotionEvent.ACTION_MOVE:
                             float dx = event.getX() - lastTouchX;
                             float dy = event.getY() - lastTouchY;
                             lastTouchX = event.getX();
@@ -4389,7 +5085,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                                     // Swiped Up -> Bring layer forward (up)
                                     project.moveLayerUp(project.getSelectedIndex());
                                     accumulatedZDy = 0f;
-                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                                     binding.canvasView.invalidate();
                                     updateTransformCoordinatesUI();
                                     updateCanvasToolsState();
@@ -4397,7 +5093,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                                     // Swiped Down -> Send layer backward (down)
                                     project.moveLayerDown(project.getSelectedIndex());
                                     accumulatedZDy = 0f;
-                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                                     binding.canvasView.invalidate();
                                     updateTransformCoordinatesUI();
                                     updateCanvasToolsState();
@@ -4405,7 +5101,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                             } else {
                                 float rawX = layer.getX() + dx;
                                 float rawY = layer.getY() + dy;
-                                android.graphics.PointF snapped = binding.canvasView.applyMagneticSnapping(layer, rawX, rawY);
+                                PointF snapped = binding.canvasView.applyMagneticSnapping(layer, rawX, rawY);
                                 layer.setX(snapped.x);
                                 layer.setY(snapped.y);
                                 binding.canvasView.invalidate();
@@ -4413,8 +5109,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                             }
                             return true;
 
-                        case android.view.MotionEvent.ACTION_UP:
-                        case android.view.MotionEvent.ACTION_CANCEL:
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
                             accumulatedZDy = 0f;
                             hasSavedSnapshotForPad = false;
                             binding.canvasView.clearMagneticSnapLines();
@@ -4442,7 +5138,6 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         TextView tvVal1 = panel.findViewById(R.id.tvCoordVal1);
         TextView tvVal2 = panel.findViewById(R.id.tvCoordVal2);
         TextView tvVal3 = panel.findViewById(R.id.tvCoordVal3);
-
         TextView tvScaleW = panel.findViewById(R.id.tvScaleWidthVal);
         TextView tvScaleH = panel.findViewById(R.id.tvScaleHeightVal);
         TextView tvSkewX = panel.findViewById(R.id.tvSkewXVal);
@@ -4457,16 +5152,107 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
 
         // Position coordinates
-        if (tvVal1 != null) tvVal1.setText(String.format(java.util.Locale.US, "%.2f", layer.getX()));
-        if (tvVal2 != null) tvVal2.setText(String.format(java.util.Locale.US, "%.2f", layer.getY()));
-        if (tvVal3 != null) tvVal3.setText(String.format(java.util.Locale.US, "Z:%d", project.getSelectedIndex() + 1));
+        if (tvVal1 != null) tvVal1.setText(String.format(Locale.US, "%.2f", layer.getX()));
+        if (tvVal2 != null) tvVal2.setText(String.format(Locale.US, "%.2f", layer.getY()));
+        if (tvVal3 != null) tvVal3.setText(String.format(Locale.US, "Z:%d", project.getSelectedIndex() + 1));
 
         // Scale coordinates
-        if (tvScaleW != null) tvScaleW.setText(String.format(java.util.Locale.US, "%.1f", layer.getWidth()));
-        if (tvScaleH != null) tvScaleH.setText(String.format(java.util.Locale.US, "%.1f", layer.getHeight()));
+        if (tvScaleW != null) tvScaleW.setText(String.format(Locale.US, "%.1f", layer.getWidth()));
+        if (tvScaleH != null) tvScaleH.setText(String.format(Locale.US, "%.1f", layer.getHeight()));
 
         // Skew coordinates
-        if (tvSkewX != null) tvSkewX.setText(String.format(java.util.Locale.US, "%.1f°", layer.getSkewX()));
-        if (tvSkewY != null) tvSkewY.setText(String.format(java.util.Locale.US, "%.1f°", layer.getSkewY()));
+        if (tvSkewX != null) tvSkewX.setText(String.format(Locale.US, "%.1f°", layer.getSkewX()));
+        if (tvSkewY != null) tvSkewY.setText(String.format(Locale.US, "%.1f°", layer.getSkewY()));
+    }
+
+    // -------------------------------------------------------------
+    // 11. BOTTOM PANEL EXPAND & COLLAPSE (SWIPE UP / DOWN)
+    // -------------------------------------------------------------
+    private boolean isBottomPanelExpanded = false;
+
+    private void setupBottomPanelExpandCollapse() {
+        View handle = findViewById(R.id.handleBottomPanel);
+        if (handle == null || binding.layoutBottomContainer == null) return;
+
+        android.view.GestureDetector gestureDetector = new android.view.GestureDetector(this, new android.view.GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2, float velocityX, float velocityY) {
+                if (e1 == null || e2 == null) return false;
+                float dy = e2.getY() - e1.getY();
+                if (dy < -30f && !isBottomPanelExpanded) {
+                    setBottomPanelExpanded(true);
+                    return true;
+                } else if (dy > 30f && isBottomPanelExpanded) {
+                    setBottomPanelExpanded(false);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(android.view.MotionEvent e) {
+                setBottomPanelExpanded(!isBottomPanelExpanded);
+                return true;
+            }
+        });
+
+        handle.setOnTouchListener((v, event) -> {
+            boolean handled = gestureDetector.onTouchEvent(event);
+            if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
+                v.performClick();
+            }
+            return handled || true;
+        });
+    }
+
+    private void setBottomPanelExpanded(boolean expand) {
+        isBottomPanelExpanded = expand;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        float density = getResources().getDisplayMetrics().density;
+        int expandedHeight = (int) (screenHeight * 0.58f);
+
+        ViewGroup.LayoutParams lp = binding.layoutBottomContainer.getLayoutParams();
+        if (expand) {
+            lp.height = expandedHeight;
+        } else {
+            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        }
+        binding.layoutBottomContainer.setLayoutParams(lp);
+
+        // Dynamically adjust internal scroll lists so they show more items ONLY when expanded
+        View rvLayers = binding.getRoot().findViewById(R.id.rvOverviewLayers);
+        if (rvLayers != null) {
+            ViewGroup.LayoutParams rlp = rvLayers.getLayoutParams();
+            rlp.height = expand ? Math.max((int) (175 * density), expandedHeight - (int) (90 * density)) : (int) (175 * density);
+            rvLayers.setLayoutParams(rlp);
+        }
+
+        View centerGridContainer = binding.getRoot().findViewById(R.id.layoutAddElementCenterContainer);
+        if (centerGridContainer != null) {
+            ViewGroup.LayoutParams clp = centerGridContainer.getLayoutParams();
+            clp.height = expand ? Math.max((int) (215 * density), expandedHeight - (int) (80 * density)) : (int) (215 * density);
+            centerGridContainer.setLayoutParams(clp);
+        }
+
+        View rvFonts = binding.getRoot().findViewById(R.id.rvFontsList);
+        if (rvFonts != null) {
+            ViewGroup.LayoutParams flp = rvFonts.getLayoutParams();
+            flp.height = expand ? Math.max((int) (180 * density), expandedHeight - (int) (200 * density)) : (int) (180 * density);
+            rvFonts.setLayoutParams(flp);
+        }
+
+        View panelEditText = binding.getRoot().findViewById(R.id.panelEditText);
+        if (panelEditText != null) {
+            ViewGroup.LayoutParams pelp = panelEditText.getLayoutParams();
+            pelp.height = expand ? expandedHeight : (int) (380 * density);
+            panelEditText.setLayoutParams(pelp);
+        }
+
+        binding.flipperBottomPanels.requestLayout();
+
+        // Reposition canvas smoothly below TopBar
+        binding.canvasView.post(() -> {
+            binding.canvasView.resetViewport();
+        });
     }
 }

@@ -27,6 +27,21 @@ public class ScrubRulerView extends View {
     private float currentValue = 0f;
     private float valuePerPixel = 0.05f;
 
+    private boolean isActive = true;
+    private float downX = 0f;
+    private float downY = 0f;
+    private float touchSlop = 8f;
+
+    public void setActive(boolean active) {
+        this.isActive = active;
+        setAlpha(active ? 1.0f : 0.45f);
+        invalidate();
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
     public void setBounds(float min, float max) {
         this.hasBounds = true;
         this.minValue = Math.min(min, max);
@@ -69,6 +84,11 @@ public class ScrubRulerView extends View {
     private void init() {
         float density = getResources().getDisplayMetrics().density;
         tickSpacing = 8f * density;
+        try {
+            touchSlop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
+        } catch (Exception e) {
+            touchSlop = 8f * density;
+        }
 
         bgPaint.setStyle(Paint.Style.FILL);
         bgPaint.setColor(0x00000000);
@@ -122,9 +142,39 @@ public class ScrubRulerView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (!isActive) {
+            // Inactive state: pass vertical scroll events to parent view, handle tap to activate
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = event.getX();
+                    downY = event.getY();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    float mdx = Math.abs(event.getX() - downX);
+                    float mdy = Math.abs(event.getY() - downY);
+                    if (mdy > touchSlop) {
+                        // Vertical scroll initiated by parent
+                        return false;
+                    }
+                    return false;
+                case MotionEvent.ACTION_UP:
+                    float dx = Math.abs(event.getX() - downX);
+                    float dy = Math.abs(event.getY() - downY);
+                    if (dx < touchSlop && dy < touchSlop) {
+                        performClick();
+                    }
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    return false;
+            }
+            return false;
+        }
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 lastTouchX = event.getX();
+                downX = event.getX();
+                downY = event.getY();
                 getParent().requestDisallowInterceptTouchEvent(true);
                 return true;
 
@@ -166,10 +216,24 @@ public class ScrubRulerView extends View {
                 return true;
 
             case MotionEvent.ACTION_UP:
+                getParent().requestDisallowInterceptTouchEvent(false);
+                float upDx = Math.abs(event.getX() - downX);
+                float upDy = Math.abs(event.getY() - downY);
+                if (upDx < touchSlop && upDy < touchSlop) {
+                    performClick();
+                }
+                return true;
+
             case MotionEvent.ACTION_CANCEL:
                 getParent().requestDisallowInterceptTouchEvent(false);
                 return true;
         }
         return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        return true;
     }
 }

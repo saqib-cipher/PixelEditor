@@ -24,6 +24,7 @@ import glab.pixeleditor.model.CanvasLayer;
 import glab.pixeleditor.model.EditorProject;
 import glab.pixeleditor.model.PhotoLayer;
 import glab.pixeleditor.model.ShapeLayer;
+import glab.pixeleditor.model.TextLayer;
 
 public class PixelCanvasView extends View {
 
@@ -425,6 +426,8 @@ public class PixelCanvasView extends View {
             return ((ShapeLayer) layer).getFillMode() == ShapeLayer.FillMode.GRADIENT;
         } else if (layer instanceof PhotoLayer) {
             return ((PhotoLayer) layer).getFillMode() == ShapeLayer.FillMode.GRADIENT;
+        } else if (layer instanceof TextLayer) {
+            return ((TextLayer) layer).getFillMode() == ShapeLayer.FillMode.GRADIENT;
         }
         return false;
     }
@@ -442,6 +445,11 @@ public class PixelCanvasView extends View {
             startX = pl.getGradientStartX(); startY = pl.getGradientStartY();
             endX = pl.getGradientEndX(); endY = pl.getGradientEndY();
             startCol = pl.getGradientStartColor(); endCol = pl.getGradientEndColor();
+        } else if (layer instanceof TextLayer) {
+            TextLayer tl = (TextLayer) layer;
+            startX = tl.getGradientStartX(); startY = tl.getGradientStartY();
+            endX = tl.getGradientEndX(); endY = tl.getGradientEndY();
+            startCol = tl.getGradientStartColor(); endCol = tl.getGradientEndColor();
         } else {
             return;
         }
@@ -775,6 +783,9 @@ public class PixelCanvasView extends View {
                     } else if (activeLayer instanceof PhotoLayer) {
                         ((PhotoLayer) activeLayer).setGradientStartX(localPt[0]);
                         ((PhotoLayer) activeLayer).setGradientStartY(localPt[1]);
+                    } else if (activeLayer instanceof TextLayer) {
+                        ((TextLayer) activeLayer).setGradientStartX(localPt[0]);
+                        ((TextLayer) activeLayer).setGradientStartY(localPt[1]);
                     }
                     if (layerSelectedListener != null) {
                         layerSelectedListener.onLayerModified(activeLayer);
@@ -792,6 +803,9 @@ public class PixelCanvasView extends View {
                     } else if (activeLayer instanceof PhotoLayer) {
                         ((PhotoLayer) activeLayer).setGradientEndX(localPt[0]);
                         ((PhotoLayer) activeLayer).setGradientEndY(localPt[1]);
+                    } else if (activeLayer instanceof TextLayer) {
+                        ((TextLayer) activeLayer).setGradientEndX(localPt[0]);
+                        ((TextLayer) activeLayer).setGradientEndY(localPt[1]);
                     }
                     if (layerSelectedListener != null) {
                         layerSelectedListener.onLayerModified(activeLayer);
@@ -988,48 +1002,104 @@ public class PixelCanvasView extends View {
         switch (activeHandleIndex) {
             case 0: { // Top-Left (Uniform Proportional Scale)
                 float scaleDelta = (-ldx / Math.max(20f, w) - ldy / Math.max(20f, h)) / 2f;
-                float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
-                float newH = Math.max(20f, newW / aspect);
-                layer.setWidth(newW);
-                layer.setHeight(newH);
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * (1f + scaleDelta * 2f)));
+                    tl.setTextSize(newSize);
+                } else {
+                    float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
+                    float newH = Math.max(20f, newW / aspect);
+                    layer.setWidth(newW);
+                    layer.setHeight(newH);
+                }
                 break;
             }
-            case 1: // Top-Mid (Height only)
-                layer.setHeight(Math.max(20f, layer.getHeight() - ldy * 2));
+            case 1: { // Top-Mid (Height only)
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newH = Math.max(20f, h - ldy * 2);
+                    float ratio = newH / Math.max(1f, h);
+                    tl.setTextSize(Math.max(8f, Math.min(400f, tl.getTextSize() * ratio)));
+                } else {
+                    layer.setHeight(Math.max(20f, layer.getHeight() - ldy * 2));
+                }
                 break;
+            }
             case 2: { // Top-Right (Uniform Proportional Scale)
                 float scaleDelta = (ldx / Math.max(20f, w) - ldy / Math.max(20f, h)) / 2f;
-                float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
-                float newH = Math.max(20f, newW / aspect);
-                layer.setWidth(newW);
-                layer.setHeight(newH);
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * (1f + scaleDelta * 2f)));
+                    tl.setTextSize(newSize);
+                } else {
+                    float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
+                    float newH = Math.max(20f, newW / aspect);
+                    layer.setWidth(newW);
+                    layer.setHeight(newH);
+                }
                 break;
             }
-            case 3: // Right-Mid (Width only)
-                layer.setWidth(Math.max(20f, layer.getWidth() + ldx * 2));
+            case 3: { // Right-Mid (Width only)
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newW = Math.max(20f, w + ldx * 2);
+                    float ratio = newW / Math.max(1f, w);
+                    tl.setTextSize(Math.max(8f, Math.min(400f, tl.getTextSize() * ratio)));
+                } else {
+                    layer.setWidth(Math.max(20f, layer.getWidth() + ldx * 2));
+                }
                 break;
+            }
             case 4: { // Bottom-Right (Uniform Proportional Scale)
                 float scaleDelta = (ldx / Math.max(20f, w) + ldy / Math.max(20f, h)) / 2f;
-                float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
-                float newH = Math.max(20f, newW / aspect);
-                layer.setWidth(newW);
-                layer.setHeight(newH);
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * (1f + scaleDelta * 2f)));
+                    tl.setTextSize(newSize);
+                } else {
+                    float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
+                    float newH = Math.max(20f, newW / aspect);
+                    layer.setWidth(newW);
+                    layer.setHeight(newH);
+                }
                 break;
             }
-            case 5: // Bottom-Mid (Height only)
-                layer.setHeight(Math.max(20f, layer.getHeight() + ldy * 2));
+            case 5: { // Bottom-Mid (Height only)
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newH = Math.max(20f, h + ldy * 2);
+                    float ratio = newH / Math.max(1f, h);
+                    tl.setTextSize(Math.max(8f, Math.min(400f, tl.getTextSize() * ratio)));
+                } else {
+                    layer.setHeight(Math.max(20f, layer.getHeight() + ldy * 2));
+                }
                 break;
+            }
             case 6: { // Bottom-Left (Uniform Proportional Scale)
                 float scaleDelta = (-ldx / Math.max(20f, w) + ldy / Math.max(20f, h)) / 2f;
-                float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
-                float newH = Math.max(20f, newW / aspect);
-                layer.setWidth(newW);
-                layer.setHeight(newH);
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * (1f + scaleDelta * 2f)));
+                    tl.setTextSize(newSize);
+                } else {
+                    float newW = Math.max(20f, w * (1f + scaleDelta * 2f));
+                    float newH = Math.max(20f, newW / aspect);
+                    layer.setWidth(newW);
+                    layer.setHeight(newH);
+                }
                 break;
             }
-            case 7: // Left-Mid (Width only)
-                layer.setWidth(Math.max(20f, layer.getWidth() - ldx * 2));
+            case 7: { // Left-Mid (Width only)
+                if (layer instanceof TextLayer) {
+                    TextLayer tl = (TextLayer) layer;
+                    float newW = Math.max(20f, w - ldx * 2);
+                    float ratio = newW / Math.max(1f, w);
+                    tl.setTextSize(Math.max(8f, Math.min(400f, tl.getTextSize() * ratio)));
+                } else {
+                    layer.setWidth(Math.max(20f, layer.getWidth() - ldx * 2));
+                }
                 break;
+            }
         }
     }
 
@@ -1078,6 +1148,10 @@ public class PixelCanvasView extends View {
             PhotoLayer pl = (PhotoLayer) layer;
             startX = pl.getGradientStartX(); startY = pl.getGradientStartY();
             endX = pl.getGradientEndX(); endY = pl.getGradientEndY();
+        } else if (layer instanceof TextLayer) {
+            TextLayer tl = (TextLayer) layer;
+            startX = tl.getGradientStartX(); startY = tl.getGradientStartY();
+            endX = tl.getGradientEndX(); endY = tl.getGradientEndY();
         } else {
             return -1;
         }

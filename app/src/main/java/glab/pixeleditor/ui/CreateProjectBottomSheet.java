@@ -156,6 +156,58 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
 
         btnClear.setOnClickListener(v -> etName.setText(""));
 
+        TextView tabProject = view.findViewById(R.id.tabCreateProject);
+        TextView tabElement = view.findViewById(R.id.tabCreateElement);
+        com.google.android.material.button.MaterialButton btnSubmit = view.findViewById(R.id.btnSubmitCreateProject);
+
+        final boolean[] isElementMode = {false};
+
+        Runnable updateModeUI = () -> {
+            if (isElementMode[0]) {
+                tabElement.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF24304A));
+                tabElement.setTextColor(0xFF00E5BC);
+                tabProject.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0x00000000));
+                tabProject.setTextColor(0xFF94A3B8);
+                if (btnSubmit != null) btnSubmit.setText("CREATE ELEMENT");
+            } else {
+                tabProject.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF24304A));
+                tabProject.setTextColor(0xFF00E5BC);
+                tabElement.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0x00000000));
+                tabElement.setTextColor(0xFF94A3B8);
+                if (btnSubmit != null) btnSubmit.setText("CREATE PROJECT");
+            }
+        };
+
+        if (tabProject != null) {
+            tabProject.setOnClickListener(v -> {
+                isElementMode[0] = false;
+                etName.setHint("New Project Name");
+                if (etName.getText().toString().isEmpty() || etName.getText().toString().startsWith("New Element")) {
+                    etName.setText("New Project");
+                }
+                selectedBgColor = 0xFFD8DCE3;
+                selectedBgLabel = "Light Grey";
+                tvBgName.setText(selectedBgLabel);
+                viewBgSwatch.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selectedBgColor));
+                updateModeUI.run();
+            });
+        }
+
+        if (tabElement != null) {
+            tabElement.setOnClickListener(v -> {
+                isElementMode[0] = true;
+                etName.setHint("New Element Name");
+                if (etName.getText().toString().isEmpty() || etName.getText().toString().startsWith("New Project")) {
+                    etName.setText("New Element");
+                }
+                selectedBgColor = 0x00000000;
+                selectedBgLabel = "Transparent";
+                tvBgName.setText(selectedBgLabel);
+                viewBgSwatch.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0x44FFFFFF));
+                updateModeUI.run();
+            });
+        }
+
         // Resolution Picker
         view.findViewById(R.id.cardPickerResolution).setOnClickListener(v -> {
             String[] options = {"1080p (FHD)", "720p (HD)", "4K (UHD)", "540p (SD)"};
@@ -171,8 +223,8 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
 
         // Background Color Picker
         view.findViewById(R.id.cardPickerBg).setOnClickListener(v -> {
-            String[] bgNames = {"Light Grey", "Black", "White", "Transparent", "Mint Slate"};
-            int[] bgColors = {0xFFD8DCE3, 0xFF0F1320, 0xFFFFFFFF, 0x00000000, 0xFF161D2D};
+            String[] bgNames = {"Transparent", "Light Grey", "Black", "White", "Mint Slate"};
+            int[] bgColors = {0x00000000, 0xFFD8DCE3, 0xFF0F1320, 0xFFFFFFFF, 0xFF161D2D};
             new MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Select Background")
                     .setItems(bgNames, (dialog, which) -> {
@@ -188,49 +240,53 @@ public class CreateProjectBottomSheet extends BottomSheetDialogFragment {
         // Close button
         view.findViewById(R.id.btnCloseCreateSheet).setOnClickListener(v -> dismiss());
 
-        // Submit button: CREATE PROJECT
-        view.findViewById(R.id.btnSubmitCreateProject).setOnClickListener(v -> {
-            String title = etName.getText().toString().trim();
-            if (title.isEmpty()) {
-                title = "New Project";
-            }
+        // Submit button: CREATE PROJECT / CREATE ELEMENT
+        if (btnSubmit != null) {
+            btnSubmit.setOnClickListener(v -> {
+                String title = etName.getText().toString().trim();
+                if (title.isEmpty()) {
+                    title = isElementMode[0] ? "New Element" : "New Project";
+                }
 
-            Context ctx = requireContext();
-            String id = UUID.randomUUID().toString();
-            String thumb = "thumb_" + id + ".png";
+                Context ctx = requireContext();
+                String id = UUID.randomUUID().toString();
+                String thumb = "thumb_" + id + ".png";
 
-            ProjectStorageManager.ProjectItem item = new ProjectStorageManager.ProjectItem(
-                    id,
-                    title,
-                    selectedAspect,
-                    canvasWidth,
-                    canvasHeight,
-                    30,
-                    selectedBgColor,
-                    1024L,
-                    System.currentTimeMillis(),
-                    thumb,
-                    false
-            );
+                ProjectStorageManager.ProjectItem item = new ProjectStorageManager.ProjectItem(
+                        id,
+                        title,
+                        selectedAspect,
+                        canvasWidth,
+                        canvasHeight,
+                        30,
+                        selectedBgColor,
+                        1024L,
+                        System.currentTimeMillis(),
+                        thumb,
+                        false,
+                        isElementMode[0]
+                );
 
-            ProjectStorageManager.addOrUpdateProject(ctx, item);
+                ProjectStorageManager.addOrUpdateProject(ctx, item);
 
-            if (listener != null) {
-                listener.onProjectCreated(item);
-            }
+                if (listener != null) {
+                    listener.onProjectCreated(item);
+                }
 
-            // Launch MainActivity (Editor)
-            Intent intent = new Intent(ctx, MainActivity.class);
-            intent.putExtra("EXTRA_PROJECT_ID", item.getId());
-            intent.putExtra("EXTRA_PROJECT_TITLE", item.getTitle());
-            intent.putExtra("EXTRA_PROJECT_WIDTH", item.getWidth());
-            intent.putExtra("EXTRA_PROJECT_HEIGHT", item.getHeight());
-            intent.putExtra("EXTRA_PROJECT_BG", item.getBackgroundColor());
-            intent.putExtra("EXTRA_PROJECT_ASPECT", item.getAspectRatio());
-            startActivity(intent);
+                // Launch MainActivity (Editor)
+                Intent intent = new Intent(ctx, MainActivity.class);
+                intent.putExtra("EXTRA_PROJECT_ID", item.getId());
+                intent.putExtra("EXTRA_PROJECT_TITLE", item.getTitle());
+                intent.putExtra("EXTRA_PROJECT_WIDTH", item.getWidth());
+                intent.putExtra("EXTRA_PROJECT_HEIGHT", item.getHeight());
+                intent.putExtra("EXTRA_PROJECT_BG", item.getBackgroundColor());
+                intent.putExtra("EXTRA_PROJECT_ASPECT", item.getAspectRatio());
+                intent.putExtra("EXTRA_IS_ELEMENT", item.isElement());
+                startActivity(intent);
 
-            dismiss();
-        });
+                dismiss();
+            });
+        }
     }
 
         private void showDimensionsDialog (TextView tvCompSize) {

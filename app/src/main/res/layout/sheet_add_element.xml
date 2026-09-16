@@ -131,9 +131,9 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Tab 5: Templates -->
+            <!-- Tab 5: Icons / SVGs -->
             <LinearLayout
-                android:id="@+id/tabAddTemplates"
+                android:id="@+id/tabAddIcons"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:gravity="center"
@@ -142,18 +142,18 @@
                 android:paddingEnd="14dp">
 
                 <ImageView
-                    android:id="@+id/ivTabTemplates"
+                    android:id="@+id/ivTabIcons"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_pe_template"
                     app:tint="@color/pe_icon_inactive" />
 
                 <TextView
-                    android:id="@+id/tvTabTemplates"
+                    android:id="@+id/tvTabIcons"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/tab_template"
+                    android:text="Icons"
                     android:textColor="@color/pe_text_secondary"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -167,26 +167,75 @@
 
     <!-- Center Grid + Right Action Rail (matching Image 1) -->
     <LinearLayout
+        android:id="@+id/layoutAddElementCenterContainer"
         android:layout_width="match_parent"
-        android:layout_height="185dp"
+        android:layout_height="215dp"
         android:orientation="horizontal">
 
-        <!-- Grid Container for Shapes / Elements -->
-        <FrameLayout
+        <!-- Grid Container for Shapes / Elements / Icons -->
+        <LinearLayout
             android:id="@+id/containerTabContent"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:orientation="vertical"
             android:padding="6dp">
 
-            <!-- Shapes RecyclerView (loads all shapes from assets/shapes/*.xml) -->
+            <!-- Search Bar for Icons -->
+            <LinearLayout
+                android:id="@+id/layoutIconSearchBar"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/bg_input_box"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pe_search"
+                    app:tint="@color/pe_text_secondary" />
+
+                <EditText
+                    android:id="@+id/etIconSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:hint="Search icons..."
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:singleLine="true"
+                    android:textColor="@color/pe_text_primary"
+                    android:textColorHint="@color/pe_text_secondary"
+                    android:textSize="12sp" />
+
+                <ImageButton
+                    android:id="@+id/btnClearIconSearch"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pe_close"
+                    android:visibility="gone"
+                    app:tint="@color/pe_text_secondary" />
+            </LinearLayout>
+
+            <!-- Grid RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvAddShapesGrid"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:clipToPadding="false"
                 android:scrollbars="vertical" />
-        </FrameLayout>
+        </LinearLayout>
 
         <!-- Vertical Divider -->
         <View

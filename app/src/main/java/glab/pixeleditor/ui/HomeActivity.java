@@ -287,7 +287,18 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
 
     private void loadProjects() {
         boolean onlyTrash = (currentTab == HomeTab.TRASH);
-        List<ProjectStorageManager.ProjectItem> list = ProjectStorageManager.loadAllProjects(this, onlyTrash);
+        List<ProjectStorageManager.ProjectItem> rawList = ProjectStorageManager.loadAllProjects(this, onlyTrash);
+        List<ProjectStorageManager.ProjectItem> list = new java.util.ArrayList<>();
+
+        for (ProjectStorageManager.ProjectItem item : rawList) {
+            if (currentTab == HomeTab.TRASH) {
+                if (item.isInTrash()) list.add(item);
+            } else if (currentTab == HomeTab.ELEMENTS) {
+                if (!item.isInTrash() && item.isElement()) list.add(item);
+            } else {
+                if (!item.isInTrash() && !item.isElement()) list.add(item);
+            }
+        }
 
         // Sorting
         if (tvSortLabel.getText().toString().contains("Name")) {
@@ -306,7 +317,10 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
             layoutEmptyState.setVisibility(View.VISIBLE);
             if (onlyTrash) {
                 tvEmptyTitle.setText("Trash is Empty");
-                tvEmptyDesc.setText("Deleted projects will be stored here for recovery.");
+                tvEmptyDesc.setText("Deleted items will be stored here for recovery.");
+            } else if (currentTab == HomeTab.ELEMENTS) {
+                tvEmptyTitle.setText("No Saved Elements");
+                tvEmptyDesc.setText("Create reusable elements with transparent backgrounds to insert anywhere.");
             } else {
                 tvEmptyTitle.setText("No Projects Found");
                 tvEmptyDesc.setText("Tap the + button below to create a project.");

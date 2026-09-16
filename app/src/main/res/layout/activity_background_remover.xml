@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pe_bg_canvas_workspace"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <!-- Top App Bar -->
+    <LinearLayout
+        android:id="@+id/layoutBgRemoverTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/pe_surface_panel"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="12dp">
+
+        <ImageButton
+            android:id="@+id/btnBackBgRemover"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_back"
+            app:tint="@color/pe_text_primary" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI Background Remover"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvImageDimensions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Neural Object Cutout"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnResetBgRemover"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_undo"
+            app:tint="@color/pe_text_secondary" />
+
+        <ImageButton
+            android:id="@+id/btnSettingsBgRemover"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="6dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pe_settings"
+            app:tint="@color/pe_text_secondary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnApplyBgRemover"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="Apply"
+            android:textColor="@color/pe_bg_canvas_workspace"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/pe_accent_mint"
+            app:cornerRadius="8dp"
+            app:icon="@drawable/ic_check"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            app:iconTint="@color/pe_bg_canvas_workspace" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/pe_border" />
+
+    <!-- Center Interactive Workspace Preview -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0C101A">
+
+        <glab.pixeleditor.ui.CutoutPreviewView
+            android:id="@+id/ivCutoutPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="12dp" />
+
+        <!-- Status / Tip overlay banner -->
+        <TextView
+            android:id="@+id/tvModeTip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_chip_pill"
+            android:paddingStart="14dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="5dp"
+            android:text="Tap anywhere on your subject to isolate it"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <!-- Loading Progress Indicator -->
+        <LinearLayout
+            android:id="@+id/layoutProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_panel_floating_top_rounded"
+            android:elevation="8dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:id="@+id/progressBgRemoval"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:indeterminateTint="@color/pe_accent_mint" />
+
+            <TextView
+                android:id="@+id/tvProgressMsg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Processing AI Cutout..."
+                android:textColor="@color/pe_text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Bottom Controls & Tool Selection Dock -->
+    <LinearLayout
+        android:id="@+id/layoutBottomControlsDock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/pe_surface_panel"
+        android:elevation="12dp"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
+
+        <!-- Mode Selector Chips Horizontal Scroll -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupCutoutModes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipModeU2Net"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:checked="true"
+                    android:text="🧠 Local AI (U²-Net)" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipModeCloud"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="🌐 Cloud AI" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipModeTap"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="🎯 Tap Subject" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipModeSelfie"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="👤 Portrait AI" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipModeBrush"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="🖌️ Touch Brush" />
+
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@color/pe_border" />
+
+        <!-- 1. Cloud AI Action Bar -->
+        <LinearLayout
+            android:id="@+id/layoutCloudControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvCurrentProvider"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Using: Free Cloud AI"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRunCloudAi"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Run Cutout"
+                android:textColor="@color/pe_accent_mint"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/pe_surface_elevated"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+
+        <!-- 2. Tolerance & Invert Controls (For U2Net / Tap / Portrait) -->
+        <LinearLayout
+            android:id="@+id/layoutToleranceControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tolerance:"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp" />
+
+            <glab.pixeleditor.view.ScrubRulerView
+                android:id="@+id/rulerBgThreshold"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvThresholdVal"
+                android:layout_width="46dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_chip_pill"
+                android:gravity="center"
+                android:text="50%"
+                android:textColor="@color/pe_accent_mint"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="22dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@color/pe_border" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchKeepSubject"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:checked="true"
+                android:text="Keep"
+                android:textColor="@color/pe_text_primary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 3. Manual Brush Controls -->
+        <LinearLayout
+            android:id="@+id/layoutBrushControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupBrushMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBrushErase"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:checked="true"
+                    android:text="Erase"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBrushRestore"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Restore"
+                    android:textSize="11sp" />
+            </com.google.android.material.chip.ChipGroup>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Size:"
+                android:textColor="@color/pe_text_secondary"
+                android:textSize="11sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderBrushSize"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:value="0.04"
+                android:valueFrom="0.01"
+                android:valueTo="0.15" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

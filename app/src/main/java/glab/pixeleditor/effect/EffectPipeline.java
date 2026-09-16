@@ -458,6 +458,42 @@ public class EffectPipeline {
         return shader;
     }
 
+    public static float calculateEffectExpansionPadding(List<EffectDefinition> effects, float w, float h) {
+        if (effects == null || effects.isEmpty()) return 0f;
+        float maxPad = 0f;
+        for (EffectDefinition eff : effects) {
+            if (!eff.isEnabled()) continue;
+            String id = eff.getId().toLowerCase();
+            String name = eff.getName() != null ? eff.getName().toLowerCase() : "";
+            String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+
+            if (id.contains("radial") || fn.contains("radial") || id.contains("scatter") || fn.contains("scatter")) {
+                EffectParam radP = eff.getParam("radius");
+                float rad = radP != null ? radP.getFloatValue() : 300f;
+                maxPad = Math.max(maxPad, rad + 150f);
+            } else if (id.contains("grid") || fn.contains("grid")) {
+                EffectParam spxP = eff.getParam("spacing_x");
+                EffectParam spyP = eff.getParam("spacing_y");
+                float sp = Math.max(spxP != null ? spxP.getFloatValue() : 60f, spyP != null ? spyP.getFloatValue() : 60f);
+                maxPad = Math.max(maxPad, sp * 4f + 100f);
+            } else if (id.contains("repeat") || fn.startsWith("repeat") || id.contains("echo")) {
+                EffectParam countP = eff.getParam("count");
+                int count = countP != null ? Math.round(countP.getFloatValue()) : 5;
+                EffectParam oxP = eff.getParam("offset_x");
+                EffectParam oyP = eff.getParam("offset_y");
+                float off = Math.max(Math.abs(oxP != null ? oxP.getFloatValue() : 30f), Math.abs(oyP != null ? oyP.getFloatValue() : 30f));
+                maxPad = Math.max(maxPad, count * off + 100f);
+            } else if (id.contains("blur") || name.contains("blur") || id.contains("glow") || name.contains("glow") || id.contains("shadow")) {
+                maxPad = Math.max(maxPad, Math.max(w, h) * 0.5f + 120f);
+            } else if (id.contains("wave") || id.contains("warp") || id.contains("displace") || id.contains("tile")) {
+                maxPad = Math.max(maxPad, Math.max(w, h) * 0.6f + 150f);
+            } else {
+                maxPad = Math.max(maxPad, 80f);
+            }
+        }
+        return Math.min(maxPad, 1200f);
+    }
+
     /**
      * Executes the layer's enabled Alight Motion effects sequentially using the GLSL CDATA shader engine.
      */
@@ -500,7 +536,7 @@ public class EffectPipeline {
             String id = eff.getId().toLowerCase();
             String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
 
-            // Handle repeat/pattern effects that have no GLSL shader — rendered CPU-side
+            // Handle repeat/pattern effects rendered CPU-side with dedicated geometric algorithms
             if (id.contains("repeat") || fn.startsWith("repeat")) {
                 current = applyRepeatEffect(current, eff);
                 continue;
@@ -517,14 +553,290 @@ public class EffectPipeline {
     }
 
     /**
-     * CPU-side implementation of repeat.xml effect.
-     * Draws N copies of the source bitmap, each offset/rotated/scaled by cumulative step values.
+     * Routes repeat effects to their dedicated geometric layout implementations:
+     * - Radial Repeat: Circle/Arc distribution around center
+     * - Grid Repeat: 2D Matrix rows x columns
+     * - Linear / Line Repeat: Spaced along an angle vector
+     * - Scatter Repeat: Pseudo-random organic cloud
+     * - Standard Repeat: Progressive offset trail
      */
     private static Bitmap applyRepeatEffect(Bitmap source, EffectDefinition eff) {
         if (source == null || source.isRecycled()) return source;
 
-        int count = 10;
-        float offsetX = 0f, offsetY = 0f;
+        String id = eff.getId() != null ? eff.getId().toLowerCase() : "";
+        String fn = eff.getFileName() != null ? eff.getFileName().toLowerCase() : "";
+        String name = eff.getName() != null ? eff.getName().toLowerCase() : "";
+
+        if (id.contains("radial") || fn.contains("radial") || name.contains("radial")) {
+            return applyRadialRepeat(source, eff);
+        } else if (id.contains("grid") || fn.contains("grid") || name.contains("grid")) {
+            return applyGridRepeat(source, eff);
+        } else if (id.contains("scatter") || fn.contains("scatter") || name.contains("scatter")) {
+            return applyScatterRepeat(source, eff);
+        } else if (id.contains("line") || fn.contains("line") || name.contains("linear")) {
+            return applyLinearRepeat(source, eff);
+        } else {
+            return applyStandardRepeat(source, eff);
+        }
+    }
+
+    /**
+     * Radial Repeat: Distributes count copies around a circular ring/arc at radius R.
+     */
+    private static Bitmap applyRadialRepeat(Bitmap source, EffectDefinition eff) {
+        int count = 8;
+        float radius = 220f;
+        float startAngle = 0f;
+        float sweepAngle = 360f;
+        float scale = 1.0f;
+        float alpha = 1.0f;
+
+        EffectParam countP = eff.getParam("count");
+        if (countP != null) count = Math.max(2, Math.min(60, Math.round(countP.getFloatValue())));
+
+        EffectParam radP = eff.getParam("radius");
+        if (radP != null) radius = Math.max(10f, radP.getFloatValue());
+
+        EffectParam angP = eff.getParam("angle");
+        if (angP != null) startAngle = angP.getFloatValue();
+
+        EffectParam scP = eff.getParam("scale");
+        if (scP != null && scP.getFloatValue() > 0f) scale = scP.getFloatValue();
+
+        EffectParam alP = eff.getParam("alpha");
+        if (alP != null) alpha = Math.max(0f, Math.min(1f, alP.getFloatValue()));
+
+        int w = source.getWidth();
+        int h = source.getHeight();
+
+        int outSize = (int) (radius * 2f + Math.max(w, h) * scale + 80f);
+        outSize = Math.max(outSize, Math.max(w, h));
+        outSize = Math.min(outSize, 2800);
+
+        Bitmap output = Bitmap.createBitmap(outSize, outSize, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        paint.setAlpha((int) (alpha * 255));
+
+        float cx = outSize / 2f;
+        float cy = outSize / 2f;
+        double stepRad = Math.toRadians(sweepAngle / (double) count);
+        double startRad = Math.toRadians(startAngle);
+
+        for (int i = 0; i < count; i++) {
+            double theta = startRad + i * stepRad;
+            float px = (float) (cx + radius * Math.cos(theta));
+            float py = (float) (cy + radius * Math.sin(theta));
+
+            canvas.save();
+            canvas.translate(px, py);
+            canvas.rotate((float) Math.toDegrees(theta) + 90f);
+            if (scale != 1.0f) {
+                canvas.scale(scale, scale);
+            }
+            canvas.drawBitmap(source, -w / 2f, -h / 2f, paint);
+            canvas.restore();
+        }
+
+        return output;
+    }
+
+    /**
+     * Grid Repeat: Arranges copies in a 2D matrix of rows x columns.
+     */
+    private static Bitmap applyGridRepeat(Bitmap source, EffectDefinition eff) {
+        int cols = 3;
+        int rows = 3;
+        float spacingX = 40f;
+        float spacingY = 40f;
+        float scale = 1.0f;
+        float alpha = 1.0f;
+
+        EffectParam countP = eff.getParam("count");
+        if (countP != null) {
+            int total = Math.max(1, Math.min(64, Math.round(countP.getFloatValue())));
+            cols = (int) Math.ceil(Math.sqrt(total));
+            rows = (int) Math.ceil((double) total / cols);
+        }
+
+        EffectParam spxP = eff.getParam("spacing_x");
+        if (spxP != null) spacingX = spxP.getFloatValue();
+        EffectParam spyP = eff.getParam("spacing_y");
+        if (spyP != null) spacingY = spyP.getFloatValue();
+
+        EffectParam scP = eff.getParam("scale");
+        if (scP != null && scP.getFloatValue() > 0f) scale = scP.getFloatValue();
+
+        EffectParam alP = eff.getParam("alpha");
+        if (alP != null) alpha = Math.max(0f, Math.min(1f, alP.getFloatValue()));
+
+        int w = source.getWidth();
+        int h = source.getHeight();
+
+        float cellW = w * scale + spacingX;
+        float cellH = h * scale + spacingY;
+        int outW = Math.min(2800, (int) (cols * cellW + 60f));
+        int outH = Math.min(2800, (int) (rows * cellH + 60f));
+
+        Bitmap output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        paint.setAlpha((int) (alpha * 255));
+
+        float startX = (outW - (cols - 1) * cellW) / 2f;
+        float startY = (outH - (rows - 1) * cellH) / 2f;
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                float px = startX + c * cellW;
+                float py = startY + r * cellH;
+
+                canvas.save();
+                canvas.translate(px, py);
+                if (scale != 1.0f) {
+                    canvas.scale(scale, scale);
+                }
+                canvas.drawBitmap(source, -w / 2f, -h / 2f, paint);
+                canvas.restore();
+            }
+        }
+
+        return output;
+    }
+
+    /**
+     * Linear Repeat: Repeats copies along a line vector at a specified angle and step distance.
+     */
+    private static Bitmap applyLinearRepeat(Bitmap source, EffectDefinition eff) {
+        int count = 6;
+        float spacing = 60f;
+        float angle = 0f;
+        float scale = 1.0f;
+        float alpha = 1.0f;
+
+        EffectParam countP = eff.getParam("count");
+        if (countP != null) count = Math.max(1, Math.min(40, Math.round(countP.getFloatValue())));
+
+        EffectParam spP = eff.getParam("spacing");
+        if (spP != null) spacing = spP.getFloatValue();
+
+        EffectParam angP = eff.getParam("angle");
+        if (angP != null) angle = angP.getFloatValue();
+
+        EffectParam scP = eff.getParam("scale");
+        if (scP != null && scP.getFloatValue() > 0f) scale = scP.getFloatValue();
+
+        EffectParam alP = eff.getParam("alpha");
+        if (alP != null) alpha = Math.max(0f, Math.min(1f, alP.getFloatValue()));
+
+        int w = source.getWidth();
+        int h = source.getHeight();
+
+        float totalDist = (count - 1) * spacing;
+        double rad = Math.toRadians(angle);
+        float spanX = (float) Math.abs(totalDist * Math.cos(rad));
+        float spanY = (float) Math.abs(totalDist * Math.sin(rad));
+
+        int outW = Math.min(2800, (int) (w * scale + spanX + 80f));
+        int outH = Math.min(2800, (int) (h * scale + spanY + 80f));
+
+        Bitmap output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+
+        float cx = outW / 2f;
+        float cy = outH / 2f;
+        float halfSpanX = (float) (totalDist * Math.cos(rad) / 2.0);
+        float halfSpanY = (float) (totalDist * Math.sin(rad) / 2.0);
+
+        for (int i = 0; i < count; i++) {
+            float t = (count > 1) ? (float) i / (float) (count - 1) : 0f;
+            float px = (float) (cx - halfSpanX + i * spacing * Math.cos(rad));
+            float py = (float) (cy - halfSpanY + i * spacing * Math.sin(rad));
+
+            float curAlpha = alpha * (1.0f - t * 0.4f);
+            paint.setAlpha((int) (Math.max(0f, Math.min(1f, curAlpha)) * 255));
+
+            canvas.save();
+            canvas.translate(px, py);
+            canvas.rotate(angle);
+            if (scale != 1.0f) {
+                float s = 1.0f + (scale - 1.0f) * t;
+                canvas.scale(s, s);
+            }
+            canvas.drawBitmap(source, -w / 2f, -h / 2f, paint);
+            canvas.restore();
+        }
+
+        return output;
+    }
+
+    /**
+     * Scatter Repeat: Organic/random scattering of copies within a circular radius.
+     */
+    private static Bitmap applyScatterRepeat(Bitmap source, EffectDefinition eff) {
+        int count = 16;
+        float radius = 260f;
+        float seed = 1.0f;
+        float scale = 0.8f;
+        float alpha = 0.9f;
+
+        EffectParam countP = eff.getParam("count");
+        if (countP != null) count = Math.max(2, Math.min(80, Math.round(countP.getFloatValue())));
+
+        EffectParam radP = eff.getParam("radius");
+        if (radP != null) radius = Math.max(20f, radP.getFloatValue());
+
+        EffectParam seedP = eff.getParam("scatterSeed");
+        if (seedP == null) seedP = eff.getParam("seed");
+        if (seedP != null) seed = seedP.getFloatValue();
+
+        EffectParam scP = eff.getParam("scale");
+        if (scP != null && scP.getFloatValue() > 0f) scale = scP.getFloatValue();
+
+        EffectParam alP = eff.getParam("alpha");
+        if (alP != null) alpha = Math.max(0f, Math.min(1f, alP.getFloatValue()));
+
+        int w = source.getWidth();
+        int h = source.getHeight();
+
+        int outSize = Math.min(2800, (int) (radius * 2f + Math.max(w, h) * scale + 80f));
+        Bitmap output = Bitmap.createBitmap(outSize, outSize, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+
+        float cx = outSize / 2f;
+        float cy = outSize / 2f;
+        java.util.Random rnd = new java.util.Random((long) (seed * 10000.0));
+
+        for (int i = 0; i < count; i++) {
+            double angle = rnd.nextDouble() * Math.PI * 2.0;
+            double dist = Math.sqrt(rnd.nextDouble()) * radius;
+            float px = (float) (cx + dist * Math.cos(angle));
+            float py = (float) (cy + dist * Math.sin(angle));
+
+            float s = scale * (0.6f + rnd.nextFloat() * 0.8f);
+            float rot = rnd.nextFloat() * 360f;
+            float a = alpha * (0.5f + rnd.nextFloat() * 0.5f);
+            paint.setAlpha((int) (Math.max(0f, Math.min(1f, a)) * 255));
+
+            canvas.save();
+            canvas.translate(px, py);
+            canvas.rotate(rot);
+            canvas.scale(s, s);
+            canvas.drawBitmap(source, -w / 2f, -h / 2f, paint);
+            canvas.restore();
+        }
+
+        return output;
+    }
+
+    /**
+     * Standard Repeat: Cumulative step offset trail.
+     */
+    private static Bitmap applyStandardRepeat(Bitmap source, EffectDefinition eff) {
+        int count = 5;
+        float offsetX = 30f, offsetY = 30f;
         float angle = 0f;
         float scale = 1.0f;
         float alpha = 1.0f;
@@ -536,6 +848,11 @@ public class EffectPipeline {
         EffectParam oyParam = eff.getParam("offset_y");
         if (oxParam != null) offsetX = oxParam.getFloatValue();
         if (oyParam != null) offsetY = oyParam.getFloatValue();
+
+        if (offsetX == 0f && offsetY == 0f && count > 1) {
+            offsetX = 25f;
+            offsetY = 25f;
+        }
 
         EffectParam angleParam = eff.getParam("angle");
         if (angleParam != null) angle = angleParam.getFloatValue();
@@ -549,33 +866,32 @@ public class EffectPipeline {
         int w = source.getWidth();
         int h = source.getHeight();
 
-        // Compute canvas size to fit all copies (add padding for offsets)
-        int padX = (int) (Math.abs(offsetX) * count + Math.abs(w));
-        int padY = (int) (Math.abs(offsetY) * count + Math.abs(h));
-        int outW = Math.max(w, padX + w);
-        int outH = Math.max(h, padY + h);
-        // Safety cap
-        outW = Math.min(outW, 4096);
-        outH = Math.min(outH, 4096);
+        int padX = (int) (Math.abs(offsetX) * count + 60f);
+        int padY = (int) (Math.abs(offsetY) * count + 60f);
+        int outW = Math.min(2800, Math.max(w, w + padX * 2));
+        int outH = Math.min(2800, Math.max(h, h + padY * 2));
 
         Bitmap output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
-
         Paint drawPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         float cx = outW / 2f;
         float cy = outH / 2f;
 
-        for (int i = count; i >= 0; i--) {
-            float stepAlpha = alpha - (alpha / count) * i;
+        for (int i = count - 1; i >= 0; i--) {
+            float stepAlpha = (count > 1) ? alpha * (1f - ((float) i / (float) count) * 0.4f) : alpha;
             int a = (int) (Math.max(0f, Math.min(1f, stepAlpha)) * 255);
             drawPaint.setAlpha(a);
 
             canvas.save();
-            canvas.translate(cx + offsetX * i, cy + offsetY * i);
-            canvas.rotate(angle * i);
-            float sc = (float) Math.pow(scale, i);
-            canvas.scale(sc, sc);
-            canvas.drawBitmap(source, -w / 2f, -h / 2f, drawPaint);
+            canvas.translate(cx + offsetX * i - (w / 2f), cy + offsetY * i - (h / 2f));
+            if (angle != 0f) {
+                canvas.rotate(angle * i, w / 2f, h / 2f);
+            }
+            if (scale != 1.0f && scale > 0f) {
+                float sc = (float) Math.pow(scale, i);
+                canvas.scale(sc, sc, w / 2f, h / 2f);
+            }
+            canvas.drawBitmap(source, 0, 0, drawPaint);
             canvas.restore();
         }
 

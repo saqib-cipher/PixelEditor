@@ -2,6 +2,7 @@ package glab.pixeleditor.model;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
@@ -73,6 +74,23 @@ public class PhotoLayer extends CanvasLayer {
             paint.setColorFilter(filter);
         }
 
+        // Draw Shadows
+        if (!shadows.isEmpty()) {
+            for (ShadowItem s : shadows) {
+                if (!s.isEnabled()) continue;
+                int sAlpha = Math.round(Color.alpha(s.getColor()) * s.getAlpha() * (opacity / 255f));
+                if (sAlpha <= 0) continue;
+                Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                shadowPaint.setStyle(Paint.Style.FILL);
+                shadowPaint.setColor(Color.argb(sAlpha, Color.red(s.getColor()), Color.green(s.getColor()), Color.blue(s.getColor())));
+                if (s.getSize() > 0.5f) {
+                    shadowPaint.setMaskFilter(new android.graphics.BlurMaskFilter(s.getSize(), android.graphics.BlurMaskFilter.Blur.NORMAL));
+                }
+                RectF shRect = new RectF(destRect.left + s.getOffsetX(), destRect.top + s.getOffsetY(), destRect.right + s.getOffsetX(), destRect.bottom + s.getOffsetY());
+                canvas.drawRect(shRect, shadowPaint);
+            }
+        }
+
         // Apply Mask, Trim, Blur
         glab.pixeleditor.effect.EffectPipeline.applyMaskAndStyling(canvas, this, destRect, paint, null);
 
@@ -83,11 +101,45 @@ public class PhotoLayer extends CanvasLayer {
             canvas.drawRect(destRect, paint);
             paint.setShader(null);
         } else {
-            // Processed bitmap through authentic Alight Motion GLSL CDATA shaders
-            RectF layerBounds = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
-            Bitmap renderBitmap = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, bitmap, layerBounds, null);
-            android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, renderBitmap.getWidth(), renderBitmap.getHeight());
-            canvas.drawBitmap(renderBitmap, srcRect, destRect, paint);
+            boolean hasActiveEffects = false;
+            for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
+                if (eff.isEnabled()) {
+                    hasActiveEffects = true;
+                    break;
+                }
+            }
+
+            if (hasActiveEffects) {
+                float pad = glab.pixeleditor.effect.EffectPipeline.calculateEffectExpansionPadding(appliedEffects, width, height);
+                int bw = Math.max(1, (int) Math.ceil(bitmap.getWidth() + pad * 2f));
+                int bh = Math.max(1, (int) Math.ceil(bitmap.getHeight() + pad * 2f));
+                Bitmap paddedBmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
+                Canvas offCanvas = new Canvas(paddedBmp);
+                offCanvas.drawBitmap(bitmap, pad, pad, paint);
+
+                RectF layerBounds = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
+                Bitmap renderBitmap = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, paddedBmp, layerBounds, null);
+                float outPadX = (renderBitmap.getWidth() - bitmap.getWidth()) / 2f * (width / (float) bitmap.getWidth());
+                float outPadY = (renderBitmap.getHeight() - bitmap.getHeight()) / 2f * (height / (float) bitmap.getHeight());
+                RectF dstRect = new RectF(-width / 2f - outPadX, -height / 2f - outPadY, width / 2f + outPadX, height / 2f + outPadY);
+                canvas.drawBitmap(renderBitmap, null, dstRect, paint);
+            } else {
+                android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+                canvas.drawBitmap(bitmap, srcRect, destRect, paint);
+            }
+        }
+
+        // Draw Multiple Configured Borders
+        if (!borders.isEmpty()) {
+            for (BorderItem b : borders) {
+                if (!b.isEnabled() || b.getWidth() <= 0f) continue;
+                Paint bp = new Paint(Paint.ANTI_ALIAS_FLAG);
+                bp.setStyle(Paint.Style.STROKE);
+                bp.setStrokeWidth(b.getWidth());
+                bp.setColor(b.getColor());
+                bp.setAlpha(Math.round(Color.alpha(b.getColor()) * (opacity / 255f)));
+                canvas.drawRect(destRect, bp);
+            }
         }
 
         // Apply Gradient or Solid Color Overlay if active

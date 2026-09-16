@@ -1,0 +1,10 @@
+all layout should be responsive window inset purely visible
+should use material 3 expressive (latest version) components
+clean and minimal ui
+improve performance
+doesnt conflict any play store policy
+storage permission etc
+floating and animated components for editor ui
+dont use toast everywhere
+when change some or add new in app then explain that in explain.md
+if any change is made by user dont change that only if needed, dont touch it

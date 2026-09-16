@@ -4,7 +4,10 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -36,15 +39,11 @@ public class EffectHelper {
             "shake.xml", "shake2.xml", "shake-parts.xml",
             "spin.xml",
             "swing.xml", "swing2.xml",
-            "timecode.xml",
             "timequant.xml",
             "drawing-progress.xml",
-            "textprogress.xml",
-            "textrand.xml",
             "echo-keyframe.xml",
             "parenthelper.xml",
             "scaleassist.xml",
-            "counter.xml",
             "checkerdissolve.xml", "checkerdissolve2.xml",
             "fade.xml",
             "wipe.xml", "wipe2.xml", "radialwipe.xml",
@@ -484,32 +483,37 @@ public class EffectHelper {
     public static android.graphics.drawable.Drawable loadThumbnailDrawable(Context context, EffectDefinition effect) {
         if (effect == null || context == null) return null;
         String assetPath = resolveThumbnailAssetPath(context, effect);
-        if (assetPath == null) return null;
-
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                android.graphics.ImageDecoder.Source src =
-                        android.graphics.ImageDecoder.createSource(context.getAssets(), assetPath);
-                android.graphics.drawable.Drawable drawable =
-                        android.graphics.ImageDecoder.decodeDrawable(src);
-                if (drawable instanceof android.graphics.drawable.Animatable) {
-                    ((android.graphics.drawable.Animatable) drawable).start();
-                }
-                return drawable;
-            } else {
-                try (InputStream is = context.getAssets().open(assetPath)) {
-                    Bitmap bmp = BitmapFactory.decodeStream(is);
-                    if (bmp != null) {
-                        return new android.graphics.drawable.BitmapDrawable(context.getResources(), bmp);
+        if (assetPath != null) {
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    android.graphics.ImageDecoder.Source src =
+                            android.graphics.ImageDecoder.createSource(context.getAssets(), assetPath);
+                    android.graphics.drawable.Drawable drawable =
+                            android.graphics.ImageDecoder.decodeDrawable(src);
+                    if (drawable instanceof android.graphics.drawable.Animatable) {
+                        ((android.graphics.drawable.Animatable) drawable).start();
+                    }
+                    return drawable;
+                } else {
+                    try (InputStream is = context.getAssets().open(assetPath)) {
+                        Bitmap bmp = BitmapFactory.decodeStream(is);
+                        if (bmp != null) {
+                            return new android.graphics.drawable.BitmapDrawable(context.getResources(), bmp);
+                        }
                     }
                 }
-            }
-        } catch (Exception ignored) {}
+            } catch (Exception ignored) {}
+        }
+
+        Bitmap fallback = loadThumbnail(context, effect);
+        if (fallback != null) {
+            return new android.graphics.drawable.BitmapDrawable(context.getResources(), fallback);
+        }
         return null;
     }
 
     /**
-     * Loads thumbnail image bitmap from assets with fuzzy matching and LRU caching.
+     * Loads thumbnail image bitmap from assets with fuzzy matching, aliases and procedural fallback.
      */
     public static Bitmap loadThumbnail(Context context, EffectDefinition effect) {
         if (effect == null || context == null) {
@@ -533,7 +537,67 @@ public class EffectHelper {
             } catch (Exception ignored) {}
         }
 
+        // Generate expressive procedural thumbnail bitmap
+        Bitmap generated = generateProceduralThumbnail(context, effect);
+        if (generated != null) {
+            sThumbnailCache.put(cacheKey, generated);
+            return generated;
+        }
+
         return null;
+    }
+
+    private static Bitmap generateProceduralThumbnail(Context context, EffectDefinition effect) {
+        int size = 96;
+        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+
+        String cat = effect.getCategory() != null ? effect.getCategory().toLowerCase() : "";
+        int startCol = 0xFF1E273C;
+        int endCol = 0xFF0D1525;
+        int accentCol = 0xFF00E5BC;
+
+        if (cat.contains("blur")) {
+            startCol = 0xFF2A1B3D;
+            endCol = 0xFF140D20;
+            accentCol = 0xFFD946EF;
+        } else if (cat.contains("color")) {
+            startCol = 0xFF1C2D37;
+            endCol = 0xFF0A1820;
+            accentCol = 0xFF06B6D4;
+        } else if (cat.contains("repeat") || cat.contains("procedural")) {
+            startCol = 0xFF1A332B;
+            endCol = 0xFF0B1E17;
+            accentCol = 0xFF10B981;
+        } else if (cat.contains("warp") || cat.contains("distort")) {
+            startCol = 0xFF35201A;
+            endCol = 0xFF1B0F0B;
+            accentCol = 0xFFF97316;
+        }
+
+        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bgPaint.setShader(new android.graphics.LinearGradient(0, 0, size, size, startCol, endCol, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawRoundRect(0, 0, size, size, 16f, 16f, bgPaint);
+
+        Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ringPaint.setStyle(Paint.Style.STROKE);
+        ringPaint.setStrokeWidth(3f);
+        ringPaint.setColor(accentCol);
+        canvas.drawCircle(size / 2f, size / 2f, 24f, ringPaint);
+
+        Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        textPaint.setColor(0xFFFFFFFF);
+        textPaint.setTextSize(20f);
+        textPaint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        String name = effect.getName() != null && !effect.getName().isEmpty() ? effect.getName() : "FX";
+        String initial = name.substring(0, Math.min(2, name.length())).toUpperCase(java.util.Locale.US);
+        Paint.FontMetrics fm = textPaint.getFontMetrics();
+        float baseline = size / 2f - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(initial, size / 2f, baseline, textPaint);
+
+        return bmp;
     }
 
     private static Map<String, String> getCommonAliases() {
@@ -545,6 +609,7 @@ public class EffectHelper {
         map.put("pinchbulge", "pinch_bulge");
         map.put("mattechoke", "matte_choker");
         map.put("simplestars", "simple_starfield");
+        map.put("repeat", "repeat");
         map.put("repeatlinear", "linear_repeat");
         map.put("repeatscatter", "scatter_repeat");
         map.put("repeatradial", "radial_repeat");
@@ -557,6 +622,11 @@ public class EffectHelper {
         map.put("colortune", "color_tune");
         map.put("fastblur", "box_blur");
         map.put("unsharpmask", "unsharp_mask");
+        map.put("tiles", "tiles");
+        map.put("rgbsplit", "rgb_split");
+        map.put("vignette", "vignette");
+        map.put("halftone", "halftone");
+        map.put("findedges", "find_edges");
         return map;
     }
 

@@ -16,7 +16,8 @@ import java.util.List;
 
 /**
  * Modern Material 3 Expressive clamped slider that strictly prevents dragging
- * beyond minimum and maximum boundaries, with haptic feedback ticks on bounds hit.
+ * beyond minimum and maximum boundaries, with smooth thumb animations, anti-aliased
+ * rounded tracks, and bounds haptic feedback.
  */
 public class ClampedSliderView extends View {
 
@@ -76,6 +77,7 @@ public class ClampedSliderView extends View {
 
         thumbFillPaint.setStyle(Paint.Style.FILL);
         thumbFillPaint.setColor(0xFFFFFFFF);
+        thumbFillPaint.setShadowLayer(3f * density, 0f, 1.5f * density, 0x55000000);
 
         thumbStrokePaint.setStyle(Paint.Style.STROKE);
         thumbStrokePaint.setColor(0xFF00E5BC);
@@ -84,8 +86,10 @@ public class ClampedSliderView extends View {
         thumbHaloPaint.setStyle(Paint.Style.FILL);
         thumbHaloPaint.setColor(0x3300E5BC);
 
+        // Hardware layer for shadow rendering
+        setLayerType(LAYER_TYPE_SOFTWARE, null);
+
         if (attrs != null) {
-            // Read standard android attributes or default
             int[] attrsArray = new int[]{
                     android.R.attr.value,
                     android.R.attr.max
@@ -220,18 +224,26 @@ public class ClampedSliderView extends View {
 
         float thumbX = paddingStart + trackWidth * progress;
 
-        activeTrackRect.set(paddingStart, centerY - trackHeight / 2f, thumbX, centerY + trackHeight / 2f);
-        canvas.drawRoundRect(activeTrackRect, trackHeight / 2f, trackHeight / 2f, trackActivePaint);
+        if (progress > 0.001f) {
+            float activeRight = Math.max(paddingStart + trackHeight, thumbX);
+            activeTrackRect.set(paddingStart, centerY - trackHeight / 2f, activeRight, centerY + trackHeight / 2f);
+            canvas.drawRoundRect(activeTrackRect, trackHeight / 2f, trackHeight / 2f, trackActivePaint);
+        }
 
         // Thumb Halo if touched
         if (isDragging) {
             canvas.drawCircle(thumbX, centerY, haloRadius, thumbHaloPaint);
         }
 
-        // Thumb Body
-        canvas.drawCircle(thumbX, centerY, thumbRadius, thumbFillPaint);
-        canvas.drawCircle(thumbX, centerY, thumbRadius, thumbStrokePaint);
+        // Thumb Body with shadow
+        float currentRadius = isDragging ? thumbRadius * 1.15f : thumbRadius;
+        canvas.drawCircle(thumbX, centerY, currentRadius, thumbFillPaint);
+        canvas.drawCircle(thumbX, centerY, currentRadius, thumbStrokePaint);
     }
+
+    private float downX = 0f;
+    private float downY = 0f;
+    private boolean isHorizontalDragConfirmed = false;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -242,22 +254,48 @@ public class ClampedSliderView extends View {
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                downX = event.getX();
+                downY = event.getY();
+                isHorizontalDragConfirmed = false;
                 isDragging = true;
                 hitBoundaryThisDrag = false;
-                getParent().requestDisallowInterceptTouchEvent(true);
+                if (getParent() != null) {
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                }
                 updateValueFromTouch(event.getX(), paddingStart, trackWidth);
                 invalidate();
                 return true;
 
             case MotionEvent.ACTION_MOVE:
+                float dx = Math.abs(event.getX() - downX);
+                float dy = Math.abs(event.getY() - downY);
+
+                if (!isHorizontalDragConfirmed) {
+                    if (dy > dx * 1.5f && dy > 12f) {
+                        isDragging = false;
+                        if (getParent() != null) {
+                            getParent().requestDisallowInterceptTouchEvent(false);
+                        }
+                        return false;
+                    } else if (dx > 8f) {
+                        isHorizontalDragConfirmed = true;
+                        if (getParent() != null) {
+                            getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                    }
+                }
+
                 updateValueFromTouch(event.getX(), paddingStart, trackWidth);
                 return true;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 isDragging = false;
+                isHorizontalDragConfirmed = false;
                 hitBoundaryThisDrag = false;
-                getParent().requestDisallowInterceptTouchEvent(false);
+                if (getParent() != null) {
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                }
                 invalidate();
                 return true;
         }
@@ -267,11 +305,7 @@ public class ClampedSliderView extends View {
 
     private void updateValueFromTouch(float touchX, float paddingStart, float trackWidth) {
         float fraction;
-        float min = Math.min(valueFrom, valueTo);
-        float max = Math.max(valueFrom, valueTo);
-
         if (touchX >= paddingStart + trackWidth) {
-            // Strictly clamped at max - cannot drag further
             fraction = 1.0f;
             if (!hitBoundaryThisDrag) {
                 try {
@@ -280,7 +314,6 @@ public class ClampedSliderView extends View {
                 hitBoundaryThisDrag = true;
             }
         } else if (touchX <= paddingStart) {
-            // Strictly clamped at min - cannot drag further
             fraction = 0.0f;
             if (!hitBoundaryThisDrag) {
                 try {
@@ -293,6 +326,7 @@ public class ClampedSliderView extends View {
             hitBoundaryThisDrag = false;
         }
 
+        fraction = Math.max(0.0f, Math.min(1.0f, fraction));
         float calculatedVal = valueFrom + fraction * (valueTo - valueFrom);
         setValueInternal(calculatedVal, true);
     }

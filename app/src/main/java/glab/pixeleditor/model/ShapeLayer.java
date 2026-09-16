@@ -186,23 +186,29 @@ public class ShapeLayer extends CanvasLayer {
 
         boolean hasActiveEffects = false;
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
-            if (eff.isEnabled() && eff.getShaderSource() != null && !eff.getShaderSource().trim().isEmpty()) {
+            if (eff.isEnabled()) {
                 hasActiveEffects = true;
                 break;
             }
         }
 
         if (hasActiveEffects && width > 0 && height > 0) {
-            int bw = Math.max(1, (int) Math.ceil(width));
-            int bh = Math.max(1, (int) Math.ceil(height));
+            float pad = glab.pixeleditor.effect.EffectPipeline.calculateEffectExpansionPadding(appliedEffects, width, height);
+            int bw = Math.max(1, (int) Math.ceil(width + pad * 2f));
+            int bh = Math.max(1, (int) Math.ceil(height + pad * 2f));
             Bitmap shapeBmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
             Canvas offCanvas = new Canvas(shapeBmp);
-            RectF offRect = new RectF(0, 0, bw, bh);
-            drawShapeGeometry(offCanvas, offRect, fillPaint, strokePaint);
+            RectF offRect = new RectF(pad - width / 2f, pad - height / 2f, pad + width / 2f, pad + height / 2f);
+            offCanvas.translate(bw / 2f, bh / 2f);
+            RectF localRect = new RectF(-width / 2f, -height / 2f, width / 2f, height / 2f);
+            drawShapeGeometry(offCanvas, localRect, fillPaint, strokePaint);
 
             RectF layerBounds = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
             Bitmap processed = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, shapeBmp, layerBounds, null);
-            canvas.drawBitmap(processed, null, rect, null);
+            float outPadX = (processed.getWidth() - width) / 2f;
+            float outPadY = (processed.getHeight() - height) / 2f;
+            RectF dstRect = new RectF(-width / 2f - outPadX, -height / 2f - outPadY, width / 2f + outPadX, height / 2f + outPadY);
+            canvas.drawBitmap(processed, null, dstRect, null);
         } else {
             drawShapeGeometry(canvas, rect, fillPaint, strokePaint);
         }

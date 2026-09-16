@@ -125,10 +125,10 @@
                 android:id="@+id/layoutLeftCanvasTools"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="start|bottom"
-                android:layout_marginStart="12dp"
+                android:layout_gravity="end|bottom"
+                android:layout_marginEnd="12dp"
                 android:layout_marginBottom="16dp"
-                android:orientation="vertical">
+                android:orientation="horizontal">
 
                 <!-- Copy / Duplicate Layer -->
                 <com.google.android.material.card.MaterialCardView
@@ -136,7 +136,7 @@
                     style="@style/Widget.PixelEditor.Card"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginEnd="8dp"
                     android:clickable="true"
                     android:focusable="true"
                     app:cardBackgroundColor="#D9161D2D"
@@ -157,7 +157,7 @@
                     style="@style/Widget.PixelEditor.Card"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginEnd="8dp"
                     android:clickable="true"
                     android:focusable="true"
                     app:cardBackgroundColor="#D9161D2D"
@@ -178,7 +178,7 @@
                     style="@style/Widget.PixelEditor.Card"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginEnd="8dp"
                     android:clickable="true"
                     android:focusable="true"
                     app:cardBackgroundColor="#D9161D2D"
@@ -239,6 +239,7 @@
                     app:strokeColor="@color/pe_border">
 
                     <ImageView
+                        android:id="@+id/rightLayoutToggle"
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_gravity="center"
@@ -407,25 +408,28 @@
             android:elevation="12dp"
             android:orientation="vertical">
 
-            <!-- Sleek Top Pill Handle Indicator -->
+            <!-- Sleek Top Pill Handle Indicator (Swipe Up / Tap to Expand) -->
             <LinearLayout
+                android:id="@+id/handleBottomPanel"
                 android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="2dp"
+                android:layout_height="20dp"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center"
                 android:orientation="horizontal">
 
                 <View
-                    android:layout_width="38dp"
-                    android:layout_height="3dp"
+                    android:id="@+id/viewPillIndicator"
+                    android:layout_width="42dp"
+                    android:layout_height="4dp"
                     android:background="@drawable/bg_pill_indicator" />
             </LinearLayout>
 
             <!-- 4. Dynamic Bottom Panel Container (ViewFlipper) -->
-            <ViewFlipper
+            <glab.pixeleditor.view.AutoHeightViewFlipper
                 android:id="@+id/flipperBottomPanels"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content">
 
                 <!-- 0: Layer Menu -->
                 <include layout="@layout/panel_layer_menu" />
@@ -457,7 +461,10 @@
                 <!-- 9: Blending & Opacity Panel (Screenshot 2) -->
                 <include layout="@layout/panel_blending_opacity" />
 
-            </ViewFlipper>
+                <!-- 10: Typography & Edit Text Panel -->
+                <include layout="@layout/panel_edit_text" />
+
+            </glab.pixeleditor.view.AutoHeightViewFlipper>
         </LinearLayout>
     </LinearLayout>
 

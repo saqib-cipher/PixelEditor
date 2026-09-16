@@ -16,6 +16,11 @@ public class ShapeDefinition {
     private final List<EffectParam> params = new ArrayList<>();
     private String scriptSource = "";
 
+    // SVG Vector icon support
+    private boolean isSvg = false;
+    private boolean isOutlineSvg = false;
+    private String svgContent = "";
+
     public ShapeDefinition(String id, String fileName, String name) {
         this.id = id;
         this.fileName = fileName;
@@ -44,6 +49,9 @@ public class ShapeDefinition {
     public ShapeDefinition copy() {
         ShapeDefinition copy = new ShapeDefinition(id, fileName, name);
         copy.setScriptSource(scriptSource);
+        copy.setSvg(isSvg);
+        copy.setOutlineSvg(isOutlineSvg);
+        copy.setSvgContent(svgContent);
         for (EffectParam p : params) {
             copy.addParam(p.copy());
         }
@@ -57,6 +65,9 @@ public class ShapeDefinition {
             json.put("fileName", fileName);
             json.put("name", name);
             json.put("scriptSource", scriptSource);
+            json.put("isSvg", isSvg);
+            json.put("isOutlineSvg", isOutlineSvg);
+            json.put("svgContent", svgContent);
 
             JSONArray pArray = new JSONArray();
             for (EffectParam p : params) {
@@ -77,6 +88,9 @@ public class ShapeDefinition {
 
         ShapeDefinition def = new ShapeDefinition(id, fileName, name);
         def.scriptSource = json.optString("scriptSource", "");
+        def.isSvg = json.optBoolean("isSvg", false);
+        def.isOutlineSvg = json.optBoolean("isOutlineSvg", false);
+        def.svgContent = json.optString("svgContent", "");
 
         JSONArray pArray = json.optJSONArray("params");
         if (pArray != null) {
@@ -99,4 +113,11 @@ public class ShapeDefinition {
     public List<EffectParam> getParams() { return params; }
     public String getScriptSource() { return scriptSource; }
     public void setScriptSource(String scriptSource) { this.scriptSource = scriptSource; }
+
+    public boolean isSvg() { return isSvg; }
+    public void setSvg(boolean svg) { isSvg = svg; }
+    public boolean isOutlineSvg() { return isOutlineSvg; }
+    public void setOutlineSvg(boolean outlineSvg) { isOutlineSvg = outlineSvg; }
+    public String getSvgContent() { return svgContent; }
+    public void setSvgContent(String svgContent) { this.svgContent = svgContent; }
 }

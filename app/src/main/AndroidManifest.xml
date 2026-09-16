@@ -2,8 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <application
         android:allowBackup="true"
+        android:usesCleartextTraffic="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -40,6 +46,13 @@
             android:theme="@style/Theme.PixelEditor"
             tools:targetApi="24" />
 
+        <!-- AI Background Remover Activity -->
+        <activity
+            android:name=".ui.BackgroundRemoverActivity"
+            android:exported="false"
+            android:label="Background Remover"
+            android:theme="@style/Theme.PixelEditor" />
+
         <!-- FileProvider for project sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -50,6 +63,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Zip Compress & Extraction Service -->
+        <service
+            android:name=".service.ZipCompressService"
+            android:exported="false" />
 
     </application>
 

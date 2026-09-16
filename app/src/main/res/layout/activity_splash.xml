@@ -6,7 +6,8 @@
     android:layout_height="match_parent"
     android:background="@color/pe_bg_canvas_workspace"
     android:gravity="center"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:padding="24dp">
 
     <!-- Center Logo Container with Mint Glow Ring -->
     <FrameLayout
@@ -65,14 +66,47 @@
         android:textSize="11sp"
         android:textStyle="bold" />
 
-    <!-- Indeterminate Mint Progress Bar -->
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:layout_width="120dp"
-        android:layout_height="3dp"
-        android:layout_marginTop="48dp"
-        android:indeterminate="true"
-        app:indicatorColor="@color/pe_accent_mint"
-        app:trackColor="#24304A"
-        app:trackCornerRadius="2dp" />
+    <!-- Extraction / Loading Container -->
+    <LinearLayout
+        android:id="@+id/layoutExtractionProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- Progress Bar -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/splashProgressBar"
+            android:layout_width="160dp"
+            android:layout_height="4dp"
+            android:indeterminate="true"
+            app:indicatorColor="@color/pe_accent_mint"
+            app:trackColor="#24304A"
+            app:trackCornerRadius="2dp" />
+
+        <!-- Status Message & Percentage -->
+        <TextView
+            android:id="@+id/tvSplashStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:ellipsize="middle"
+            android:maxLines="1"
+            android:text="Initializing Studio..."
+            android:textColor="@color/pe_text_secondary"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvSplashProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </LinearLayout>

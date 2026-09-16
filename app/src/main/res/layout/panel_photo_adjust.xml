@@ -169,4 +169,30 @@
             app:backgroundTint="#243048"
             app:cornerRadius="6dp" />
     </LinearLayout>
+
+    <!-- AI Subject / BG Removal Cutout Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRemoveBackground"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:backgroundTint="#243048"
+            android:text="AI Subject / Remove Background"
+            android:textColor="@color/pe_accent_mint"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp"
+            app:icon="@drawable/ic_tool_effects"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            app:iconTint="@color/pe_accent_mint"
+            app:strokeColor="@color/pe_accent_mint"
+            app:strokeWidth="1dp" />
+    </LinearLayout>
 </LinearLayout>

@@ -213,7 +213,7 @@
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_tool_effects"
-                    app:tint="@color/pe_text_secondary" />
+                    app:tint="@color/pe_text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"

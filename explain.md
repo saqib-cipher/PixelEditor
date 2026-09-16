@@ -116,9 +116,15 @@ Vector geometry layer (Rectangle, Circle, Star, Polygon, Teardrop, Crescent, Arr
 - `cloneLayer()` / `copy()`: Preserves shape definitions, fill, stroke, borders, shadows, and effect states.
 
 ### [`TextLayer.java`](file:///c:/Users/sddrk/AndroidStudioProjects/MyApplication/app/src/main/java/glab/pixeleditor/model/TextLayer.java)
-Text layer with styling, stroke, shadows, and text-specific effect transforms.
-- `draw(Canvas)`: Handles text layout, baseline positioning, font styles, text modifiers (Text Transform, Text Progress, Randomize), and shader effects.
+Text layer with styling, typography, stroke, shadows, fill modes (Solid, Gradient, Media Image texture, None), and text-specific effect transforms.
+- `draw(Canvas)`: Renders text with active `FillMode`:
+  - **Solid Fill**: Single color with alpha transparency.
+  - **Gradient Fill**: Configurable `LinearGradient`, `RadialGradient`, or `SweepGradient` shaders using start/end colors and offsets.
+  - **Media / Image Texture Fill**: Applies `BitmapShader` with `FILL` (center-crop), `FIT`, or `STRETCH` scaling modes over text glyphs.
+  - **None**: Transparent fill (outline/stroke/shadows only).
+  - Handles text layout, baseline positioning, font styles, text modifiers (Text Transform, Text Progress, Randomize), and offscreen GL shader effect pipeline.
 - `recalculateBounds()`: Computes precise text width and font metrics height.
+- `toJson(Context)` / `fromJson(Context, JSONObject)` / `copy()` / `cloneLayer()`: Preserves fill modes, gradient coordinates, gradient type, and media image fill URI across project saves and undo/redo snapshots.
 
 ### [`EditorProject.java`](file:///c:/Users/sddrk/AndroidStudioProjects/MyApplication/app/src/main/java/glab/pixeleditor/model/EditorProject.java)
 Represents a project canvas, layers, metadata, and history.
@@ -228,3 +234,43 @@ Splash launch screen transitioning to `HomeActivity`.
 - `assets/shapes/*.xml`: Procedural shape XML templates (`star.xml`, `roundrect.xml`, `poly.xml`, `teardrop.xml`, etc.).
 - `res/layout/activity_main.xml`: Root editor layout with expandable top bar, center canvas, floating tools, and docked bottom panel flipper.
 - `res/layout/panel_*.xml`: Subpanels for Color/Fill, Border/Shadow, Move/Transform, Shape Edit, Photo Adjust, Effect Controls, and Layer Overview.
+
+---
+
+## 8. Dynamic ViewFlipper & Add Element Sheet Fixes
+
+### [`AutoHeightViewFlipper.java`](file:///c:/Users/sddrk/AndroidStudioProjects/MyApplication/app/src/main/java/glab/pixeleditor/view/AutoHeightViewFlipper.java)
+- Extends `ViewFlipper` and overrides `onMeasure` to measure only the currently active displayed child (`getChildAt(getDisplayedChild())`) with margins and padding instead of taking the maximum height across all 11 subpanels.
+- Solves the bottom gap / empty void beneath `panel_layer_menu` and compact subpanels, providing optimal canvas area and clean docked bottom sheet appearance.
+
+### Add Element Sheet & SVG Icons Integration (`MainActivity.java`, `sheet_add_element.xml`)
+- Bound `tabAddIcons` (`@+id/tabAddIcons`) to `showIconsGrid.run()` which loads SVG icons via `SvgIconManager.getAllIcons()` and renders crisp previews using `SvgIconAdapter`.
+- Removed accidental listener overwrite that opened canvas settings when clicking the Icons tab.
+- Connected `btnCloseAddSheet` to intelligently return to `PANEL_LAYERS_OVERVIEW` (or `PANEL_LAYER_MENU` if a layer is actively selected).
+- Added live search bar (`@+id/layoutIconSearchBar`, `etIconSearch`, `btnClearIconSearch`) in `sheet_add_element.xml` and wired real-time filtering in `SvgIconAdapter.java` (`filter(query)`).
+- Applied edge-to-edge system navigation and IME keyboard window insets (`WindowInsetsCompat.Type.ime()`) to `binding.layoutBottomContainer` and `scrollEffectBrowser`, ensuring panels, search inputs, and icon grids lift automatically above the keyboard when typing with zero overlap.
+
+---
+
+## 9. Recent Enhancements & Design System Polish
+
+### Tabler Icons Migration (`res/drawable/*.xml`, `assets/svg.zip`)
+- Replaced 81 vector drawable icons across toolbars, dialogs, transform controls, edit panels, layer stack, and shape previews with crisp, uniform Tabler vector icons (`24x24dp`, `strokeWidth=2dp`, `round` caps and joins) directly from `assets/svg.zip`.
+- Outlined vector drawables cleanly inherit tint colors (`#00E5BC`, `#94A3B8`, `#FFFFFF`) without distortion or clipping.
+
+### Edit Text Panel — Favorites Empty State & Chip Styling (`panel_edit_text.xml`, `MainActivity.java`)
+- Added dedicated `layoutEmptyFonts` empty state view containing a star icon, title (*"No favorite fonts yet"*), and helper subtitle (*"Tap the star icon next to any font to add it to your favorites."*).
+- Preserves the user's active "Favorites" tab selection instead of forcibly falling back to "All" fonts when favorites is empty.
+- Toggling favorite status on fonts dynamically updates the list and smoothly toggles between `rvFontsList` and `layoutEmptyFonts`.
+- Fixed chip text contrast:
+  - **Selected Chip State**: Dark text (`#00382B` / `0xFF00382B`) over mint pill background (`R.drawable.bg_pill_accent` `#00E5BC`) for readable contrast.
+  - **Unselected Chip State**: Muted slate text (`#94A3B8` / `0xFF94A3B8`) over dark pill backgrounds (`R.drawable.bg_chip_pill` / `R.drawable.bg_input_box`).
+
+### Effect Controls — Slider Mistouch Protection (`ScrubRulerView.java`, `EffectControlHelper.java`)
+- Added `isActive` state and touch filtering to `ScrubRulerView`:
+  - When **active** (`isActive = true`, full opacity `alpha = 1.0f`): ruler captures horizontal touch gestures (`requestDisallowInterceptTouchEvent(true)`), changes effect parameter values, and produces haptic feedback.
+  - When **inactive** (`isActive = false`, dimmed opacity `alpha = 0.45f`): ruler lets parent `ScrollView` scroll vertically without capturing touches, preventing accidental parameter modifications during scrolling.
+  - Tapping an inactive ruler or its parameter label immediately focuses and activates that parameter.
+
+
+

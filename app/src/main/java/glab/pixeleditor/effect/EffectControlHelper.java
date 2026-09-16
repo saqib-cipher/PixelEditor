@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import com.google.android.material.materialswitch.MaterialSwitch;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import glab.pixeleditor.R;
@@ -187,9 +188,19 @@ public class EffectControlHelper {
             return;
         }
 
+        final String[] activeParamId = new String[]{null};
+        for (EffectParam p : effect.getParams()) {
+            if (p.getType() == EffectParam.ParamType.SLIDER) {
+                activeParamId[0] = p.getId();
+                break;
+            }
+        }
+
+        final List<Runnable> uiUpdaters = new ArrayList<>();
+
         for (EffectParam param : effect.getParams()) {
             if (param.getType() == EffectParam.ParamType.SLIDER) {
-                View sliderRow = createSliderRulerRow(context, effect, param, density, listener);
+                View sliderRow = createSliderRulerRow(context, effect, param, density, activeParamId, uiUpdaters, listener);
                 container.addView(sliderRow);
             } else if (param.getType() == EffectParam.ParamType.SWITCH) {
                 View switchRow = createSwitchRow(context, effect, param, density, listener);
@@ -199,6 +210,10 @@ public class EffectControlHelper {
                 container.addView(colorRow);
             }
         }
+
+        for (Runnable u : uiUpdaters) {
+            u.run();
+        }
     }
 
     private static View createSliderRulerRow(
@@ -206,6 +221,8 @@ public class EffectControlHelper {
             EffectDefinition effect,
             EffectParam param,
             float density,
+            String[] activeParamId,
+            List<Runnable> uiUpdaters,
             OnEffectInteractionListener listener) {
 
         LinearLayout row = new LinearLayout(context);
@@ -221,7 +238,6 @@ public class EffectControlHelper {
         // 1. Parameter Label Tab / Button [ Scale ]
         TextView tvLabel = new TextView(context);
         tvLabel.setText(param.getLabel());
-        tvLabel.setTextColor(0xFFFFFFFF);
         tvLabel.setTextSize(12);
         tvLabel.setTypeface(null, Typeface.BOLD);
         tvLabel.setGravity(Gravity.CENTER);
@@ -229,15 +245,9 @@ public class EffectControlHelper {
         int padV = (int) (4 * density);
         tvLabel.setPadding(padH, padV, padH, padV);
 
-        GradientDrawable labelBg = new GradientDrawable();
-        labelBg.setColor(0xFF141C2B);
-        labelBg.setCornerRadius(6 * density);
-        labelBg.setStroke(1, 0xFF28354D);
-        tvLabel.setBackground(labelBg);
-
         LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(
-                (int) (76 * density),
-                (int) (30 * density)
+                (int) (80 * density),
+                (int) (32 * density)
         );
         tvLabel.setLayoutParams(labelLp);
         row.addView(tvLabel);
@@ -249,6 +259,14 @@ public class EffectControlHelper {
         rulerBg.setCornerRadius(6 * density);
         ruler.setBackground(rulerBg);
 
+        float min = param.getMinValue();
+        float max = param.getMaxValue();
+        float cur = param.getFloatValue();
+        float step = param.getStep() > 0 ? param.getStep() : 0.01f;
+        float range = Math.max(0.001f, max - min);
+        float sensitivity = Math.max(step, range / 300f);
+        ruler.setBounds(min, max, cur, sensitivity / 4f);
+
         LinearLayout.LayoutParams rulerLp = new LinearLayout.LayoutParams(
                 0, (int) (32 * density), 1f
         );
@@ -256,7 +274,7 @@ public class EffectControlHelper {
         ruler.setLayoutParams(rulerLp);
         row.addView(ruler);
 
-        // 3. Value Indicator Box (Right)
+        // 3. Value Indicator Box with custom value input (Right)
         TextView tvValue = new TextView(context);
         tvValue.setText(param.getFormattedValue());
         tvValue.setTextColor(0xFF00E5BC);
@@ -268,25 +286,69 @@ public class EffectControlHelper {
         GradientDrawable valBg = new GradientDrawable();
         valBg.setColor(0xFF141C2B);
         valBg.setCornerRadius(6 * density);
-        valBg.setStroke(1, 0xFF28354D);
+        valBg.setStroke((int) (1 * density), 0xFF28354D);
         tvValue.setBackground(valBg);
 
         LinearLayout.LayoutParams valLp = new LinearLayout.LayoutParams(
-                (int) (58 * density),
-                (int) (30 * density)
+                (int) (64 * density),
+                (int) (32 * density)
         );
         tvValue.setLayoutParams(valLp);
         row.addView(tvValue);
 
-        // Wire Scrub Ruler Listener (sliding left increases value, sliding right decreases value)
-        ruler.setOnScrubListener(delta -> {
-            float step = param.getStep() > 0 ? param.getStep() : 0.01f;
-            float range = param.getMaxValue() - param.getMinValue();
-            float sensitivity = Math.max(step, range / 300f);
-            float change = -(delta / 6f) * sensitivity;
+        // Active State UI updater
+        Runnable updateActiveUI = () -> {
+            boolean isActive = param.getId().equals(activeParamId[0]);
+            GradientDrawable lBg = new GradientDrawable();
+            lBg.setCornerRadius(6 * density);
+            if (isActive) {
+                lBg.setColor(0xFF243048);
+                lBg.setStroke((int) (1.5f * density), 0xFF00E5BC);
+                tvLabel.setTextColor(0xFF00E5BC);
+            } else {
+                lBg.setColor(0xFF141C2B);
+                lBg.setStroke((int) (1 * density), 0xFF28354D);
+                tvLabel.setTextColor(0xFF94A3B8);
+            }
+            tvLabel.setBackground(lBg);
+            ruler.setActive(isActive);
+            ruler.setCurrentValue(param.getFloatValue());
+        };
+        uiUpdaters.add(updateActiveUI);
 
-            float newVal = param.getFloatValue() + change;
+        // Clicking parameter label card or ruler activates it
+        View.OnClickListener selectParamClick = v -> {
+            activeParamId[0] = param.getId();
+            for (Runnable u : uiUpdaters) {
+                u.run();
+            }
+        };
+        tvLabel.setOnClickListener(selectParamClick);
+        ruler.setOnClickListener(selectParamClick);
+
+        // Clicking value card opens EditText dialog for entering custom value directly
+        tvValue.setOnClickListener(v -> {
+            activeParamId[0] = param.getId();
+            for (Runnable u : uiUpdaters) {
+                u.run();
+            }
+            showCustomValueDialog(context, effect, param, tvValue, listener);
+        });
+
+        // Scrub ruler listener (sliding right increases value, sliding left decreases)
+        ruler.setOnScrubListener(delta -> {
+            // Activate this parameter if not active
+            if (!param.getId().equals(activeParamId[0])) {
+                activeParamId[0] = param.getId();
+                for (Runnable u : uiUpdaters) {
+                    u.run();
+                }
+            }
+
+            float change = (delta / 4f) * sensitivity; // Right drag increases, left drag decreases
+            float newVal = Math.max(min, Math.min(max, param.getFloatValue() + change));
             param.setFloatValue(newVal);
+            ruler.setCurrentValue(newVal);
             tvValue.setText(param.getFormattedValue());
 
             if (listener != null) {
@@ -295,6 +357,38 @@ public class EffectControlHelper {
         });
 
         return row;
+    }
+
+    private static void showCustomValueDialog(
+            Context context,
+            EffectDefinition effect,
+            EffectParam param,
+            TextView tvValue,
+            OnEffectInteractionListener listener) {
+
+        android.widget.EditText input = new android.widget.EditText(context);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        input.setText(String.valueOf(param.getFloatValue()));
+        input.setTextColor(0xFF00E5BC);
+        input.setTextSize(16);
+        input.setPadding(48, 32, 48, 32);
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                .setTitle("Set " + param.getLabel())
+                .setMessage("Min: " + param.getMinValue() + "  |  Max: " + param.getMaxValue())
+                .setView(input)
+                .setPositiveButton("Set", (dialog, which) -> {
+                    try {
+                        float val = Float.parseFloat(input.getText().toString().trim());
+                        param.setFloatValue(val);
+                        tvValue.setText(param.getFormattedValue());
+                        if (listener != null) {
+                            listener.onParamChanged(effect, param);
+                        }
+                    } catch (Exception ignored) {}
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static View createSwitchRow(

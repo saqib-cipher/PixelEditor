@@ -48,8 +48,13 @@ public class ProjectStorageManager {
         private long lastModified;
         private String thumbnailName;
         private boolean inTrash;
+        private boolean isElement;
 
         public ProjectItem(String id, String title, String aspectRatio, int width, int height, int fps, int bg, long size, long lastModified, String thumb, boolean inTrash) {
+            this(id, title, aspectRatio, width, height, fps, bg, size, lastModified, thumb, inTrash, false);
+        }
+
+        public ProjectItem(String id, String title, String aspectRatio, int width, int height, int fps, int bg, long size, long lastModified, String thumb, boolean inTrash, boolean isElement) {
             this.id = id;
             this.title = title;
             this.aspectRatio = aspectRatio;
@@ -61,6 +66,7 @@ public class ProjectStorageManager {
             this.lastModified = lastModified;
             this.thumbnailName = thumb;
             this.inTrash = inTrash;
+            this.isElement = isElement;
         }
 
         public String getId() { return id; }
@@ -78,6 +84,8 @@ public class ProjectStorageManager {
         public void setThumbnailName(String name) { this.thumbnailName = name; }
         public boolean isInTrash() { return inTrash; }
         public void setInTrash(boolean inTrash) { this.inTrash = inTrash; }
+        public boolean isElement() { return isElement; }
+        public void setElement(boolean element) { this.isElement = element; }
 
         public String getFormattedDate() {
             SimpleDateFormat sdf = new SimpleDateFormat("MMMM d, yyyy", Locale.US);
@@ -115,6 +123,7 @@ public class ProjectStorageManager {
                 obj.put("lastModified", lastModified);
                 obj.put("thumbnailName", thumbnailName);
                 obj.put("inTrash", inTrash);
+                obj.put("isElement", isElement);
                 return obj;
             } catch (Exception e) {
                 return new JSONObject();
@@ -133,7 +142,8 @@ public class ProjectStorageManager {
                     obj.optLong("fileSize", 1024),
                     obj.optLong("lastModified", System.currentTimeMillis()),
                     obj.optString("thumbnailName", ""),
-                    obj.optBoolean("inTrash", false)
+                    obj.optBoolean("inTrash", false),
+                    obj.optBoolean("isElement", false)
             );
         }
     }
@@ -194,8 +204,7 @@ public class ProjectStorageManager {
         List<ProjectItem> all = new ArrayList<>();
 
         if (!indexFile.exists()) {
-            // Seed initial sample projects inspired by the user's screenshot
-            all = seedInitialProjects(context);
+            all = new ArrayList<>();
             saveIndex(context, all);
         } else {
             try (InputStream is = new FileInputStream(indexFile)) {
@@ -204,8 +213,24 @@ public class ProjectStorageManager {
                 is.read(buffer);
                 String json = new String(buffer, "UTF-8");
                 JSONArray array = new JSONArray(json);
+                boolean cleaned = false;
                 for (int i = 0; i < array.length(); i++) {
-                    all.add(ProjectItem.fromJson(array.getJSONObject(i)));
+                    ProjectItem item = ProjectItem.fromJson(array.getJSONObject(i));
+                    if (item != null) {
+                        File projectFile = new File(dir, item.getId() + ".json");
+                        // Purge legacy sample projects that have no backing .json file
+                        if (!projectFile.exists() && (item.getFileSize() == 743 || item.getFileSize() == 4608 || item.getFileSize() == 2764 || item.getFileSize() == 1843)) {
+                            cleaned = true;
+                            if (item.getThumbnailName() != null) {
+                                try { new File(dir, item.getThumbnailName()).delete(); } catch (Exception ignored) {}
+                            }
+                            continue;
+                        }
+                        all.add(item);
+                    }
+                }
+                if (cleaned) {
+                    saveIndex(context, all);
                 }
             } catch (Exception e) {
                 System.err.println("Error loading projects index: " + e.getMessage());
@@ -471,69 +496,5 @@ public class ProjectStorageManager {
             } catch (Exception ignored) {}
         }
         return all;
-    }
-
-    private static List<ProjectItem> seedInitialProjects(Context context) {
-        List<ProjectItem> list = new ArrayList<>();
-        long now = System.currentTimeMillis();
-        long day = 24L * 60L * 60L * 1000L;
-
-        // Project 3: New Project 3 (September 13, 2026)
-        String id3 = UUID.randomUUID().toString();
-        String thumb3 = "thumb_" + id3 + ".png";
-        createSampleThumbnail(context, thumb3, 0xFFE2E8F0, 0xFF7A4B58, "square");
-        list.add(new ProjectItem(id3, "New Project 3", "9:16", 1080, 1920, 30, 0xFFD8DCE3, 743, now, thumb3, false));
-
-        // Project 2: New Project 2 (September 8, 2026)
-        String id2 = UUID.randomUUID().toString();
-        String thumb2 = "thumb_" + id2 + ".png";
-        createSampleThumbnail(context, thumb2, 0xFF0F172A, 0xFF00D2FF, "rect");
-        list.add(new ProjectItem(id2, "New Project 2", "9:16", 1080, 1920, 30, 0xFF0F1320, 4608, now - 5 * day, thumb2, false));
-
-        // Project 1: New Project 1 (August 7, 2026)
-        String id1 = UUID.randomUUID().toString();
-        String thumb1 = "thumb_" + id1 + ".png";
-        createSampleThumbnail(context, thumb1, 0xFF1E1B4B, 0xFF00E5BC, "avatar");
-        list.add(new ProjectItem(id1, "New Project 1", "1:1", 1080, 1080, 30, 0xFFD8DCE3, 2764, now - 37 * day, thumb1, false));
-
-        // Project 0: New Project (August 4, 2026)
-        String id0 = UUID.randomUUID().toString();
-        String thumb0 = "thumb_" + id0 + ".png";
-        createSampleThumbnail(context, thumb0, 0xFF022C22, 0xFF00E5BC, "badge");
-        list.add(new ProjectItem(id0, "New Project", "16:9", 1920, 1080, 30, 0xFF0F1320, 1843, now - 40 * day, thumb0, false));
-
-        return list;
-    }
-
-    private static void createSampleThumbnail(Context context, String filename, int bgColor, int accentColor, String type) {
-        try {
-            int w = 240;
-            int h = 240;
-            Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-            Canvas c = new Canvas(bmp);
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-            // Background
-            p.setColor(bgColor);
-            c.drawRect(0, 0, w, h, p);
-
-            // Shape inside
-            p.setColor(accentColor);
-            if ("square".equals(type)) {
-                c.drawRoundRect(new RectF(w * 0.4f, h * 0.35f, w * 0.6f, h * 0.55f), 12, 12, p);
-            } else if ("rect".equals(type)) {
-                c.drawRoundRect(new RectF(w * 0.25f, h * 0.45f, w * 0.75f, h * 0.55f), 10, 10, p);
-            } else if ("avatar".equals(type)) {
-                c.drawCircle(w * 0.5f, h * 0.45f, w * 0.25f, p);
-            } else {
-                c.drawRoundRect(new RectF(w * 0.3f, h * 0.3f, w * 0.7f, h * 0.7f), 16, 16, p);
-            }
-
-            File dir = getProjectsDir(context);
-            File file = new File(dir, filename);
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                bmp.compress(Bitmap.CompressFormat.PNG, 90, fos);
-            }
-        } catch (Exception ignored) {}
     }
 }

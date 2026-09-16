@@ -238,6 +238,10 @@ public class GLEffectEngine {
         float layerCenterY = layerBounds != null ? layerBounds.centerY() : height / 2.0f;
 
         program.setUniform2f("acScreenSize", screenW, screenH);
+        program.setUniform2f("acCanvasSize", screenW, screenH);
+        program.setUniform2f("acPreviewSize", (float) width, (float) height);
+        program.setUniform2f("acResolution", (float) width, (float) height);
+        program.setUniform2f("u_resolution", (float) width, (float) height);
         program.setUniform2f("acLayerSize", layerW, layerH);
         program.setUniform2f("acLayerCenter", layerCenterX, layerCenterY);
         program.setUniform2f("acLayerPivot", 0.0f, 0.0f);
@@ -598,6 +602,10 @@ public class GLEffectEngine {
 
         sb.append("\n");
         sb.append("uniform vec2 acScreenSize;\n");
+        sb.append("uniform vec2 acCanvasSize;\n");
+        sb.append("uniform vec2 acPreviewSize;\n");
+        sb.append("uniform vec2 acResolution;\n");
+        sb.append("uniform vec2 u_resolution;\n");
         sb.append("uniform vec2 acLayerCenter;\n");
         sb.append("uniform vec2 acLayerSize;\n");
         sb.append("uniform mat4 acLayerToScreen;\n");

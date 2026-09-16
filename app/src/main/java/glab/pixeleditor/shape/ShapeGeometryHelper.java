@@ -17,6 +17,13 @@ public class ShapeGeometryHelper {
      */
     public static Path buildPath(ShapeDefinition def, RectF rect, ShapeLayer.ShapeType fallbackType) {
         if (def != null) {
+            if (def.isSvg() && def.getSvgContent() != null && !def.getSvgContent().isEmpty()) {
+                Path svgPath = glab.pixeleditor.svg.SvgHelper.createPathFromSvgContent(def.getSvgContent(), rect);
+                if (svgPath != null) {
+                    return svgPath;
+                }
+            }
+
             String file = def.getFileName() != null ? def.getFileName().toLowerCase() : "";
             String id = def.getId() != null ? def.getId().toLowerCase() : "";
 
