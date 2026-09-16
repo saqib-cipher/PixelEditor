@@ -35,6 +35,11 @@ public class PhotoLayer extends CanvasLayer {
     private float gradientStartOffset = 0.0f;
     private float gradientEndOffset = 1.0f;
 
+    // Crop pan offsets (0 = centered, -1.0 to 1.0 as fraction of image size)
+    // Positive X = pan right (show more of left side), Positive Y = pan down (show more of top)
+    private float cropOffsetX = 0f;
+    private float cropOffsetY = 0f;
+
     public PhotoLayer(String name, Bitmap bitmap, float x, float y, float width, float height) {
         super(name, x, y, width, height);
         this.bitmap = bitmap;
@@ -124,7 +129,23 @@ public class PhotoLayer extends CanvasLayer {
                 RectF dstRect = new RectF(-width / 2f - outPadX, -height / 2f - outPadY, width / 2f + outPadX, height / 2f + outPadY);
                 canvas.drawBitmap(renderBitmap, null, dstRect, paint);
             } else {
-                android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+                // Compute src rect with crop pan offset clamped so we never exceed bitmap bounds
+                int bw = bitmap.getWidth();
+                int bh = bitmap.getHeight();
+                // src rect dimensions that would fully cover destRect at native pixel ratio
+                float scaleW = (float) bw / width;   // bitmap pixels per layer pixel (width)
+                float scaleH = (float) bh / height;  // bitmap pixels per layer pixel (height)
+                int srcW = Math.min(bw, Math.round(width * scaleW));
+                int srcH = Math.min(bh, Math.round(height * scaleH));
+                // Crop pan: cropOffsetX/Y range [-0.5, 0.5] moves the visible window
+                int maxShiftX = (bw - srcW) / 2;
+                int maxShiftY = (bh - srcH) / 2;
+                int centerX = bw / 2 + Math.round(cropOffsetX * bw);
+                int centerY = bh / 2 + Math.round(cropOffsetY * bh);
+                int srcLeft = Math.max(0, Math.min(bw - srcW, centerX - srcW / 2));
+                int srcTop  = Math.max(0, Math.min(bh - srcH, centerY - srcH / 2));
+                android.graphics.Rect srcRect = new android.graphics.Rect(
+                        srcLeft, srcTop, srcLeft + srcW, srcTop + srcH);
                 canvas.drawBitmap(bitmap, srcRect, destRect, paint);
             }
         }
@@ -310,6 +331,8 @@ public class PhotoLayer extends CanvasLayer {
         copy.setGradientEndOffset(gradientEndOffset);
         copy.setMaskType(maskType);
         copy.setBlendMode(blendMode);
+        copy.cropOffsetX = this.cropOffsetX;
+        copy.cropOffsetY = this.cropOffsetY;
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             copy.addEffect(eff.copy());
         }
@@ -353,6 +376,8 @@ public class PhotoLayer extends CanvasLayer {
         clone.setLocked(isLocked);
         clone.setMaskType(maskType);
         clone.setBlendMode(blendMode);
+        clone.cropOffsetX = this.cropOffsetX;
+        clone.cropOffsetY = this.cropOffsetY;
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             clone.addEffect(eff.copy());
         }
@@ -405,6 +430,14 @@ public class PhotoLayer extends CanvasLayer {
     public float getGradientEndOffset() { return gradientEndOffset; }
     public void setGradientEndOffset(float gradientEndOffset) { this.gradientEndOffset = gradientEndOffset; }
 
+    /** Crop pan offset X: range [-0.5, 0.5]. Positive = shift visible window rightward. */
+    public float getCropOffsetX() { return cropOffsetX; }
+    public void setCropOffsetX(float v) { this.cropOffsetX = Math.max(-0.5f, Math.min(0.5f, v)); }
+
+    /** Crop pan offset Y: range [-0.5, 0.5]. Positive = shift visible window downward. */
+    public float getCropOffsetY() { return cropOffsetY; }
+    public void setCropOffsetY(float v) { this.cropOffsetY = Math.max(-0.5f, Math.min(0.5f, v)); }
+
     private String photoFileName = "";
     private float originalWidth = 0f;
     private float originalHeight = 0f;
@@ -444,6 +477,8 @@ public class PhotoLayer extends CanvasLayer {
             json.put("gradientEndOffset", (double) gradientEndOffset);
             json.put("originalWidth", getOriginalWidth());
             json.put("originalHeight", getOriginalHeight());
+            json.put("cropOffsetX", (double) cropOffsetX);
+            json.put("cropOffsetY", (double) cropOffsetY);
 
             // Persist bitmap to projects dir/assets
             if (bitmap != null && !bitmap.isRecycled()) {
@@ -521,6 +556,8 @@ public class PhotoLayer extends CanvasLayer {
         layer.photoFileName = photoPath;
         layer.originalWidth = (float) json.optDouble("originalWidth", loadedBmp.getWidth());
         layer.originalHeight = (float) json.optDouble("originalHeight", loadedBmp.getHeight());
+        layer.cropOffsetX = (float) json.optDouble("cropOffsetX", 0.0);
+        layer.cropOffsetY = (float) json.optDouble("cropOffsetY", 0.0);
 
         return layer;
     }

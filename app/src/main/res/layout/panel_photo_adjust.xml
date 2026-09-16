@@ -54,7 +54,7 @@
         android:layout_marginBottom="8dp"
         android:background="@color/pe_border" />
 
-    <!-- Width (X) in Pixels -->
+    <!-- Crop Offset X (pans image left/right inside frame) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
         <TextView
             android:layout_width="80dp"
             android:layout_height="wrap_content"
-            android:text="Width (X)"
+            android:text="Crop X"
             android:textColor="@color/pe_text_secondary"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -81,13 +81,13 @@
             android:layout_height="28dp"
             android:background="@drawable/bg_input_box"
             android:gravity="center"
-            android:text="300px"
+            android:text="0"
             android:textColor="@color/pe_accent_mint"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Height (Y) in Pixels -->
+    <!-- Crop Offset Y (pans image up/down inside frame) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -98,7 +98,7 @@
         <TextView
             android:layout_width="80dp"
             android:layout_height="wrap_content"
-            android:text="Height (Y)"
+            android:text="Crop Y"
             android:textColor="@color/pe_text_secondary"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -115,7 +115,7 @@
             android:layout_height="28dp"
             android:background="@drawable/bg_input_box"
             android:gravity="center"
-            android:text="300px"
+            android:text="0"
             android:textColor="@color/pe_accent_mint"
             android:textSize="11sp"
             android:textStyle="bold" />

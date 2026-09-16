@@ -1103,9 +1103,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
         if (rulerSize != null) {
             float curSize = Math.max(8f, Math.min(200f, textLayer.getTextSize()));
+            // valuePerPixel = 0.5: drag right 1px = +0.5pt, drag left 1px = -0.5pt
             rulerSize.setBounds(8f, 200f, curSize, 0.5f);
+            rulerSize.setInvertDirection(true);
             rulerSize.setOnScrubListener(delta -> {
-                float newSize = Math.max(8f, Math.min(200f, textLayer.getTextSize() + delta));
+                // delta in pixels; positive = drag right (>>>>>) = INCREASE size
+                float newSize = Math.max(8f, Math.min(200f, textLayer.getTextSize() + delta * 0.5f));
                 textLayer.setTextSize(newSize);
                 rulerSize.setCurrentValue(newSize);
                 if (tvSizeDisplay != null) {
@@ -1514,120 +1517,89 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         // Subpanel 9: Blending & Opacity Panel (Screenshot 2)
         setupBlendingOpacityPanel();
 
-        // Subpanel 4: Photo Size Controls (Width X & Height Y)
+        // Subpanel 4: Photo Crop Offset Controls (Crop X & Crop Y)
         ClampedSliderView sliderPhotoW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
         ClampedSliderView sliderPhotoH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
         TextView tvPhotoW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
         TextView tvPhotoH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
+        // Aspect-lock switch and other size buttons hidden / repurposed — keep refs to avoid NPE
         MaterialSwitch switchAspect =
                 binding.getRoot().findViewById(R.id.switchPhotoAspectLock);
+        // Hide aspect lock switch (not relevant for crop mode)
+        if (switchAspect != null) switchAspect.setVisibility(View.GONE);
 
         if (sliderPhotoW != null) {
-            sliderPhotoW.setValueFrom(20);
-            sliderPhotoW.setValueTo(3000);
+            // Crop X: -50 to +50 (maps to -0.5 to +0.5 fraction of bitmap width)
+            sliderPhotoW.setValueFrom(-50);
+            sliderPhotoW.setValueTo(50);
             sliderPhotoW.addOnChangeListener((slider, value, fromUser) -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer instanceof PhotoLayer && fromUser) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    float oldW = pl.getWidth();
-                    pl.setWidth(value);
-                    if (tvPhotoW != null) tvPhotoW.setText(Math.round(value) + "px");
-
-                    if (switchAspect != null && switchAspect.isChecked() && oldW > 0) {
-                        float ratio = value / oldW;
-                        float newH = Math.min(3000, Math.max(20, pl.getHeight() * ratio));
-                        pl.setHeight(newH);
-                        if (sliderPhotoH != null) sliderPhotoH.setValue(newH);
-                        if (tvPhotoH != null) tvPhotoH.setText(Math.round(newH) + "px");
-                    }
+                    pl.setCropOffsetX(value / 100f);  // convert % to fraction
+                    if (tvPhotoW != null) tvPhotoW.setText(Math.round(value) + "%");
                     binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
                 }
             });
         }
 
         if (sliderPhotoH != null) {
-            sliderPhotoH.setValueFrom(20);
-            sliderPhotoH.setValueTo(3000);
+            // Crop Y: -50 to +50 (maps to -0.5 to +0.5 fraction of bitmap height)
+            sliderPhotoH.setValueFrom(-50);
+            sliderPhotoH.setValueTo(50);
             sliderPhotoH.addOnChangeListener((slider, value, fromUser) -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer instanceof PhotoLayer && fromUser) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    float oldH = pl.getHeight();
-                    pl.setHeight(value);
-                    if (tvPhotoH != null) tvPhotoH.setText(Math.round(value) + "px");
-
-                    if (switchAspect != null && switchAspect.isChecked() && oldH > 0) {
-                        float ratio = value / oldH;
-                        float newW = Math.min(3000, Math.max(20, pl.getWidth() * ratio));
-                        pl.setWidth(newW);
-                        if (sliderPhotoW != null) sliderPhotoW.setValue(newW);
-                        if (tvPhotoW != null) tvPhotoW.setText(Math.round(newW) + "px");
-                    }
+                    pl.setCropOffsetY(value / 100f);  // convert % to fraction
+                    if (tvPhotoH != null) tvPhotoH.setText(Math.round(value) + "%");
                     binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
                 }
             });
         }
 
-        // Reset to original photo dimensions
+        // Reset crop offsets to center
         binding.getRoot().findViewById(R.id.btnResetAdjustments).setOnClickListener(v -> {
             CanvasLayer layer = project.getSelectedLayer();
             if (layer instanceof PhotoLayer) {
                 PhotoLayer pl = (PhotoLayer) layer;
-                float origW = pl.getOriginalWidth();
-                float origH = pl.getOriginalHeight();
-                if (origW > 0 && origH > 0) {
-                    pl.setWidth(origW);
-                    pl.setHeight(origH);
-                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, origW)));
-                    sliderPhotoH.setValue(Math.min(3000, Math.max(20, origH)));
-                    tvPhotoW.setText(Math.round(origW) + "px");
-                    tvPhotoH.setText(Math.round(origH) + "px");
-                    binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
-                }
+                pl.setCropOffsetX(0f);
+                pl.setCropOffsetY(0f);
+                if (sliderPhotoW != null) sliderPhotoW.setValue(0);
+                if (sliderPhotoH != null) sliderPhotoH.setValue(0);
+                if (tvPhotoW != null) tvPhotoW.setText("0%");
+                if (tvPhotoH != null) tvPhotoH.setText("0%");
+                binding.canvasView.invalidate();
+                updateTransformCoordinatesUI();
             }
         });
 
-        // Fit Canvas
+        // "Fit Canvas" button → Center Crop X
         View btnFitCanvas = binding.getRoot().findViewById(R.id.btnPhotoMatchCanvas);
         if (btnFitCanvas != null) {
             btnFitCanvas.setOnClickListener(v -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer instanceof PhotoLayer) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    float cw = project.getCanvasWidth();
-                    float ratio = cw / Math.max(1f, pl.getWidth());
-                    float newH = Math.min(3000, Math.max(20, pl.getHeight() * ratio));
-                    pl.setWidth(cw);
-                    pl.setHeight(newH);
-                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, cw)));
-                    sliderPhotoH.setValue(newH);
-                    tvPhotoW.setText(Math.round(cw) + "px");
-                    tvPhotoH.setText(Math.round(newH) + "px");
+                    pl.setCropOffsetX(0f);
+                    if (sliderPhotoW != null) sliderPhotoW.setValue(0);
+                    if (tvPhotoW != null) tvPhotoW.setText("0%");
                     binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
                 }
             });
         }
 
-        // Square 1:1
+        // "Square 1:1" button → Center Crop Y
         View btnSquare = binding.getRoot().findViewById(R.id.btnPhotoSquare);
         if (btnSquare != null) {
             btnSquare.setOnClickListener(v -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer instanceof PhotoLayer) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    float size = Math.min(pl.getWidth(), pl.getHeight());
-                    pl.setWidth(size);
-                    pl.setHeight(size);
-                    sliderPhotoW.setValue(Math.min(3000, Math.max(20, size)));
-                    sliderPhotoH.setValue(Math.min(3000, Math.max(20, size)));
-                    tvPhotoW.setText(Math.round(size) + "px");
-                    tvPhotoH.setText(Math.round(size) + "px");
+                    pl.setCropOffsetY(0f);
+                    if (sliderPhotoH != null) sliderPhotoH.setValue(0);
+                    if (tvPhotoH != null) tvPhotoH.setText("0%");
                     binding.canvasView.invalidate();
-                    updateTransformCoordinatesUI();
                 }
             });
         }
@@ -1729,6 +1701,9 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 if (layer instanceof ShapeLayer) {
                     ((ShapeLayer) layer).setHasStroke(isChecked);
                     binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer) {
+                    ((TextLayer) layer).setHasStroke(isChecked);
+                    binding.canvasView.invalidate();
                 }
             });
         }
@@ -1746,6 +1721,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     }
                     if (tvStrokeVal != null) tvStrokeVal.setText(String.format(Locale.US, "%.1f", value));
                     binding.canvasView.invalidate();
+                } else if (layer instanceof TextLayer && fromUser) {
+                    ((TextLayer) layer).setStrokeWidth(value);
+                    if (value > 0 && !((TextLayer) layer).isHasStroke()) {
+                        ((TextLayer) layer).setHasStroke(true);
+                        if (switchStroke != null) switchStroke.setChecked(true);
+                    }
+                    if (tvStrokeVal != null) tvStrokeVal.setText(String.format(Locale.US, "%.1f", value));
+                    binding.canvasView.invalidate();
                 }
             });
         }
@@ -1753,10 +1736,16 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         if (viewStrokeSwatch != null) {
             viewStrokeSwatch.setOnClickListener(v -> {
                 CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
-                int curColor = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getStrokeColor() : 0xFF00E5BC;
+                int curColor = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getStrokeColor()
+                        : (layer instanceof TextLayer) ? ((TextLayer) layer).getStrokeColor()
+                        : 0xFF00E5BC;
                 AlightColorPickerDialog.show(MainActivity.this, "Stroke Color", curColor, selectedColor -> {
                     if (layer instanceof ShapeLayer) {
                         ((ShapeLayer) layer).setStrokeColor(selectedColor);
+                        viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(selectedColor));
+                        binding.canvasView.invalidate();
+                    } else if (layer instanceof TextLayer) {
+                        ((TextLayer) layer).setStrokeColor(selectedColor);
                         viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(selectedColor));
                         binding.canvasView.invalidate();
                     }
@@ -1765,6 +1754,11 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     binding.canvasView.startEyedropper(color -> {
                         if (layer instanceof ShapeLayer) {
                             ((ShapeLayer) layer).setStrokeColor(color);
+                            pickerView.setColor(color, true);
+                            viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(color));
+                            binding.canvasView.invalidate();
+                        } else if (layer instanceof TextLayer) {
+                            ((TextLayer) layer).setStrokeColor(color);
                             pickerView.setColor(color, true);
                             viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(color));
                             binding.canvasView.invalidate();
@@ -1907,6 +1901,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         ((ShapeLayer) layer).setStrokeColor(0xFF00E5BC);
                         ((ShapeLayer) layer).setStrokeAlignment(BorderItem.Alignment.CENTER);
                         ((ShapeLayer) layer).setStrokeJoin(Paint.Join.ROUND);
+                    } else if (layer instanceof TextLayer) {
+                        ((TextLayer) layer).setHasStroke(false);
+                        ((TextLayer) layer).setStrokeWidth(0f);
+                        ((TextLayer) layer).setStrokeColor(0xFF00E5BC);
                     }
                     layer.clearBorders();
                     layer.clearShadows();
@@ -1961,6 +1959,21 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             if (btnJoinRound != null) btnJoinRound.setTextColor(join == Paint.Join.ROUND ? 0xFF00E5BC : 0xFF94A3B8);
             if (btnJoinMiter != null) btnJoinMiter.setTextColor(join == Paint.Join.MITER ? 0xFF00E5BC : 0xFF94A3B8);
             if (btnJoinBevel != null) btnJoinBevel.setTextColor(join == Paint.Join.BEVEL ? 0xFF00E5BC : 0xFF94A3B8);
+        } else if (layer instanceof TextLayer) {
+            TextLayer tl = (TextLayer) layer;
+            if (switchStroke != null) switchStroke.setChecked(tl.isHasStroke());
+            if (sliderStroke != null) sliderStroke.setValue(tl.getStrokeWidth());
+            if (tvStrokeVal != null) tvStrokeVal.setText(String.format(Locale.US, "%.1f", tl.getStrokeWidth()));
+            if (viewStrokeSwatch != null) {
+                viewStrokeSwatch.setBackgroundTintList(ColorStateList.valueOf(tl.getStrokeColor()));
+            }
+            // Align/Join buttons hidden for text (not applicable)
+            if (btnInside != null) btnInside.setVisibility(View.GONE);
+            if (btnCenter != null) btnCenter.setVisibility(View.GONE);
+            if (btnOutside != null) btnOutside.setVisibility(View.GONE);
+            if (btnJoinRound != null) btnJoinRound.setVisibility(View.GONE);
+            if (btnJoinMiter != null) btnJoinMiter.setVisibility(View.GONE);
+            if (btnJoinBevel != null) btnJoinBevel.setVisibility(View.GONE);
         }
 
         populateBordersList(layer);
@@ -4297,12 +4310,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             TextView tvW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
             TextView tvH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
             if (sW != null && tvW != null) {
-                sW.setValue(Math.min(3000, Math.max(20, pl.getWidth())));
-                tvW.setText(Math.round(pl.getWidth()) + "px");
+                float cropXPct = pl.getCropOffsetX() * 100f;
+                sW.setValue(Math.max(-50, Math.min(50, cropXPct)));
+                tvW.setText(Math.round(cropXPct) + "%");
             }
             if (sH != null && tvH != null) {
-                sH.setValue(Math.min(3000, Math.max(20, pl.getHeight())));
-                tvH.setText(Math.round(pl.getHeight()) + "px");
+                float cropYPct = pl.getCropOffsetY() * 100f;
+                sH.setValue(Math.max(-50, Math.min(50, cropYPct)));
+                tvH.setText(Math.round(cropYPct) + "%");
             }
         }
 
@@ -4991,29 +5006,33 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         }
 
         // Mode 3: Scale Scrub Ruler listener
+
         if (rulerScale != null) {
+            rulerScale.setInvertDirection(false);
             rulerScale.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
-                    float factor = 1.0f + (delta * 0.005f); // Drag right increases scale, drag left decreases scale
+                    // valuePerPixel for scale: 0.5px per pixel of drag
+                    final float vpp = 0.5f;
                     if (layer instanceof TextLayer) {
                         TextLayer tl = (TextLayer) layer;
-                        float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() * factor));
+                        float newSize = Math.max(8f, Math.min(400f, tl.getTextSize() + delta * vpp));
                         tl.setTextSize(newSize);
                         rulerScale.setCurrentValue(newSize);
                     } else {
                         if (isScaleAspectLinked || activeScaleAxis == ScaleAxis.BOTH) {
-                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
-                            float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                            float aspect = layer.getHeight() / Math.max(1f, layer.getWidth());
+                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() + delta * vpp));
+                            float newH = Math.max(20f, Math.min(3000f, newW * aspect));
                             layer.setWidth(newW);
                             layer.setHeight(newH);
                             rulerScale.setCurrentValue(newW);
                         } else if (activeScaleAxis == ScaleAxis.WIDTH) {
-                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() * factor));
+                            float newW = Math.max(20f, Math.min(3000f, layer.getWidth() + delta * vpp));
                             layer.setWidth(newW);
                             rulerScale.setCurrentValue(newW);
                         } else if (activeScaleAxis == ScaleAxis.HEIGHT) {
-                            float newH = Math.max(20f, Math.min(3000f, layer.getHeight() * factor));
+                            float newH = Math.max(20f, Math.min(3000f, layer.getHeight() + delta * vpp));
                             layer.setHeight(newH);
                             rulerScale.setCurrentValue(newH);
                         }
@@ -5029,12 +5048,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             rulerSkew.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {
+                    // valuePerPixel = 0.3 (set in setBounds), drag right increases skew
                     if (activeSkewAxis == SkewAxis.X) {
-                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewX() + (delta * 0.3f)));
+                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewX() + delta * 0.3f));
                         layer.setSkewX(newSkew);
                         rulerSkew.setCurrentValue(newSkew);
                     } else {
-                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewY() + (delta * 0.3f)));
+                        float newSkew = Math.max(-85f, Math.min(85f, layer.getSkewY() + delta * 0.3f));
                         layer.setSkewY(newSkew);
                         rulerSkew.setCurrentValue(newSkew);
                     }

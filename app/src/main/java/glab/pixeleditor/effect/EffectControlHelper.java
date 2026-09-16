@@ -264,8 +264,10 @@ public class EffectControlHelper {
         float cur = param.getFloatValue();
         float step = param.getStep() > 0 ? param.getStep() : 0.01f;
         float range = Math.max(0.001f, max - min);
-        float sensitivity = Math.max(step, range / 300f);
-        ruler.setBounds(min, max, cur, sensitivity / 4f);
+        // valuePerPixel: how much the param value changes per 1px of drag
+        // Right-drag (positive delta) = increase, left-drag (negative delta) = decrease
+        float valuePerPixel = Math.max(step, range / 400f);
+        ruler.setBounds(min, max, cur, valuePerPixel);
 
         LinearLayout.LayoutParams rulerLp = new LinearLayout.LayoutParams(
                 0, (int) (32 * density), 1f
@@ -335,7 +337,8 @@ public class EffectControlHelper {
             showCustomValueDialog(context, effect, param, tvValue, listener);
         });
 
-        // Scrub ruler listener (sliding right increases value, sliding left decreases)
+        // Scrub ruler listener
+        ruler.setInvertDirection(true);
         ruler.setOnScrubListener(delta -> {
             // Activate this parameter if not active
             if (!param.getId().equals(activeParamId[0])) {
@@ -345,8 +348,9 @@ public class EffectControlHelper {
                 }
             }
 
-            float change = (delta / 4f) * sensitivity; // Right drag increases, left drag decreases
-            float newVal = Math.max(min, Math.min(max, param.getFloatValue() + change));
+            // valuePerPixel is baked into setBounds, ruler tracks currentValue internally.
+            // Read the new clamped value directly from the ruler's internal state.
+            float newVal = Math.max(min, Math.min(max, param.getFloatValue() + delta * valuePerPixel));
             param.setFloatValue(newVal);
             ruler.setCurrentValue(newVal);
             tvValue.setText(param.getFormattedValue());
