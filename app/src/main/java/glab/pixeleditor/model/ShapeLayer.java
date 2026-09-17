@@ -12,6 +12,10 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.SweepGradient;
 
+import glab.pixeleditor.view.GradientBarView;
+import java.util.ArrayList;
+import java.util.List;
+
 public class ShapeLayer extends CanvasLayer {
 
     public enum ShapeType {
@@ -117,23 +121,25 @@ public class ShapeLayer extends CanvasLayer {
             fillPaint.setStyle(Paint.Style.FILL);
             fillPaint.setAlpha(opacity);
 
-            int startA = Math.round(Color.alpha(gradientStartColor) * (opacity / 255f));
-            int endA = Math.round(Color.alpha(gradientEndColor) * (opacity / 255f));
-            int sCol = Color.argb(startA, Color.red(gradientStartColor), Color.green(gradientStartColor), Color.blue(gradientStartColor));
-            int eCol = Color.argb(endA, Color.red(gradientEndColor), Color.green(gradientEndColor), Color.blue(gradientEndColor));
+            int[] rawCols = getGradientColorsArray();
+            float[] offsets = getGradientOffsetsArray();
+            int[] cols = new int[rawCols.length];
+            for (int i = 0; i < rawCols.length; i++) {
+                int a = Math.round(Color.alpha(rawCols[i]) * (opacity / 255f));
+                cols[i] = Color.argb(a, Color.red(rawCols[i]), Color.green(rawCols[i]), Color.blue(rawCols[i]));
+            }
 
             if (gradientType == GradientType.RADIAL) {
                 float radius = (float) Math.hypot(gradientEndX - gradientStartX, gradientEndY - gradientStartY);
                 RadialGradient rg = new RadialGradient(
                         gradientStartX, gradientStartY, Math.max(1f, radius),
-                        sCol, eCol, Shader.TileMode.CLAMP
+                        cols, offsets, Shader.TileMode.CLAMP
                 );
                 fillPaint.setShader(rg);
             } else if (gradientType == GradientType.SWEEP) {
                 SweepGradient sg = new SweepGradient(
                         gradientStartX, gradientStartY,
-                        new int[]{sCol, eCol, sCol},
-                        new float[]{0f, 0.5f, 1f}
+                        cols, offsets
                 );
                 float angle = (float) Math.toDegrees(Math.atan2(gradientEndY - gradientStartY, gradientEndX - gradientStartX));
                 Matrix sm = new Matrix();
@@ -144,8 +150,7 @@ public class ShapeLayer extends CanvasLayer {
                 // LINEAR
                 LinearGradient lg = new LinearGradient(
                         gradientStartX, gradientStartY, gradientEndX, gradientEndY,
-                        new int[]{sCol, eCol},
-                        new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)},
+                        cols, offsets,
                         Shader.TileMode.CLAMP
                 );
                 fillPaint.setShader(lg);
@@ -380,6 +385,7 @@ public class ShapeLayer extends CanvasLayer {
         if (this.shapeDefinition != null) {
             copy.shapeDefinition = this.shapeDefinition.copy();
         }
+        copy.setGradientStops(this.gradientStops);
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             copy.addEffect(eff.copy());
         }
@@ -418,6 +424,7 @@ public class ShapeLayer extends CanvasLayer {
         clone.setGradientEndY(gradientEndY);
         clone.setGradientStartOffset(gradientStartOffset);
         clone.setGradientEndOffset(gradientEndOffset);
+        clone.setGradientStops(this.gradientStops);
         clone.setStrokeColor(strokeColor);
         clone.setStrokeWidth(strokeWidth);
         clone.setHasStroke(hasStroke);
@@ -479,6 +486,49 @@ public class ShapeLayer extends CanvasLayer {
     public void setGradientStartOffset(float gradientStartOffset) { this.gradientStartOffset = gradientStartOffset; }
     public float getGradientEndOffset() { return gradientEndOffset; }
     public void setGradientEndOffset(float gradientEndOffset) { this.gradientEndOffset = gradientEndOffset; }
+
+    private final List<GradientBarView.GradientStop> gradientStops = new ArrayList<>();
+
+    public List<GradientBarView.GradientStop> getGradientStops() {
+        return gradientStops;
+    }
+
+    public void setGradientStops(List<GradientBarView.GradientStop> stops) {
+        this.gradientStops.clear();
+        if (stops != null) {
+            for (GradientBarView.GradientStop s : stops) {
+                this.gradientStops.add(s.copy());
+            }
+        }
+        if (!this.gradientStops.isEmpty()) {
+            this.gradientStartColor = this.gradientStops.get(0).color;
+            this.gradientStartOffset = this.gradientStops.get(0).offset;
+            this.gradientEndColor = this.gradientStops.get(this.gradientStops.size() - 1).color;
+            this.gradientEndOffset = this.gradientStops.get(this.gradientStops.size() - 1).offset;
+        }
+    }
+
+    public int[] getGradientColorsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            int[] arr = new int[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).color;
+            }
+            return arr;
+        }
+        return new int[]{gradientStartColor, gradientEndColor};
+    }
+
+    public float[] getGradientOffsetsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            float[] arr = new float[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).offset;
+            }
+            return arr;
+        }
+        return new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)};
+    }
 
     public int getStrokeColor() { return strokeColor; }
     public void setStrokeColor(int strokeColor) { this.strokeColor = strokeColor; }
@@ -553,6 +603,18 @@ public class ShapeLayer extends CanvasLayer {
             json.put("gradientEndY", (double) gradientEndY);
             json.put("gradientStartOffset", (double) gradientStartOffset);
             json.put("gradientEndOffset", (double) gradientEndOffset);
+
+            if (!gradientStops.isEmpty()) {
+                org.json.JSONArray stopsArr = new org.json.JSONArray();
+                for (GradientBarView.GradientStop s : gradientStops) {
+                    org.json.JSONObject sObj = new org.json.JSONObject();
+                    sObj.put("color", s.color);
+                    sObj.put("offset", (double) s.offset);
+                    stopsArr.put(sObj);
+                }
+                json.put("gradientStops", stopsArr);
+            }
+
             json.put("strokeColor", strokeColor);
             json.put("strokeWidth", strokeWidth);
             json.put("hasStroke", hasStroke);
@@ -626,6 +688,21 @@ public class ShapeLayer extends CanvasLayer {
         layer.gradientEndY = (float) json.optDouble("gradientEndY", h / 3f);
         layer.gradientStartOffset = (float) json.optDouble("gradientStartOffset", 0.0);
         layer.gradientEndOffset = (float) json.optDouble("gradientEndOffset", 1.0);
+
+        org.json.JSONArray stopsArr = json.optJSONArray("gradientStops");
+        if (stopsArr != null && stopsArr.length() > 0) {
+            List<GradientBarView.GradientStop> loadedStops = new ArrayList<>();
+            for (int i = 0; i < stopsArr.length(); i++) {
+                org.json.JSONObject sObj = stopsArr.optJSONObject(i);
+                if (sObj != null) {
+                    loadedStops.add(new GradientBarView.GradientStop(
+                            sObj.optInt("color", 0xFF000000),
+                            (float) sObj.optDouble("offset", 0.0)
+                    ));
+                }
+            }
+            layer.setGradientStops(loadedStops);
+        }
 
         layer.strokeColor = json.optInt("strokeColor", 0xFF00E5BC);
         layer.strokeWidth = (float) json.optDouble("strokeWidth", 0.0);

@@ -66,6 +66,7 @@ public class PixelCanvasView extends View {
     private final Paint baseLayerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // Gradient On-Canvas Controller Painting
+    private boolean isGradientEditingActive = false;
     private final Paint gradLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gradLineShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gradHandleOuterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -268,6 +269,17 @@ public class PixelCanvasView extends View {
         this.isViewportLocked = locked;
     }
 
+    public boolean isGradientEditingActive() {
+        return isGradientEditingActive;
+    }
+
+    public void setGradientEditingActive(boolean active) {
+        if (this.isGradientEditingActive != active) {
+            this.isGradientEditingActive = active;
+            invalidate();
+        }
+    }
+
     public void setProject(EditorProject project) {
         this.project = project;
         resetViewport();
@@ -406,11 +418,12 @@ public class PixelCanvasView extends View {
         if (!isEyedropperActive) {
             CanvasLayer selectedLayer = project.getSelectedLayer();
             if (selectedLayer != null && selectedLayer.isVisible() && !selectedLayer.isLocked()) {
-                drawSelectionOverlay(canvas, selectedLayer);
-
-                // Draw on-canvas Gradient Vector Line & Handles if ShapeLayer or PhotoLayer has Gradient Fill
-                if (hasGradientFill(selectedLayer)) {
+                if (isGradientEditingActive && hasGradientFill(selectedLayer)) {
+                    // When editing Gradient: show gradient vector line & handles, hide transform bounding box to prevent mistouch
                     drawGradientControllerOverlay(canvas, selectedLayer);
+                } else {
+                    // Normal layer selection box & transform handles
+                    drawSelectionOverlay(canvas, selectedLayer);
                 }
             }
         }
@@ -685,18 +698,23 @@ public class PixelCanvasView extends View {
 
                 CanvasLayer selectedLayer = project != null ? project.getSelectedLayer() : null;
 
-                // 1. Check if clicking on on-canvas Gradient Handles
-                if (selectedLayer != null && !selectedLayer.isLocked() && hasGradientFill(selectedLayer)) {
-                    int gradHandle = hitTestGradientHandle(selectedLayer, vx, vy);
-                    if (gradHandle == 0) {
-                        currentTouchMode = TouchMode.GRADIENT_START_HANDLE;
-                        hasSavedSnapshotForInteraction = false;
-                        return true;
-                    } else if (gradHandle == 1) {
-                        currentTouchMode = TouchMode.GRADIENT_END_HANDLE;
-                        hasSavedSnapshotForInteraction = false;
-                        return true;
+                // 1. When gradient editing is active: ONLY interact with gradient handles & vector line
+                if (isGradientEditingActive) {
+                    if (selectedLayer != null && !selectedLayer.isLocked() && hasGradientFill(selectedLayer)) {
+                        int gradHandle = hitTestGradientHandle(selectedLayer, vx, vy);
+                        if (gradHandle == 0) {
+                            currentTouchMode = TouchMode.GRADIENT_START_HANDLE;
+                            hasSavedSnapshotForInteraction = false;
+                            return true;
+                        } else if (gradHandle == 1) {
+                            currentTouchMode = TouchMode.GRADIENT_END_HANDLE;
+                            hasSavedSnapshotForInteraction = false;
+                            return true;
+                        }
                     }
+                    // Prevent accidental layer selection change or handle mistouch while editing gradient
+                    currentTouchMode = TouchMode.NONE;
+                    return true;
                 }
 
                 // 2. Check if clicking on an active resize/rotation handle

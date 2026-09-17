@@ -153,7 +153,11 @@ public class EditorProject {
 
     private String aspectRatio = "9:16";
 
+    private boolean isElement = false;
+
     // Getters and Setters
+    public boolean isElement() { return isElement; }
+    public void setElement(boolean element) { this.isElement = element; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public int getCanvasWidth() { return canvasWidth; }
@@ -180,6 +184,7 @@ public class EditorProject {
             json.put("aspectRatio", getAspectRatio());
             json.put("backgroundColor", backgroundColor);
             json.put("selectedIndex", selectedIndex);
+            json.put("isElement", isElement);
 
             org.json.JSONArray layersArray = new org.json.JSONArray();
             for (CanvasLayer layer : layers) {
@@ -198,6 +203,7 @@ public class EditorProject {
         project.canvasHeight = json.optInt("canvasHeight", 1920);
         project.aspectRatio = json.optString("aspectRatio", "9:16");
         project.backgroundColor = json.optInt("backgroundColor", 0xFFD8DCE3);
+        project.isElement = json.optBoolean("isElement", false);
 
         org.json.JSONArray layersArray = json.optJSONArray("layers");
         if (layersArray != null) {

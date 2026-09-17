@@ -383,7 +383,8 @@ public class ProjectStorageManager {
                 source.getFileSize(),
                 System.currentTimeMillis(),
                 newThumb,
-                false
+                false,
+                source.isElement()
         );
 
         List<ProjectItem> all = loadAllRaw(context);

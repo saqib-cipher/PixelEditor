@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="Image Size"
+            android:text="Image Size &amp; Crop"
             android:textColor="@color/pe_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />

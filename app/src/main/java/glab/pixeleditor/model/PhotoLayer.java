@@ -12,6 +12,10 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 
+import glab.pixeleditor.view.GradientBarView;
+import java.util.ArrayList;
+import java.util.List;
+
 public class PhotoLayer extends CanvasLayer {
 
     private Bitmap bitmap;
@@ -34,6 +38,7 @@ public class PhotoLayer extends CanvasLayer {
     private float gradientEndY = 100f;
     private float gradientStartOffset = 0.0f;
     private float gradientEndOffset = 1.0f;
+    private final List<GradientBarView.GradientStop> gradientStops = new ArrayList<>();
 
     // Crop pan offsets (0 = centered, -1.0 to 1.0 as fraction of image size)
     // Positive X = pan right (show more of left side), Positive Y = pan down (show more of top)
@@ -43,6 +48,8 @@ public class PhotoLayer extends CanvasLayer {
     public PhotoLayer(String name, Bitmap bitmap, float x, float y, float width, float height) {
         super(name, x, y, width, height);
         this.bitmap = bitmap;
+        this.originalWidth = width;
+        this.originalHeight = height;
         this.gradientStartX = -width / 3f;
         this.gradientStartY = -height / 3f;
         this.gradientEndX = width / 3f;
@@ -114,38 +121,46 @@ public class PhotoLayer extends CanvasLayer {
                 }
             }
 
+            // Compute src rect strictly based on slider X and Y crop factors relative to original dimensions
+            int bw = bitmap.getWidth();
+            int bh = bitmap.getHeight();
+            float origW = getOriginalWidth();
+            float origH = getOriginalHeight();
+
+            float cropFactorX = Math.max(0.01f, Math.min(1.0f, width / Math.max(1f, origW)));
+            float cropFactorY = Math.max(0.01f, Math.min(1.0f, height / Math.max(1f, origH)));
+
+            int srcW = Math.max(1, Math.min(bw, Math.round(bw * cropFactorX)));
+            int srcH = Math.max(1, Math.min(bh, Math.round(bh * cropFactorY)));
+
+            // Crop pan: cropOffsetX/Y moves the center within available shift room
+            int maxShiftX = (bw - srcW) / 2;
+            int maxShiftY = (bh - srcH) / 2;
+            int centerX = bw / 2 + Math.round(cropOffsetX * 2f * maxShiftX);
+            int centerY = bh / 2 + Math.round(cropOffsetY * 2f * maxShiftY);
+            int srcLeft = Math.max(0, Math.min(bw - srcW, centerX - srcW / 2));
+            int srcTop = Math.max(0, Math.min(bh - srcH, centerY - srcH / 2));
+            android.graphics.Rect srcRect = new android.graphics.Rect(
+                    srcLeft, srcTop, srcLeft + srcW, srcTop + srcH);
+
             if (hasActiveEffects) {
                 float pad = glab.pixeleditor.effect.EffectPipeline.calculateEffectExpansionPadding(appliedEffects, width, height);
-                int bw = Math.max(1, (int) Math.ceil(bitmap.getWidth() + pad * 2f));
-                int bh = Math.max(1, (int) Math.ceil(bitmap.getHeight() + pad * 2f));
-                Bitmap paddedBmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
+                int cropW = srcRect.width();
+                int cropH = srcRect.height();
+                int pbw = Math.max(1, (int) Math.ceil(cropW + pad * 2f));
+                int pbh = Math.max(1, (int) Math.ceil(cropH + pad * 2f));
+                Bitmap paddedBmp = Bitmap.createBitmap(pbw, pbh, Bitmap.Config.ARGB_8888);
                 Canvas offCanvas = new Canvas(paddedBmp);
-                offCanvas.drawBitmap(bitmap, pad, pad, paint);
+                android.graphics.Rect destPadded = new android.graphics.Rect((int) pad, (int) pad, (int) (pad + cropW), (int) (pad + cropH));
+                offCanvas.drawBitmap(bitmap, srcRect, destPadded, paint);
 
                 RectF layerBounds = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
                 Bitmap renderBitmap = glab.pixeleditor.effect.EffectPipeline.processLayerEffects(this, paddedBmp, layerBounds, null);
-                float outPadX = (renderBitmap.getWidth() - bitmap.getWidth()) / 2f * (width / (float) bitmap.getWidth());
-                float outPadY = (renderBitmap.getHeight() - bitmap.getHeight()) / 2f * (height / (float) bitmap.getHeight());
+                float outPadX = (renderBitmap.getWidth() - cropW) / 2f * (width / (float) cropW);
+                float outPadY = (renderBitmap.getHeight() - cropH) / 2f * (height / (float) cropH);
                 RectF dstRect = new RectF(-width / 2f - outPadX, -height / 2f - outPadY, width / 2f + outPadX, height / 2f + outPadY);
                 canvas.drawBitmap(renderBitmap, null, dstRect, paint);
             } else {
-                // Compute src rect with crop pan offset clamped so we never exceed bitmap bounds
-                int bw = bitmap.getWidth();
-                int bh = bitmap.getHeight();
-                // src rect dimensions that would fully cover destRect at native pixel ratio
-                float scaleW = (float) bw / width;   // bitmap pixels per layer pixel (width)
-                float scaleH = (float) bh / height;  // bitmap pixels per layer pixel (height)
-                int srcW = Math.min(bw, Math.round(width * scaleW));
-                int srcH = Math.min(bh, Math.round(height * scaleH));
-                // Crop pan: cropOffsetX/Y range [-0.5, 0.5] moves the visible window
-                int maxShiftX = (bw - srcW) / 2;
-                int maxShiftY = (bh - srcH) / 2;
-                int centerX = bw / 2 + Math.round(cropOffsetX * bw);
-                int centerY = bh / 2 + Math.round(cropOffsetY * bh);
-                int srcLeft = Math.max(0, Math.min(bw - srcW, centerX - srcW / 2));
-                int srcTop  = Math.max(0, Math.min(bh - srcH, centerY - srcH / 2));
-                android.graphics.Rect srcRect = new android.graphics.Rect(
-                        srcLeft, srcTop, srcLeft + srcW, srcTop + srcH);
                 canvas.drawBitmap(bitmap, srcRect, destRect, paint);
             }
         }
@@ -166,26 +181,29 @@ public class PhotoLayer extends CanvasLayer {
         // Apply Gradient or Solid Color Overlay if active
         if (fillMode == ShapeLayer.FillMode.GRADIENT) {
             Paint gradPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            gradPaint.setStyle(Paint.Style.FILL);
             gradPaint.setAlpha(opacity);
             gradPaint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_ATOP));
 
-            int startA = Math.round(android.graphics.Color.alpha(gradientStartColor) * (opacity / 255f));
-            int endA = Math.round(android.graphics.Color.alpha(gradientEndColor) * (opacity / 255f));
-            int sCol = android.graphics.Color.argb(startA, android.graphics.Color.red(gradientStartColor), android.graphics.Color.green(gradientStartColor), android.graphics.Color.blue(gradientStartColor));
-            int eCol = android.graphics.Color.argb(endA, android.graphics.Color.red(gradientEndColor), android.graphics.Color.green(gradientEndColor), android.graphics.Color.blue(gradientEndColor));
+            int[] rawCols = getGradientColorsArray();
+            float[] offsets = getGradientOffsetsArray();
+            int[] cols = new int[rawCols.length];
+            for (int i = 0; i < rawCols.length; i++) {
+                int a = Math.round(android.graphics.Color.alpha(rawCols[i]) * (opacity / 255f));
+                cols[i] = android.graphics.Color.argb(a, android.graphics.Color.red(rawCols[i]), android.graphics.Color.green(rawCols[i]), android.graphics.Color.blue(rawCols[i]));
+            }
 
             if (gradientType == ShapeLayer.GradientType.RADIAL) {
                 float radius = (float) Math.hypot(gradientEndX - gradientStartX, gradientEndY - gradientStartY);
                 android.graphics.RadialGradient rg = new android.graphics.RadialGradient(
                         gradientStartX, gradientStartY, Math.max(1f, radius),
-                        sCol, eCol, android.graphics.Shader.TileMode.CLAMP
+                        cols, offsets, android.graphics.Shader.TileMode.CLAMP
                 );
                 gradPaint.setShader(rg);
             } else if (gradientType == ShapeLayer.GradientType.SWEEP) {
                 android.graphics.SweepGradient sg = new android.graphics.SweepGradient(
                         gradientStartX, gradientStartY,
-                        new int[]{sCol, eCol, sCol},
-                        new float[]{0f, 0.5f, 1f}
+                        cols, offsets
                 );
                 float angle = (float) Math.toDegrees(Math.atan2(gradientEndY - gradientStartY, gradientEndX - gradientStartX));
                 android.graphics.Matrix sm = new android.graphics.Matrix();
@@ -196,8 +214,7 @@ public class PhotoLayer extends CanvasLayer {
                 // LINEAR
                 android.graphics.LinearGradient lg = new android.graphics.LinearGradient(
                         gradientStartX, gradientStartY, gradientEndX, gradientEndY,
-                        new int[]{sCol, eCol},
-                        new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)},
+                        cols, offsets,
                         android.graphics.Shader.TileMode.CLAMP
                 );
                 gradPaint.setShader(lg);
@@ -329,10 +346,13 @@ public class PhotoLayer extends CanvasLayer {
         copy.setGradientEndY(gradientEndY);
         copy.setGradientStartOffset(gradientStartOffset);
         copy.setGradientEndOffset(gradientEndOffset);
+        copy.setGradientStops(this.gradientStops);
         copy.setMaskType(maskType);
         copy.setBlendMode(blendMode);
         copy.cropOffsetX = this.cropOffsetX;
         copy.cropOffsetY = this.cropOffsetY;
+        copy.originalWidth = this.getOriginalWidth();
+        copy.originalHeight = this.getOriginalHeight();
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             copy.addEffect(eff.copy());
         }
@@ -372,12 +392,15 @@ public class PhotoLayer extends CanvasLayer {
         clone.setGradientEndY(gradientEndY);
         clone.setGradientStartOffset(gradientStartOffset);
         clone.setGradientEndOffset(gradientEndOffset);
+        clone.setGradientStops(this.gradientStops);
         clone.setVisible(isVisible);
         clone.setLocked(isLocked);
         clone.setMaskType(maskType);
         clone.setBlendMode(blendMode);
         clone.cropOffsetX = this.cropOffsetX;
         clone.cropOffsetY = this.cropOffsetY;
+        clone.originalWidth = this.getOriginalWidth();
+        clone.originalHeight = this.getOriginalHeight();
         for (glab.pixeleditor.effect.EffectDefinition eff : appliedEffects) {
             clone.addEffect(eff.copy());
         }
@@ -430,6 +453,47 @@ public class PhotoLayer extends CanvasLayer {
     public float getGradientEndOffset() { return gradientEndOffset; }
     public void setGradientEndOffset(float gradientEndOffset) { this.gradientEndOffset = gradientEndOffset; }
 
+    public List<GradientBarView.GradientStop> getGradientStops() {
+        return gradientStops;
+    }
+
+    public void setGradientStops(List<GradientBarView.GradientStop> stops) {
+        this.gradientStops.clear();
+        if (stops != null) {
+            for (GradientBarView.GradientStop s : stops) {
+                this.gradientStops.add(s.copy());
+            }
+        }
+        if (!this.gradientStops.isEmpty()) {
+            this.gradientStartColor = this.gradientStops.get(0).color;
+            this.gradientStartOffset = this.gradientStops.get(0).offset;
+            this.gradientEndColor = this.gradientStops.get(this.gradientStops.size() - 1).color;
+            this.gradientEndOffset = this.gradientStops.get(this.gradientStops.size() - 1).offset;
+        }
+    }
+
+    public int[] getGradientColorsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            int[] arr = new int[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).color;
+            }
+            return arr;
+        }
+        return new int[]{gradientStartColor, gradientEndColor};
+    }
+
+    public float[] getGradientOffsetsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            float[] arr = new float[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).offset;
+            }
+            return arr;
+        }
+        return new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)};
+    }
+
     /** Crop pan offset X: range [-0.5, 0.5]. Positive = shift visible window rightward. */
     public float getCropOffsetX() { return cropOffsetX; }
     public void setCropOffsetX(float v) { this.cropOffsetX = Math.max(-0.5f, Math.min(0.5f, v)); }
@@ -475,6 +539,18 @@ public class PhotoLayer extends CanvasLayer {
             json.put("gradientEndY", (double) gradientEndY);
             json.put("gradientStartOffset", (double) gradientStartOffset);
             json.put("gradientEndOffset", (double) gradientEndOffset);
+
+            if (!gradientStops.isEmpty()) {
+                org.json.JSONArray stopsArr = new org.json.JSONArray();
+                for (GradientBarView.GradientStop s : gradientStops) {
+                    org.json.JSONObject sObj = new org.json.JSONObject();
+                    sObj.put("color", s.color);
+                    sObj.put("offset", (double) s.offset);
+                    stopsArr.put(sObj);
+                }
+                json.put("gradientStops", stopsArr);
+            }
+
             json.put("originalWidth", getOriginalWidth());
             json.put("originalHeight", getOriginalHeight());
             json.put("cropOffsetX", (double) cropOffsetX);
@@ -552,6 +628,21 @@ public class PhotoLayer extends CanvasLayer {
         layer.gradientEndY = (float) json.optDouble("gradientEndY", h / 3f);
         layer.gradientStartOffset = (float) json.optDouble("gradientStartOffset", 0.0);
         layer.gradientEndOffset = (float) json.optDouble("gradientEndOffset", 1.0);
+
+        org.json.JSONArray stopsArr = json.optJSONArray("gradientStops");
+        if (stopsArr != null && stopsArr.length() > 0) {
+            List<GradientBarView.GradientStop> loadedStops = new ArrayList<>();
+            for (int i = 0; i < stopsArr.length(); i++) {
+                org.json.JSONObject sObj = stopsArr.optJSONObject(i);
+                if (sObj != null) {
+                    loadedStops.add(new GradientBarView.GradientStop(
+                            sObj.optInt("color", 0xFF000000),
+                            (float) sObj.optDouble("offset", 0.0)
+                    ));
+                }
+            }
+            layer.setGradientStops(loadedStops);
+        }
 
         layer.photoFileName = photoPath;
         layer.originalWidth = (float) json.optDouble("originalWidth", loadedBmp.getWidth());

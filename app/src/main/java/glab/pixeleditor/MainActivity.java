@@ -352,6 +352,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
                 populateLayersOverviewPanel();
             }
+            updateCanvasGradientEditingState();
             return;
         }
 
@@ -414,7 +415,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                     Math.max(1024, project.getLayers().size() * 512L),
                     System.currentTimeMillis(),
                     thumbName,
-                    false
+                    false,
+                    project.isElement()
             );
             ProjectStorageManager.addOrUpdateProject(this, item);
         } catch (Exception ignored) {}
@@ -428,14 +430,22 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         int width = intent != null ? intent.getIntExtra("EXTRA_PROJECT_WIDTH", 1080) : 1080;
         int height = intent != null ? intent.getIntExtra("EXTRA_PROJECT_HEIGHT", 1920) : 1920;
         int bg = intent != null ? intent.getIntExtra("EXTRA_PROJECT_BG", 0xFFD8DCE3) : 0xFFD8DCE3;
+        boolean isElement = intent != null && intent.getBooleanExtra("EXTRA_IS_ELEMENT", false);
 
         if (projectId != null && !projectId.isEmpty()) {
             project = ProjectStorageManager.loadProjectContent(this, projectId);
+            if (project != null && !isElement) {
+                ProjectStorageManager.ProjectItem existingItem = ProjectStorageManager.getProjectById(this, projectId);
+                if (existingItem != null && existingItem.isElement()) {
+                    isElement = true;
+                }
+            }
         }
 
         if (project == null) {
             project = new EditorProject();
-            project.setTitle(title != null && !title.isEmpty() ? title : "New Project 1");
+            project.setElement(isElement);
+            project.setTitle(title != null && !title.isEmpty() ? title : (isElement ? "New Element 1" : "New Project 1"));
             project.setCanvasWidth(width);
             project.setCanvasHeight(height);
             project.setBackgroundColor(bg);
@@ -443,6 +453,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 project.setAspectRatio(aspect);
             }
         } else {
+            if (isElement) project.setElement(true);
             if (title != null && !title.isEmpty()) project.setTitle(title);
             if (width > 0) project.setCanvasWidth(width);
             if (height > 0) project.setCanvasHeight(height);
@@ -898,6 +909,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 populateColorFillPanel(layer);
             }
             binding.flipperBottomPanels.setDisplayedChild(PANEL_COLOR_FILL);
+            updateCanvasGradientEditingState();
         });
 
         menuView.findViewById(R.id.btnToolBorderShadow).setOnClickListener(v -> {
@@ -906,6 +918,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 populateBorderShadowPanel(layer);
             }
             binding.flipperBottomPanels.setDisplayedChild(PANEL_BORDER_SHADOW);
+            updateCanvasGradientEditingState();
         });
 
         menuView.findViewById(R.id.btnToolBlending).setOnClickListener(v -> {
@@ -914,6 +927,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 populateBlendingOpacityPanel(layer);
             }
             binding.flipperBottomPanels.setDisplayedChild(PANEL_BLENDING_OPACITY);
+            updateCanvasGradientEditingState();
         });
 
         menuView.findViewById(R.id.btnToolTransform).setOnClickListener(v -> {
@@ -921,6 +935,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             if (layer != null) {
                 openMoveTransformPanel();
             }
+            updateCanvasGradientEditingState();
         });
 
         menuView.findViewById(R.id.btnToolEditShape).setOnClickListener(v -> {
@@ -932,10 +947,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 populateEditShapePanel((ShapeLayer) layer);
             } else if (layer instanceof PhotoLayer) {
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_PHOTO_ADJUST);
+                populatePhotoAdjustPanel((PhotoLayer) layer);
             } else if (layer instanceof TextLayer) {
                 binding.flipperBottomPanels.setDisplayedChild(PANEL_EDIT_TEXT);
                 populateEditTextPanel((TextLayer) layer);
             }
+            updateCanvasGradientEditingState();
         });
 
         menuView.findViewById(R.id.btnToolEffects).setOnClickListener(v -> {
@@ -945,6 +962,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             } else {
                 binding.containerEffectBrowser.setVisibility(View.VISIBLE);
             }
+            updateCanvasGradientEditingState();
         });
     }
 
@@ -1478,35 +1496,49 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
     // -------------------------------------------------------------
     private void setupSubpanels() {
         // Back buttons for sub-panels
-        binding.getRoot().findViewById(R.id.btnBackFromEditShape).setOnClickListener(v ->
-                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
-        binding.getRoot().findViewById(R.id.btnBackFromBorder).setOnClickListener(v ->
-                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
-        binding.getRoot().findViewById(R.id.btnBackFromColor).setOnClickListener(v ->
-                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
-        binding.getRoot().findViewById(R.id.btnBackFromAdjust).setOnClickListener(v ->
-                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+        binding.getRoot().findViewById(R.id.btnBackFromEditShape).setOnClickListener(v -> {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            updateCanvasGradientEditingState();
+        });
+        binding.getRoot().findViewById(R.id.btnBackFromBorder).setOnClickListener(v -> {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            updateCanvasGradientEditingState();
+        });
+        binding.getRoot().findViewById(R.id.btnBackFromColor).setOnClickListener(v -> {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            updateCanvasGradientEditingState();
+        });
+        binding.getRoot().findViewById(R.id.btnBackFromAdjust).setOnClickListener(v -> {
+            binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+            updateCanvasGradientEditingState();
+        });
         View btnBackBlending = binding.getRoot().findViewById(R.id.btnBackFromBlendingOpacity);
         if (btnBackBlending != null) {
-            btnBackBlending.setOnClickListener(v ->
-                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+            btnBackBlending.setOnClickListener(v -> {
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                updateCanvasGradientEditingState();
+            });
         }
 
         View btnBackText = binding.getRoot().findViewById(R.id.btnBackTextEdit);
         if (btnBackText != null) {
-            btnBackText.setOnClickListener(v ->
-                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+            btnBackText.setOnClickListener(v -> {
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                updateCanvasGradientEditingState();
+            });
         }
         View btnDoneText = binding.getRoot().findViewById(R.id.btnDoneTextEdit);
         if (btnDoneText != null) {
-            btnDoneText.setOnClickListener(v ->
-                    binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU));
+            btnDoneText.setOnClickListener(v -> {
+                binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
+                updateCanvasGradientEditingState();
+            });
         }
         binding.getRoot().findViewById(R.id.btnCloseAddSheet).setOnClickListener(v -> {
             binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYERS_OVERVIEW);
             populateLayersOverviewPanel();
+            updateCanvasGradientEditingState();
         });
-
 
         // Subpanel 2: Border & Shadow
         setupBorderShadowPanel();
@@ -1517,92 +1549,112 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         // Subpanel 9: Blending & Opacity Panel (Screenshot 2)
         setupBlendingOpacityPanel();
 
-        // Subpanel 4: Photo Crop Offset Controls (Crop X & Crop Y)
+        // Subpanel 4: Photo Adjust (Image Size & Crop Sliders)
         ClampedSliderView sliderPhotoW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
         ClampedSliderView sliderPhotoH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
         TextView tvPhotoW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
         TextView tvPhotoH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
-        // Aspect-lock switch and other size buttons hidden / repurposed — keep refs to avoid NPE
-        MaterialSwitch switchAspect =
-                binding.getRoot().findViewById(R.id.switchPhotoAspectLock);
-        // Hide aspect lock switch (not relevant for crop mode)
-        if (switchAspect != null) switchAspect.setVisibility(View.GONE);
+        MaterialSwitch switchAspect = binding.getRoot().findViewById(R.id.switchPhotoAspectLock);
+        if (switchAspect != null) {
+            switchAspect.setVisibility(View.VISIBLE);
+            switchAspect.setChecked(true);
+        }
 
         if (sliderPhotoW != null) {
-            // Crop X: -50 to +50 (maps to -0.5 to +0.5 fraction of bitmap width)
-            sliderPhotoW.setValueFrom(-50);
-            sliderPhotoW.setValueTo(50);
             sliderPhotoW.addOnChangeListener((slider, value, fromUser) -> {
-                CanvasLayer layer = project.getSelectedLayer();
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof PhotoLayer && fromUser) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    pl.setCropOffsetX(value / 100f);  // convert % to fraction
-                    if (tvPhotoW != null) tvPhotoW.setText(Math.round(value) + "%");
+                    float oldW = pl.getWidth();
+                    float oldH = pl.getHeight();
+                    pl.setWidth(value);
+                    if (switchAspect != null && switchAspect.isChecked() && oldW > 0) {
+                        float newH = value * (oldH / oldW);
+                        pl.setHeight(newH);
+                        if (sliderPhotoH != null) sliderPhotoH.setValue(newH);
+                        if (tvPhotoH != null) tvPhotoH.setText(Math.round(newH) + "px");
+                    }
+                    if (tvPhotoW != null) tvPhotoW.setText(Math.round(value) + "px");
                     binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
                 }
             });
         }
 
         if (sliderPhotoH != null) {
-            // Crop Y: -50 to +50 (maps to -0.5 to +0.5 fraction of bitmap height)
-            sliderPhotoH.setValueFrom(-50);
-            sliderPhotoH.setValueTo(50);
             sliderPhotoH.addOnChangeListener((slider, value, fromUser) -> {
-                CanvasLayer layer = project.getSelectedLayer();
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof PhotoLayer && fromUser) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    pl.setCropOffsetY(value / 100f);  // convert % to fraction
-                    if (tvPhotoH != null) tvPhotoH.setText(Math.round(value) + "%");
+                    float oldW = pl.getWidth();
+                    float oldH = pl.getHeight();
+                    pl.setHeight(value);
+                    if (switchAspect != null && switchAspect.isChecked() && oldH > 0) {
+                        float newW = value * (oldW / oldH);
+                        pl.setWidth(newW);
+                        if (sliderPhotoW != null) sliderPhotoW.setValue(newW);
+                        if (tvPhotoW != null) tvPhotoW.setText(Math.round(newW) + "px");
+                    }
+                    if (tvPhotoH != null) tvPhotoH.setText(Math.round(value) + "px");
                     binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
                 }
             });
         }
 
-        // Reset crop offsets to center
-        binding.getRoot().findViewById(R.id.btnResetAdjustments).setOnClickListener(v -> {
-            CanvasLayer layer = project.getSelectedLayer();
-            if (layer instanceof PhotoLayer) {
-                PhotoLayer pl = (PhotoLayer) layer;
-                pl.setCropOffsetX(0f);
-                pl.setCropOffsetY(0f);
-                if (sliderPhotoW != null) sliderPhotoW.setValue(0);
-                if (sliderPhotoH != null) sliderPhotoH.setValue(0);
-                if (tvPhotoW != null) tvPhotoW.setText("0%");
-                if (tvPhotoH != null) tvPhotoH.setText("0%");
-                binding.canvasView.invalidate();
-                updateTransformCoordinatesUI();
-            }
-        });
+        // Reset to original dimensions
+        View btnResetAdjust = binding.getRoot().findViewById(R.id.btnResetAdjustments);
+        if (btnResetAdjust != null) {
+            btnResetAdjust.setOnClickListener(v -> {
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                if (layer instanceof PhotoLayer) {
+                    PhotoLayer pl = (PhotoLayer) layer;
+                    pl.setWidth(pl.getOriginalWidth());
+                    pl.setHeight(pl.getOriginalHeight());
+                    pl.setCropOffsetX(0f);
+                    pl.setCropOffsetY(0f);
+                    populatePhotoAdjustPanel(pl);
+                    binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
+                }
+            });
+        }
 
-        // "Fit Canvas" button → Center Crop X
+        // "Fit Canvas" button → Scales image to match canvas size
         View btnFitCanvas = binding.getRoot().findViewById(R.id.btnPhotoMatchCanvas);
         if (btnFitCanvas != null) {
             btnFitCanvas.setOnClickListener(v -> {
-                CanvasLayer layer = project.getSelectedLayer();
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof PhotoLayer) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    pl.setCropOffsetX(0f);
-                    if (sliderPhotoW != null) sliderPhotoW.setValue(0);
-                    if (tvPhotoW != null) tvPhotoW.setText("0%");
+                    float cw = project.getCanvasWidth();
+                    float ch = project.getCanvasHeight();
+                    pl.setWidth(cw);
+                    pl.setHeight(ch);
+                    populatePhotoAdjustPanel(pl);
                     binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
                 }
             });
         }
 
-        // "Square 1:1" button → Center Crop Y
+        // "Square 1:1" button → Make width and height equal
         View btnSquare = binding.getRoot().findViewById(R.id.btnPhotoSquare);
         if (btnSquare != null) {
             btnSquare.setOnClickListener(v -> {
-                CanvasLayer layer = project.getSelectedLayer();
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof PhotoLayer) {
                     PhotoLayer pl = (PhotoLayer) layer;
-                    pl.setCropOffsetY(0f);
-                    if (sliderPhotoH != null) sliderPhotoH.setValue(0);
-                    if (tvPhotoH != null) tvPhotoH.setText("0%");
+                    float side = Math.min(pl.getWidth(), pl.getHeight());
+                    pl.setWidth(side);
+                    pl.setHeight(side);
+                    populatePhotoAdjustPanel(pl);
                     binding.canvasView.invalidate();
+                    updateTransformCoordinatesUI();
                 }
             });
         }
+
         // AI Subject / Background Remover (Both Adjust and Color & Fill panels)
         View.OnClickListener removeBgListener = v -> {
             CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
@@ -1624,7 +1676,36 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         View btnRemoveBgFill = binding.getRoot().findViewById(R.id.btnRemoveBgFromFill);
         if (btnRemoveBgFill != null) {
             btnRemoveBgFill.setOnClickListener(removeBgListener);
-        }        }
+        }
+    }
+
+    private void populatePhotoAdjustPanel(PhotoLayer pl) {
+        if (pl == null) return;
+        ClampedSliderView sliderPhotoW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
+        ClampedSliderView sliderPhotoH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
+        TextView tvPhotoW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
+        TextView tvPhotoH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
+
+        float maxDim = Math.max(2000f, Math.max(pl.getOriginalWidth() * 2f, pl.getOriginalHeight() * 2f));
+
+        if (sliderPhotoW != null) {
+            sliderPhotoW.setValueFrom(20);
+            sliderPhotoW.setValueTo(maxDim);
+            sliderPhotoW.setValue(Math.max(20f, Math.min(maxDim, pl.getWidth())));
+        }
+        if (tvPhotoW != null) {
+            tvPhotoW.setText(Math.round(pl.getWidth()) + "px");
+        }
+
+        if (sliderPhotoH != null) {
+            sliderPhotoH.setValueFrom(20);
+            sliderPhotoH.setValueTo(maxDim);
+            sliderPhotoH.setValue(Math.max(20f, Math.min(maxDim, pl.getHeight())));
+        }
+        if (tvPhotoH != null) {
+            tvPhotoH.setText(Math.round(pl.getHeight()) + "px");
+        }
+    }
     
 
     // -------------------------------------------------------------
@@ -2265,12 +2346,14 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ImageView ivGradSweep = binding.getRoot().findViewById(R.id.ivGradTypeSweep);
 
         GradientBarView gradientBarView = binding.getRoot().findViewById(R.id.gradientBarView);
-        View btnGradStart = binding.getRoot().findViewById(R.id.btnGradStartColor);
-        View btnGradEnd = binding.getRoot().findViewById(R.id.btnGradEndColor);
-        View btnGradStartContainer = binding.getRoot().findViewById(R.id.btnGradStartContainer);
-        View btnGradEndContainer = binding.getRoot().findViewById(R.id.btnGradEndContainer);
+        View btnAddGradColor = binding.getRoot().findViewById(R.id.btnAddGradColor);
+        View btnDeleteGradColor = binding.getRoot().findViewById(R.id.btnDeleteGradColor);
+        View btnGradSelectedColorContainer = binding.getRoot().findViewById(R.id.btnGradSelectedColorContainer);
+        View viewGradSelectedColor = binding.getRoot().findViewById(R.id.viewGradSelectedColor);
+        TextView tvGradSelectedStopLabel = binding.getRoot().findViewById(R.id.tvGradSelectedStopLabel);
+        TextView tvGradSelectedHex = binding.getRoot().findViewById(R.id.tvGradSelectedHex);
         View btnReverse = binding.getRoot().findViewById(R.id.btnReverseGradient);
-        View btnEyedropper = binding.getRoot().findViewById(R.id.btnGradEyedropper);
+        View btnGradEyedropper = binding.getRoot().findViewById(R.id.btnGradEyedropper);
 
         // Media Fill scaling & picking controls (Screenshot 1)
         MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
@@ -2290,6 +2373,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             if (ivGrad != null) ivGrad.setImageTintList(ColorStateList.valueOf(child == 2 ? 0xFF00E5BC : 0xFF94A3B8));
             tabMedia.setStrokeColor(child == 3 ? 0xFF00E5BC : 0x22FFFFFF);
             if (ivMedia != null) ivMedia.setImageTintList(ColorStateList.valueOf(child == 3 ? 0xFF00E5BC : 0xFF94A3B8));
+            updateCanvasGradientEditingState();
         };
 
         if (tabNone != null) {
@@ -2352,36 +2436,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 updateTabsState.run();
                 CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
                 if (layer instanceof ShapeLayer) {
-                    ShapeLayer sl = (ShapeLayer) layer;
-                    sl.setFillMode(ShapeLayer.FillMode.GRADIENT);
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(sl.getGradientStartColor(), sl.getGradientEndColor());
-                        gradientBarView.setOffsets(sl.getGradientStartOffset(), sl.getGradientEndOffset());
-                    }
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientEndColor()));
-                    if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientStartColor()));
+                    ((ShapeLayer) layer).setFillMode(ShapeLayer.FillMode.GRADIENT);
                 } else if (layer instanceof PhotoLayer) {
-                    PhotoLayer pl = (PhotoLayer) layer;
-                    pl.setFillMode(ShapeLayer.FillMode.GRADIENT);
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(pl.getGradientStartColor(), pl.getGradientEndColor());
-                        gradientBarView.setOffsets(pl.getGradientStartOffset(), pl.getGradientEndOffset());
-                    }
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientEndColor()));
-                    if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
+                    ((PhotoLayer) layer).setFillMode(ShapeLayer.FillMode.GRADIENT);
                 } else if (layer instanceof TextLayer) {
-                    TextLayer tl = (TextLayer) layer;
-                    tl.setFillMode(ShapeLayer.FillMode.GRADIENT);
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
-                        gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
-                    }
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
-                    if (previewFill != null) previewFill.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
+                    ((TextLayer) layer).setFillMode(ShapeLayer.FillMode.GRADIENT);
                 }
+                populateColorFillPanel(layer);
                 binding.canvasView.invalidate();
             });
         }
@@ -2515,6 +2576,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 } else if (layer instanceof TextLayer) {
                     ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.LINEAR);
                 }
+                if (gradientBarView != null) gradientBarView.setGradientType(ShapeLayer.GradientType.LINEAR);
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
             });
@@ -2530,6 +2592,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 } else if (layer instanceof TextLayer) {
                     ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.RADIAL);
                 }
+                if (gradientBarView != null) gradientBarView.setGradientType(ShapeLayer.GradientType.RADIAL);
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
             });
@@ -2545,8 +2608,110 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 } else if (layer instanceof TextLayer) {
                     ((TextLayer) layer).setGradientType(ShapeLayer.GradientType.SWEEP);
                 }
+                if (gradientBarView != null) gradientBarView.setGradientType(ShapeLayer.GradientType.SWEEP);
                 updateGradTypeButtons.run();
                 binding.canvasView.invalidate();
+            });
+        }
+
+        Runnable updateSelectedStopUI = () -> {
+            if (gradientBarView == null) return;
+            GradientBarView.GradientStop selectedStop = gradientBarView.getSelectedStop();
+            int stopIndex = gradientBarView.getSelectedStopIndex();
+            int totalStops = gradientBarView.getStops().size();
+            int col = (selectedStop != null) ? selectedStop.color : 0xFF000000;
+            float offset = (selectedStop != null) ? selectedStop.offset : 0.0f;
+
+            if (viewGradSelectedColor != null) {
+                viewGradSelectedColor.setBackgroundTintList(ColorStateList.valueOf(col));
+            }
+            if (tvGradSelectedStopLabel != null) {
+                tvGradSelectedStopLabel.setText("Color " + (stopIndex + 1) + " (" + Math.round(offset * 100f) + "%)");
+            }
+            if (tvGradSelectedHex != null) {
+                String hex = String.format(Locale.US, "#%06X", (0xFFFFFF & col));
+                tvGradSelectedHex.setText(hex);
+            }
+            if (btnDeleteGradColor != null) {
+                btnDeleteGradColor.setEnabled(totalStops > 2);
+                btnDeleteGradColor.setAlpha(totalStops > 2 ? 1.0f : 0.35f);
+            }
+            if (previewFill != null) {
+                previewFill.setBackgroundTintList(ColorStateList.valueOf(col));
+            }
+        };
+
+        View.OnClickListener openSelectedStopColorPicker = v -> {
+            if (gradientBarView == null) return;
+            GradientBarView.GradientStop stop = gradientBarView.getSelectedStop();
+            if (stop == null) return;
+            int curCol = stop.color;
+            int stopIndex = gradientBarView.getSelectedStopIndex();
+
+            AlightColorPickerDialog.show(MainActivity.this, "Edit Color " + (stopIndex + 1), curCol, col -> {
+                gradientBarView.updateSelectedStopColor(col);
+                CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                updateSelectedStopUI.run();
+                binding.canvasView.invalidate();
+            }, (dialog, pickerView) -> {
+                Toast.makeText(MainActivity.this, "Drag across canvas to pick color", Toast.LENGTH_SHORT).show();
+                binding.canvasView.startEyedropper(col -> {
+                    gradientBarView.updateSelectedStopColor(col);
+                    CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                    List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                    if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                    pickerView.setColor(col, true);
+                    updateSelectedStopUI.run();
+                    binding.canvasView.invalidate();
+                });
+            });
+        };
+
+        if (btnGradSelectedColorContainer != null) {
+            btnGradSelectedColorContainer.setOnClickListener(openSelectedStopColorPicker);
+        }
+
+        // Add Gradient Stop Color button (+)
+        if (btnAddGradColor != null) {
+            btnAddGradColor.setOnClickListener(v -> {
+                if (gradientBarView != null) {
+                    gradientBarView.addStopAuto();
+                    updateSelectedStopUI.run();
+                    CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                    List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                    if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                    binding.canvasView.invalidate();
+                    // Open color picker dialog immediately for the newly added color stop
+                    openSelectedStopColorPicker.onClick(btnAddGradColor);
+                }
+            });
+        }
+
+        // Delete Gradient Stop Color button (Trash)
+        if (btnDeleteGradColor != null) {
+            btnDeleteGradColor.setOnClickListener(v -> {
+                if (gradientBarView != null) {
+                    if (gradientBarView.removeSelectedStop()) {
+                        updateSelectedStopUI.run();
+                        CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                        List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                        if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                        else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                        else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                        binding.canvasView.invalidate();
+                        Toast.makeText(MainActivity.this, "Removed color stop", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Minimum 2 colors required", Toast.LENGTH_SHORT).show();
+                    }
+                }
             });
         }
 
@@ -2555,6 +2720,27 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             gradientBarView.setOnGradientChangeListener(new GradientBarView.OnGradientChangeListener() {
                 @Override
                 public void onStopSelected(int stopIndex, int color) {
+                    updateSelectedStopUI.run();
+                }
+
+                @Override
+                public void onStopClick(int stopIndex, int color) {
+                    updateSelectedStopUI.run();
+                    openSelectedStopColorPicker.onClick(gradientBarView);
+                }
+
+                @Override
+                public void onStopsChanged(List<GradientBarView.GradientStop> stops, boolean fromUser) {
+                    CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+                    if (layer instanceof ShapeLayer) {
+                        ((ShapeLayer) layer).setGradientStops(stops);
+                    } else if (layer instanceof PhotoLayer) {
+                        ((PhotoLayer) layer).setGradientStops(stops);
+                    } else if (layer instanceof TextLayer) {
+                        ((TextLayer) layer).setGradientStops(stops);
+                    }
+                    updateSelectedStopUI.run();
+                    binding.canvasView.invalidate();
                 }
 
                 @Override
@@ -2576,211 +2762,40 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                         tl.setGradientEndOffset(endOffset);
                         binding.canvasView.invalidate();
                     }
+                    updateSelectedStopUI.run();
                 }
             });
         }
-
-        // Start / End Color pickers
-        View.OnClickListener pickStartColor = v -> {
-            CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
-            int curCol = 0xFF000000;
-            if (layer instanceof ShapeLayer) curCol = ((ShapeLayer) layer).getGradientStartColor();
-            else if (layer instanceof PhotoLayer) curCol = ((PhotoLayer) layer).getGradientStartColor();
-            else if (layer instanceof TextLayer) curCol = ((TextLayer) layer).getGradientStartColor();
-
-            AlightColorPickerDialog.show(MainActivity.this, "Gradient Start Color", curCol, col -> {
-                if (layer instanceof ShapeLayer) {
-                    ((ShapeLayer) layer).setGradientStartColor(col);
-                } else if (layer instanceof PhotoLayer) {
-                    ((PhotoLayer) layer).setGradientStartColor(col);
-                } else if (layer instanceof TextLayer) {
-                    ((TextLayer) layer).setGradientStartColor(col);
-                }
-                if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(col));
-                if (gradientBarView != null) {
-                    int endCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientEndColor() :
-                                 (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() :
-                                 (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
-                    gradientBarView.setColors(col, endCol);
-                }
-                binding.canvasView.invalidate();
-            }, (dialog, pickerView) -> {
-                Toast.makeText(MainActivity.this, "Drag across canvas to pick color", Toast.LENGTH_SHORT).show();
-                binding.canvasView.startEyedropper(col -> {
-                    if (layer instanceof ShapeLayer) {
-                        ((ShapeLayer) layer).setGradientStartColor(col);
-                    } else if (layer instanceof PhotoLayer) {
-                        ((PhotoLayer) layer).setGradientStartColor(col);
-                    } else if (layer instanceof TextLayer) {
-                        ((TextLayer) layer).setGradientStartColor(col);
-                    }
-                    pickerView.setColor(col, true);
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(col));
-                    if (gradientBarView != null) {
-                        int endCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientEndColor() :
-                                     (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientEndColor() :
-                                     (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientEndColor() : 0xFFFFFFFF;
-                        gradientBarView.setColors(col, endCol);
-                    }
-                    binding.canvasView.invalidate();
-                });
-            });
-        };
-
-        if (btnGradStart != null) btnGradStart.setOnClickListener(pickStartColor);
-        if (btnGradStartContainer != null) btnGradStartContainer.setOnClickListener(pickStartColor);
-
-        View.OnClickListener pickEndColor = v -> {
-            CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
-            int curCol = 0xFFFFFFFF;
-            if (layer instanceof ShapeLayer) curCol = ((ShapeLayer) layer).getGradientEndColor();
-            else if (layer instanceof PhotoLayer) curCol = ((PhotoLayer) layer).getGradientEndColor();
-            else if (layer instanceof TextLayer) curCol = ((TextLayer) layer).getGradientEndColor();
-
-            AlightColorPickerDialog.show(MainActivity.this, "Gradient End Color", curCol, col -> {
-                if (layer instanceof ShapeLayer) {
-                    ((ShapeLayer) layer).setGradientEndColor(col);
-                } else if (layer instanceof PhotoLayer) {
-                    ((PhotoLayer) layer).setGradientEndColor(col);
-                } else if (layer instanceof TextLayer) {
-                    ((TextLayer) layer).setGradientEndColor(col);
-                }
-                if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(col));
-                if (gradientBarView != null) {
-                    int startCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientStartColor() :
-                                   (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() :
-                                   (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientStartColor() : 0xFF000000;
-                    gradientBarView.setColors(startCol, col);
-                }
-                binding.canvasView.invalidate();
-            }, (dialog, pickerView) -> {
-                Toast.makeText(MainActivity.this, "Drag across canvas to pick color", Toast.LENGTH_SHORT).show();
-                binding.canvasView.startEyedropper(col -> {
-                    if (layer instanceof ShapeLayer) {
-                        ((ShapeLayer) layer).setGradientEndColor(col);
-                    } else if (layer instanceof PhotoLayer) {
-                        ((PhotoLayer) layer).setGradientEndColor(col);
-                    } else if (layer instanceof TextLayer) {
-                        ((TextLayer) layer).setGradientEndColor(col);
-                    }
-                    pickerView.setColor(col, true);
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(col));
-                    if (gradientBarView != null) {
-                        int startCol = (layer instanceof ShapeLayer) ? ((ShapeLayer) layer).getGradientStartColor() :
-                                       (layer instanceof PhotoLayer) ? ((PhotoLayer) layer).getGradientStartColor() :
-                                       (layer instanceof TextLayer) ? ((TextLayer) layer).getGradientStartColor() : 0xFF000000;
-                        gradientBarView.setColors(startCol, col);
-                    }
-                    binding.canvasView.invalidate();
-                });
-            });
-        };
-
-        if (btnGradEnd != null) btnGradEnd.setOnClickListener(pickEndColor);
-        if (btnGradEndContainer != null) btnGradEndContainer.setOnClickListener(pickEndColor);
 
         // Reverse Gradient Button
         if (btnReverse != null) {
             btnReverse.setOnClickListener(v -> {
                 CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
-                if (layer instanceof ShapeLayer) {
-                    ShapeLayer sl = (ShapeLayer) layer;
-                    int tempCol = sl.getGradientStartColor();
-                    sl.setGradientStartColor(sl.getGradientEndColor());
-                    sl.setGradientEndColor(tempCol);
-
-                    float tempOff = sl.getGradientStartOffset();
-                    sl.setGradientStartOffset(sl.getGradientEndOffset());
-                    sl.setGradientEndOffset(tempOff);
-
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientEndColor()));
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(sl.getGradientStartColor(), sl.getGradientEndColor());
-                        gradientBarView.setOffsets(sl.getGradientStartOffset(), sl.getGradientEndOffset());
-                    }
-                    binding.canvasView.invalidate();
-                } else if (layer instanceof PhotoLayer) {
-                    PhotoLayer pl = (PhotoLayer) layer;
-                    int tempCol = pl.getGradientStartColor();
-                    pl.setGradientStartColor(pl.getGradientEndColor());
-                    pl.setGradientEndColor(tempCol);
-
-                    float tempOff = pl.getGradientStartOffset();
-                    pl.setGradientStartOffset(pl.getGradientEndOffset());
-                    pl.setGradientEndOffset(tempOff);
-
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientEndColor()));
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(pl.getGradientStartColor(), pl.getGradientEndColor());
-                        gradientBarView.setOffsets(pl.getGradientStartOffset(), pl.getGradientEndOffset());
-                    }
-                    binding.canvasView.invalidate();
-                } else if (layer instanceof TextLayer) {
-                    TextLayer tl = (TextLayer) layer;
-                    int tempCol = tl.getGradientStartColor();
-                    tl.setGradientStartColor(tl.getGradientEndColor());
-                    tl.setGradientEndColor(tempCol);
-
-                    float tempOff = tl.getGradientStartOffset();
-                    tl.setGradientStartOffset(tl.getGradientEndOffset());
-                    tl.setGradientEndOffset(tempOff);
-
-                    if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
-                    if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
-                    if (gradientBarView != null) {
-                        gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
-                        gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
-                    }
+                if (gradientBarView != null) {
+                    gradientBarView.reverseStops();
+                    List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                    if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                    else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                    updateSelectedStopUI.run();
                     binding.canvasView.invalidate();
                 }
             });
         }
 
         // Gradient Eyedropper Button
-        if (btnEyedropper != null) {
-            btnEyedropper.setOnClickListener(v -> {
-                Toast.makeText(MainActivity.this, "Drag across canvas to pick gradient stop color", Toast.LENGTH_SHORT).show();
+        if (btnGradEyedropper != null) {
+            btnGradEyedropper.setOnClickListener(v -> {
+                Toast.makeText(MainActivity.this, "Drag across canvas to pick color for selected stop", Toast.LENGTH_SHORT).show();
                 binding.canvasView.startEyedropper(color -> {
                     CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
-                    int selectedStop = (gradientBarView != null) ? gradientBarView.getSelectedStopIndex() : 0;
-                    if (layer instanceof ShapeLayer) {
-                        ShapeLayer sl = (ShapeLayer) layer;
-                        if (selectedStop == 0) {
-                            sl.setGradientStartColor(color);
-                            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(color));
-                        } else {
-                            sl.setGradientEndColor(color);
-                            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(color));
-                        }
-                        if (gradientBarView != null) {
-                            gradientBarView.setColors(sl.getGradientStartColor(), sl.getGradientEndColor());
-                        }
-                    } else if (layer instanceof PhotoLayer) {
-                        PhotoLayer pl = (PhotoLayer) layer;
-                        if (selectedStop == 0) {
-                            pl.setGradientStartColor(color);
-                            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(color));
-                        } else {
-                            pl.setGradientEndColor(color);
-                            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(color));
-                        }
-                        if (gradientBarView != null) {
-                            gradientBarView.setColors(pl.getGradientStartColor(), pl.getGradientEndColor());
-                        }
-                    } else if (layer instanceof TextLayer) {
-                        TextLayer tl = (TextLayer) layer;
-                        if (selectedStop == 0) {
-                            tl.setGradientStartColor(color);
-                            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(color));
-                        } else {
-                            tl.setGradientEndColor(color);
-                            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(color));
-                        }
-                        if (gradientBarView != null) {
-                            gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
-                        }
+                    if (gradientBarView != null) {
+                        gradientBarView.updateSelectedStopColor(color);
+                        List<GradientBarView.GradientStop> stops = gradientBarView.getStops();
+                        if (layer instanceof ShapeLayer) ((ShapeLayer) layer).setGradientStops(stops);
+                        else if (layer instanceof PhotoLayer) ((PhotoLayer) layer).setGradientStops(stops);
+                        else if (layer instanceof TextLayer) ((TextLayer) layer).setGradientStops(stops);
+                        updateSelectedStopUI.run();
                     }
                     binding.canvasView.invalidate();
                 });
@@ -2841,8 +2856,10 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         ImageView ivGradSweep = binding.getRoot().findViewById(R.id.ivGradTypeSweep);
 
         GradientBarView gradientBarView = binding.getRoot().findViewById(R.id.gradientBarView);
-        View btnGradStart = binding.getRoot().findViewById(R.id.btnGradStartColor);
-        View btnGradEnd = binding.getRoot().findViewById(R.id.btnGradEndColor);
+        View viewGradSelectedColor = binding.getRoot().findViewById(R.id.viewGradSelectedColor);
+        TextView tvGradSelectedStopLabel = binding.getRoot().findViewById(R.id.tvGradSelectedStopLabel);
+        TextView tvGradSelectedHex = binding.getRoot().findViewById(R.id.tvGradSelectedHex);
+        View btnDeleteGradColor = binding.getRoot().findViewById(R.id.btnDeleteGradColor);
 
         TextView tvMediaName = binding.getRoot().findViewById(R.id.tvMediaFillName);
         MaterialButton btnMediaScaleFill = binding.getRoot().findViewById(R.id.btnMediaScaleFill);
@@ -2850,6 +2867,13 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         MaterialButton btnMediaScaleStretch = binding.getRoot().findViewById(R.id.btnMediaScaleStretch);
 
         int childIdx = 1; // Default Solid
+        ShapeLayer.GradientType gt = ShapeLayer.GradientType.LINEAR;
+        List<GradientBarView.GradientStop> stops = null;
+        int startCol = 0xFF000000;
+        int endCol = 0xFFFFFFFF;
+        float startOff = 0.0f;
+        float endOff = 1.0f;
+
         if (layer instanceof ShapeLayer) {
             ShapeLayer sl = (ShapeLayer) layer;
             ShapeLayer.FillMode fm = sl.getFillMode();
@@ -2866,32 +2890,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 previewFill.setBackgroundTintList(ColorStateList.valueOf(col));
             }
 
-            if (gradientBarView != null) {
-                gradientBarView.setColors(sl.getGradientStartColor(), sl.getGradientEndColor());
-                gradientBarView.setOffsets(sl.getGradientStartOffset(), sl.getGradientEndOffset());
-            }
-            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientStartColor()));
-            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(sl.getGradientEndColor()));
-
-            ShapeLayer.GradientType gt = sl.getGradientType();
-            if (btnGradTypeLinear != null) {
-                boolean active = (gt == ShapeLayer.GradientType.LINEAR);
-                btnGradTypeLinear.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeLinear.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradLinear != null) ivGradLinear.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeRadial != null) {
-                boolean active = (gt == ShapeLayer.GradientType.RADIAL);
-                btnGradTypeRadial.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeRadial.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradRadial != null) ivGradRadial.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeSweep != null) {
-                boolean active = (gt == ShapeLayer.GradientType.SWEEP);
-                btnGradTypeSweep.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeSweep.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradSweep != null) ivGradSweep.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
+            gt = sl.getGradientType();
+            stops = sl.getGradientStops();
+            startCol = sl.getGradientStartColor();
+            endCol = sl.getGradientEndColor();
+            startOff = sl.getGradientStartOffset();
+            endOff = sl.getGradientEndOffset();
 
             if (tvMediaName != null) {
                 if (sl.getMediaName() != null && !sl.getMediaName().isEmpty()) {
@@ -2924,32 +2928,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 previewFill.setBackgroundTintList(ColorStateList.valueOf(col));
             }
 
-            if (gradientBarView != null) {
-                gradientBarView.setColors(pl.getGradientStartColor(), pl.getGradientEndColor());
-                gradientBarView.setOffsets(pl.getGradientStartOffset(), pl.getGradientEndOffset());
-            }
-            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientStartColor()));
-            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(pl.getGradientEndColor()));
-
-            ShapeLayer.GradientType gt = pl.getGradientType();
-            if (btnGradTypeLinear != null) {
-                boolean active = (gt == ShapeLayer.GradientType.LINEAR);
-                btnGradTypeLinear.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeLinear.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradLinear != null) ivGradLinear.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeRadial != null) {
-                boolean active = (gt == ShapeLayer.GradientType.RADIAL);
-                btnGradTypeRadial.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeRadial.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradRadial != null) ivGradRadial.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeSweep != null) {
-                boolean active = (gt == ShapeLayer.GradientType.SWEEP);
-                btnGradTypeSweep.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeSweep.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradSweep != null) ivGradSweep.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
+            gt = pl.getGradientType();
+            stops = pl.getGradientStops();
+            startCol = pl.getGradientStartColor();
+            endCol = pl.getGradientEndColor();
+            startOff = pl.getGradientStartOffset();
+            endOff = pl.getGradientEndOffset();
 
             if (tvMediaName != null) {
                 tvMediaName.setText(pl.getName());
@@ -2970,32 +2954,12 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                 previewFill.setBackgroundTintList(ColorStateList.valueOf(col));
             }
 
-            if (gradientBarView != null) {
-                gradientBarView.setColors(tl.getGradientStartColor(), tl.getGradientEndColor());
-                gradientBarView.setOffsets(tl.getGradientStartOffset(), tl.getGradientEndOffset());
-            }
-            if (btnGradStart != null) btnGradStart.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientStartColor()));
-            if (btnGradEnd != null) btnGradEnd.setBackgroundTintList(ColorStateList.valueOf(tl.getGradientEndColor()));
-
-            ShapeLayer.GradientType gt = tl.getGradientType();
-            if (btnGradTypeLinear != null) {
-                boolean active = (gt == ShapeLayer.GradientType.LINEAR);
-                btnGradTypeLinear.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeLinear.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradLinear != null) ivGradLinear.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeRadial != null) {
-                boolean active = (gt == ShapeLayer.GradientType.RADIAL);
-                btnGradTypeRadial.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeRadial.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradRadial != null) ivGradRadial.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
-            if (btnGradTypeSweep != null) {
-                boolean active = (gt == ShapeLayer.GradientType.SWEEP);
-                btnGradTypeSweep.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
-                btnGradTypeSweep.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
-                if (ivGradSweep != null) ivGradSweep.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
-            }
+            gt = tl.getGradientType();
+            stops = tl.getGradientStops();
+            startCol = tl.getGradientStartColor();
+            endCol = tl.getGradientEndColor();
+            startOff = tl.getGradientStartOffset();
+            endOff = tl.getGradientEndOffset();
 
             if (tvMediaName != null) {
                 if (tl.getMediaName() != null && !tl.getMediaName().isEmpty()) {
@@ -3013,6 +2977,55 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             if (btnMediaScaleStretch != null) btnMediaScaleStretch.setTextColor(scaleMode == ShapeLayer.MediaScaleMode.STRETCH ? 0xFF00E5BC : 0xFF94A3B8);
         }
 
+        if (gradientBarView != null) {
+            gradientBarView.setGradientType(gt);
+            if (stops != null && stops.size() >= 2) {
+                gradientBarView.setStops(stops);
+            } else {
+                gradientBarView.setColors(startCol, endCol);
+                gradientBarView.setOffsets(startOff, endOff);
+            }
+            GradientBarView.GradientStop selectedStop = gradientBarView.getSelectedStop();
+            int stopIndex = gradientBarView.getSelectedStopIndex();
+            int totalStops = gradientBarView.getStops().size();
+            int selCol = (selectedStop != null) ? selectedStop.color : startCol;
+            float offset = (selectedStop != null) ? selectedStop.offset : 0.0f;
+
+            if (viewGradSelectedColor != null) {
+                viewGradSelectedColor.setBackgroundTintList(ColorStateList.valueOf(selCol));
+            }
+            if (tvGradSelectedStopLabel != null) {
+                tvGradSelectedStopLabel.setText("Color " + (stopIndex + 1) + " (" + Math.round(offset * 100f) + "%)");
+            }
+            if (tvGradSelectedHex != null) {
+                String hex = String.format(Locale.US, "#%06X", (0xFFFFFF & selCol));
+                tvGradSelectedHex.setText(hex);
+            }
+            if (btnDeleteGradColor != null) {
+                btnDeleteGradColor.setEnabled(totalStops > 2);
+                btnDeleteGradColor.setAlpha(totalStops > 2 ? 1.0f : 0.35f);
+            }
+        }
+
+        if (btnGradTypeLinear != null) {
+            boolean active = (gt == ShapeLayer.GradientType.LINEAR);
+            btnGradTypeLinear.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+            btnGradTypeLinear.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+            if (ivGradLinear != null) ivGradLinear.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+        }
+        if (btnGradTypeRadial != null) {
+            boolean active = (gt == ShapeLayer.GradientType.RADIAL);
+            btnGradTypeRadial.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+            btnGradTypeRadial.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+            if (ivGradRadial != null) ivGradRadial.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+        }
+        if (btnGradTypeSweep != null) {
+            boolean active = (gt == ShapeLayer.GradientType.SWEEP);
+            btnGradTypeSweep.setCardBackgroundColor(active ? 0xFF243048 : 0xFF182234);
+            btnGradTypeSweep.setStrokeColor(active ? 0xFF00E5BC : 0x22FFFFFF);
+            if (ivGradSweep != null) ivGradSweep.setImageTintList(ColorStateList.valueOf(active ? 0xFF00E5BC : 0xFF94A3B8));
+        }
+
         if (flipperFill != null) {
             flipperFill.setDisplayedChild(childIdx);
         }
@@ -3027,6 +3040,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             tabMedia.setStrokeColor(childIdx == 3 ? 0xFF00E5BC : 0x22FFFFFF);
             if (ivMedia != null) ivMedia.setImageTintList(ColorStateList.valueOf(childIdx == 3 ? 0xFF00E5BC : 0xFF94A3B8));
         }
+
+        updateCanvasGradientEditingState();
     }
 
     // -------------------------------------------------------------
@@ -3663,24 +3678,27 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
                             View.OnClickListener insertElementClick = v -> {
                                 EditorProject elemProj = ProjectStorageManager.loadProjectContent(MainActivity.this, elemItem.getId());
                                 if (elemProj != null && !elemProj.getLayers().isEmpty()) {
-                                    CanvasLayer lastAdded = null;
+                                    List<CanvasLayer> copiedLayers = new ArrayList<>();
                                     for (CanvasLayer l : elemProj.getLayers()) {
-                                        CanvasLayer copy = l.copy();
-                                        copy.setX(project.getCanvasWidth() / 2f);
-                                        copy.setY(project.getCanvasHeight() / 2f);
-                                        project.addLayer(copy);
-                                        lastAdded = copy;
+                                        copiedLayers.add(l.copy());
                                     }
+                                    String groupName = (elemItem.getTitle() != null && !elemItem.getTitle().trim().isEmpty())
+                                            ? elemItem.getTitle().trim() : "Element Group";
+                                    GroupLayer groupLayer = new GroupLayer(groupName, copiedLayers, GroupLayer.GroupMaskMode.NONE);
+                                    groupLayer.setX(project.getCanvasWidth() / 2f);
+                                    groupLayer.setY(project.getCanvasHeight() / 2f);
+                                    project.addLayer(groupLayer);
+
                                     binding.canvasView.invalidate();
                                     binding.flipperBottomPanels.setDisplayedChild(PANEL_LAYER_MENU);
-                                    if (lastAdded != null) {
-                                        updateUIForActiveLayer(lastAdded);
-                                    }
+                                    updateUIForActiveLayer(groupLayer);
                                 }
                             };
                             holder.itemView.setOnClickListener(insertElementClick);
                             if (ivIcon != null) ivIcon.setOnClickListener(insertElementClick);
                             if (tvName != null) tvName.setOnClickListener(insertElementClick);
+                            View cardCell = holder.itemView.findViewById(R.id.cardShapeCell);
+                            if (cardCell != null) cardCell.setOnClickListener(insertElementClick);
                         }
 
                         @Override
@@ -4305,19 +4323,8 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
             }
         } else if (layer instanceof PhotoLayer) {
             PhotoLayer pl = (PhotoLayer) layer;
-            ClampedSliderView sW = binding.getRoot().findViewById(R.id.sliderPhotoWidth);
-            ClampedSliderView sH = binding.getRoot().findViewById(R.id.sliderPhotoHeight);
-            TextView tvW = binding.getRoot().findViewById(R.id.tvPhotoWidthVal);
-            TextView tvH = binding.getRoot().findViewById(R.id.tvPhotoHeightVal);
-            if (sW != null && tvW != null) {
-                float cropXPct = pl.getCropOffsetX() * 100f;
-                sW.setValue(Math.max(-50, Math.min(50, cropXPct)));
-                tvW.setText(Math.round(cropXPct) + "%");
-            }
-            if (sH != null && tvH != null) {
-                float cropYPct = pl.getCropOffsetY() * 100f;
-                sH.setValue(Math.max(-50, Math.min(50, cropYPct)));
-                tvH.setText(Math.round(cropYPct) + "%");
+            if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_PHOTO_ADJUST) {
+                populatePhotoAdjustPanel(pl);
             }
         }
 
@@ -4338,6 +4345,18 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         if (binding.flipperBottomPanels.getDisplayedChild() == PANEL_EFFECT_CONTROLS) {
             refreshAppliedEffectsPanel();
         }
+
+        updateCanvasGradientEditingState();
+    }
+
+    private void updateCanvasGradientEditingState() {
+        if (binding == null || binding.canvasView == null) return;
+        boolean isFillPanel = (binding.flipperBottomPanels.getDisplayedChild() == PANEL_COLOR_FILL);
+        ViewFlipper flipperFill = binding.getRoot().findViewById(R.id.flipperFillSubpanels);
+        boolean isGradTab = isFillPanel && flipperFill != null && (flipperFill.getDisplayedChild() == 2);
+        CanvasLayer layer = project != null ? project.getSelectedLayer() : null;
+        boolean active = isGradTab && (layer instanceof ShapeLayer || layer instanceof PhotoLayer || layer instanceof TextLayer);
+        binding.canvasView.setGradientEditingActive(active);
     }
 
     private void populateLayersOverviewPanel() {
@@ -5008,7 +5027,7 @@ public class MainActivity extends AppCompatActivity implements PixelCanvasView.O
         // Mode 3: Scale Scrub Ruler listener
 
         if (rulerScale != null) {
-            rulerScale.setInvertDirection(false);
+            rulerScale.setInvertDirection(true);
             rulerScale.setOnScrubListener(delta -> {
                 CanvasLayer layer = project.getSelectedLayer();
                 if (layer != null) {

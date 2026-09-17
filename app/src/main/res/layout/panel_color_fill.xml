@@ -297,83 +297,101 @@
             <!-- 3. Bottom Color Swatches & Actions -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="32dp"
-                android:layout_marginTop="2dp"
+                android:layout_height="36dp"
+                android:layout_marginTop="4dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <!-- Start Color Button -->
-                <LinearLayout
-                    android:id="@+id/btnGradStartContainer"
+                <!-- Selected Color Container (Opens AlightColorPickerDialog on click) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnGradSelectedColorContainer"
+                    style="@style/Widget.PixelEditor.Card"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_panel_card"
                     android:clickable="true"
                     android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp">
+                    app:cardBackgroundColor="@color/pe_surface_elevated"
+                    app:cardCornerRadius="8dp"
+                    app:strokeColor="@color/pe_border"
+                    app:strokeWidth="1dp">
 
-                    <View
-                        android:id="@+id/btnGradStartColor"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:background="@drawable/bg_pill_accent"
-                        android:backgroundTint="#FF000000" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp">
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="Start"
-                        android:textColor="@color/pe_text_primary"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                        <View
+                            android:id="@+id/viewGradSelectedColor"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:background="@drawable/bg_pill_accent"
+                            android:backgroundTint="#FF000000" />
 
-                <!-- End Color Button -->
-                <LinearLayout
-                    android:id="@+id/btnGradEndContainer"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_panel_card"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp">
+                        <TextView
+                            android:id="@+id/tvGradSelectedStopLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Color 1"
+                            android:textColor="@color/pe_text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
 
-                    <View
-                        android:id="@+id/btnGradEndColor"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:background="@drawable/bg_pill_accent"
-                        android:backgroundTint="#FFFFFFFF" />
+                        <TextView
+                            android:id="@+id/tvGradSelectedHex"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:text="#000000"
+                            android:textColor="@color/pe_text_secondary"
+                            android:textSize="11sp" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="End"
-                        android:textColor="@color/pe_text_primary"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_alight_palette"
+                            app:tint="@color/pe_text_secondary" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Add Color Stop Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddGradColor"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:contentDescription="Add Color"
+                    app:backgroundTint="@color/pe_surface_elevated"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_pe_add"
+                    app:iconTint="@color/pe_accent_mint" />
+
+                <!-- Delete Selected Stop Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteGradColor"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="Delete Color Stop"
+                    app:backgroundTint="@color/pe_surface_elevated"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_pe_delete"
+                    app:iconTint="@color/pe_text_secondary" />
 
                 <!-- Reverse Gradient Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnReverseGradient"
                     style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
                     android:contentDescription="Reverse"
                     app:backgroundTint="@color/pe_surface_elevated"
                     app:cornerRadius="8dp"
@@ -384,8 +402,8 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnGradEyedropper"
                     style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:layout_marginStart="4dp"
                     android:contentDescription="Eyedropper"
                     app:backgroundTint="@color/pe_surface_elevated"

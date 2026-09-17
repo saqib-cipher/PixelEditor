@@ -180,11 +180,12 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
             String title = obj.optString("title", "Imported Project");
             int w = obj.optInt("canvasWidth", 1080);
             int h = obj.optInt("canvasHeight", 1350);
+            String aspect = obj.optString("aspectRatio", "9:16");
 
             String newId = java.util.UUID.randomUUID().toString();
             String thumbName = "thumb_" + newId + ".png";
 
-            String aspect = (w == h) ? "1:1" : (w > h ? "16:9" : "9:16");
+            boolean isElem = obj.optBoolean("isElement", false);
             ProjectStorageManager.ProjectItem newItem = new ProjectStorageManager.ProjectItem(
                     newId,
                     title,
@@ -196,7 +197,8 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
                     jsonStr.length(),
                     System.currentTimeMillis(),
                     thumbName,
-                    false
+                    false,
+                    isElem
             );
 
             // Save project file in storage
@@ -399,6 +401,7 @@ public class HomeActivity extends AppCompatActivity implements ProjectAdapter.Pr
         intent.putExtra("EXTRA_PROJECT_HEIGHT", item.getHeight());
         intent.putExtra("EXTRA_PROJECT_BG", item.getBackgroundColor());
         intent.putExtra("EXTRA_PROJECT_ASPECT", item.getAspectRatio());
+        intent.putExtra("EXTRA_IS_ELEMENT", item.isElement());
         startActivity(intent);
     }
 

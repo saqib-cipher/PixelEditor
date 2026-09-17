@@ -18,6 +18,9 @@ import android.graphics.Typeface;
 import org.json.JSONObject;
 
 import glab.pixeleditor.font.FontManager;
+import glab.pixeleditor.view.GradientBarView;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TextLayer extends CanvasLayer {
 
@@ -52,6 +55,7 @@ public class TextLayer extends CanvasLayer {
     private float gradientEndY = 100f;
     private float gradientStartOffset = 0.0f;
     private float gradientEndOffset = 1.0f;
+    private final List<GradientBarView.GradientStop> gradientStops = new ArrayList<>();
 
     private int strokeColor = 0xFF000000;
     private float strokeWidth = 0f;
@@ -324,23 +328,25 @@ public class TextLayer extends CanvasLayer {
 
         // Fill Paint based on FillMode
         if (fillMode == ShapeLayer.FillMode.GRADIENT) {
-            int startA = Math.round(Color.alpha(gradientStartColor) * (opacity / 255f) * textEffAlpha);
-            int endA = Math.round(Color.alpha(gradientEndColor) * (opacity / 255f) * textEffAlpha);
-            int sCol = Color.argb(startA, Color.red(gradientStartColor), Color.green(gradientStartColor), Color.blue(gradientStartColor));
-            int eCol = Color.argb(endA, Color.red(gradientEndColor), Color.green(gradientEndColor), Color.blue(gradientEndColor));
+            int[] rawCols = getGradientColorsArray();
+            float[] offsets = getGradientOffsetsArray();
+            int[] cols = new int[rawCols.length];
+            for (int i = 0; i < rawCols.length; i++) {
+                int a = Math.round(Color.alpha(rawCols[i]) * (opacity / 255f) * textEffAlpha);
+                cols[i] = Color.argb(a, Color.red(rawCols[i]), Color.green(rawCols[i]), Color.blue(rawCols[i]));
+            }
 
             if (gradientType == ShapeLayer.GradientType.RADIAL) {
                 float radius = (float) Math.hypot(gradientEndX - gradientStartX, gradientEndY - gradientStartY);
                 RadialGradient rg = new RadialGradient(
                         gradientStartX, gradientStartY, Math.max(1f, radius),
-                        sCol, eCol, Shader.TileMode.CLAMP
+                        cols, offsets, Shader.TileMode.CLAMP
                 );
                 fillPaint.setShader(rg);
             } else if (gradientType == ShapeLayer.GradientType.SWEEP) {
                 SweepGradient sg = new SweepGradient(
                         gradientStartX, gradientStartY,
-                        new int[]{sCol, eCol, sCol},
-                        new float[]{0f, 0.5f, 1f}
+                        cols, offsets
                 );
                 float angle = (float) Math.toDegrees(Math.atan2(gradientEndY - gradientStartY, gradientEndX - gradientStartX));
                 Matrix sm = new Matrix();
@@ -351,8 +357,7 @@ public class TextLayer extends CanvasLayer {
                 // LINEAR
                 LinearGradient lg = new LinearGradient(
                         gradientStartX, gradientStartY, gradientEndX, gradientEndY,
-                        new int[]{sCol, eCol},
-                        new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)},
+                        cols, offsets,
                         Shader.TileMode.CLAMP
                 );
                 fillPaint.setShader(lg);
@@ -536,6 +541,47 @@ public class TextLayer extends CanvasLayer {
     public float getGradientEndOffset() { return gradientEndOffset; }
     public void setGradientEndOffset(float gradientEndOffset) { this.gradientEndOffset = gradientEndOffset; }
 
+    public List<GradientBarView.GradientStop> getGradientStops() {
+        return gradientStops;
+    }
+
+    public void setGradientStops(List<GradientBarView.GradientStop> stops) {
+        this.gradientStops.clear();
+        if (stops != null) {
+            for (GradientBarView.GradientStop s : stops) {
+                this.gradientStops.add(s.copy());
+            }
+        }
+        if (!this.gradientStops.isEmpty()) {
+            this.gradientStartColor = this.gradientStops.get(0).color;
+            this.gradientStartOffset = this.gradientStops.get(0).offset;
+            this.gradientEndColor = this.gradientStops.get(this.gradientStops.size() - 1).color;
+            this.gradientEndOffset = this.gradientStops.get(this.gradientStops.size() - 1).offset;
+        }
+    }
+
+    public int[] getGradientColorsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            int[] arr = new int[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).color;
+            }
+            return arr;
+        }
+        return new int[]{gradientStartColor, gradientEndColor};
+    }
+
+    public float[] getGradientOffsetsArray() {
+        if (gradientStops != null && gradientStops.size() >= 2) {
+            float[] arr = new float[gradientStops.size()];
+            for (int i = 0; i < gradientStops.size(); i++) {
+                arr[i] = gradientStops.get(i).offset;
+            }
+            return arr;
+        }
+        return new float[]{Math.min(gradientStartOffset, gradientEndOffset), Math.max(gradientStartOffset, gradientEndOffset)};
+    }
+
     public Bitmap getMediaBitmap() { return mediaBitmap; }
     public void setMediaBitmap(Bitmap mediaBitmap) { this.mediaBitmap = mediaBitmap; }
 
@@ -642,6 +688,17 @@ public class TextLayer extends CanvasLayer {
             json.put("gradientStartOffset", (double) gradientStartOffset);
             json.put("gradientEndOffset", (double) gradientEndOffset);
 
+            if (!gradientStops.isEmpty()) {
+                org.json.JSONArray stopsArr = new org.json.JSONArray();
+                for (GradientBarView.GradientStop s : gradientStops) {
+                    org.json.JSONObject sObj = new org.json.JSONObject();
+                    sObj.put("color", s.color);
+                    sObj.put("offset", (double) s.offset);
+                    stopsArr.put(sObj);
+                }
+                json.put("gradientStops", stopsArr);
+            }
+
             json.put("textSize", textSize);
             json.put("isBold", isBold);
             json.put("isItalic", isItalic);
@@ -712,6 +769,21 @@ public class TextLayer extends CanvasLayer {
         layer.gradientStartOffset = (float) json.optDouble("gradientStartOffset", 0.0);
         layer.gradientEndOffset = (float) json.optDouble("gradientEndOffset", 1.0);
 
+        org.json.JSONArray stopsArr = json.optJSONArray("gradientStops");
+        if (stopsArr != null && stopsArr.length() > 0) {
+            List<GradientBarView.GradientStop> loadedStops = new ArrayList<>();
+            for (int i = 0; i < stopsArr.length(); i++) {
+                org.json.JSONObject sObj = stopsArr.optJSONObject(i);
+                if (sObj != null) {
+                    loadedStops.add(new GradientBarView.GradientStop(
+                            sObj.optInt("color", 0xFF000000),
+                            (float) sObj.optDouble("offset", 0.0)
+                    ));
+                }
+            }
+            layer.setGradientStops(loadedStops);
+        }
+
         layer.textSize = (float) json.optDouble("textSize", 48.0);
         layer.isBold = json.optBoolean("isBold", true);
         layer.isItalic = json.optBoolean("isItalic", false);
@@ -748,6 +820,7 @@ public class TextLayer extends CanvasLayer {
         copy.gradientEndY = this.gradientEndY;
         copy.gradientStartOffset = this.gradientStartOffset;
         copy.gradientEndOffset = this.gradientEndOffset;
+        copy.setGradientStops(this.gradientStops);
 
         copy.textSize = this.textSize;
         copy.isBold = this.isBold;
@@ -804,6 +877,7 @@ public class TextLayer extends CanvasLayer {
         clone.gradientEndY = this.gradientEndY;
         clone.gradientStartOffset = this.gradientStartOffset;
         clone.gradientEndOffset = this.gradientEndOffset;
+        clone.setGradientStops(this.gradientStops);
 
         clone.textSize = this.textSize;
         clone.isBold = this.isBold;
